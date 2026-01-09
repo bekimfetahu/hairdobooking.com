@@ -1,0 +1,23 @@
+services:
+  hairdobooking_frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: hairdobooking_frontend
+    container_name: hairdobooking_frontend
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "${APP_PORT:-3800}:3000"
+    volumes:
+      - ./:/usr/src/app
+    networks:
+      - app-network
+      - shared-network  # Connect to shared-network for external communication
+
+networks:
+  app-network:
+    driver: bridge  # Internal network for communication within the Docker Compose project
+  shared-network:
+    external: true  # External network to communicate with services outside the Docker Compose project
+
