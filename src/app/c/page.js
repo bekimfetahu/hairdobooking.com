@@ -7,15 +7,13 @@ import { sendRequest } from '@/services/sendRequest';
 
 export default async function LocationPage() {
 
+    const companiesData = await sendRequest({
+        method: 'get',
+        access_type: 'laravelApp',
+        api: 'client/locations',
+        data: {}
+    });
 
-    const formData = {
-        method: 'get', // Laravel method to forward
-        access_type: 'app',
-        url: 'client/locations',
-        data: {}, // optional query params
-    }
-
-    const companiesData = await sendRequest('/laravelApi', formData);
 
     return (
         <main className="w-full bg-gray-50 py-8">

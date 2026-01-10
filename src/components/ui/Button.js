@@ -1,4 +1,3 @@
-// src/components/Button.jsx
 import React from "react";
 import { cn } from "../../lib/utils"; // optional: your classnames helper
 

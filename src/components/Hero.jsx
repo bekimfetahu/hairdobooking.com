@@ -1,4 +1,3 @@
-// src/components/Hero.jsx
 'use client';
 import React from "react";
 import Button from "./ui/Button"; // plain React Button component
