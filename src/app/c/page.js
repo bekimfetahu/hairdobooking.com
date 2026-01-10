@@ -18,7 +18,7 @@ export default async function LocationPage() {
     return (
         <main className="w-full bg-gray-50 py-8">
             <div className="mx-auto px-4">
-                {companiesData.data.map((companyData) => (
+                {companiesData?.data?.map((companyData) => (
                     <div
                         key={companyData.company.uuid}
                         className="w-full bg-white shadow-md rounded-lg p-6 mb-6"
