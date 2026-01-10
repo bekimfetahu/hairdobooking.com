@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import Title from "@/components/typography/Title";
 import HeadingOne from "@/components/typography/HeadingOne";
 import Link from "next/link";
