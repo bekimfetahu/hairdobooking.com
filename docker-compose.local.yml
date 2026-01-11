@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: dev
-    container_name: hairdobooking_frontend
+    container_name: hairdobooking_frontend_local
     ports:
       - "3804:3000"
     volumes:
