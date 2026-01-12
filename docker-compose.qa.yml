@@ -1,16 +1,22 @@
 services:
   hairdobooking_frontend_qa:
+    container_name: hairdobooking_frontend_qa
+
     build:
       context: .
-      target: prod
-    container_name: hairdobooking_frontend_qa
+      dockerfile: Dockerfile
+
+    image: hairdobooking_frontend_qa:latest
+
     ports:
       - "3001:3000"
+
     environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://adminqa.hairdobooking.com
+      NODE_ENV: production
+
     networks:
       - qa-network
+
     restart: always
 
 networks:
