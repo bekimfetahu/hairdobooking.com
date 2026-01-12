@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NO_CACHE=1
 
     image: hairdobooking_frontend_qa:latest
 
