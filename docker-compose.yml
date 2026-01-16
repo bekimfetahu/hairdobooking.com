@@ -2,11 +2,12 @@ services:
   hairdobooking_frontend:
     build:
       context: .
-    container_name: hairdobooking_frontend
+      target: production
     ports:
       - "${APP_PORT:-3800}:3000"
     environment:
       - HOST=0.0.0.0
+      - PORT=3000
     networks:
       - app-network
     restart: unless-stopped
