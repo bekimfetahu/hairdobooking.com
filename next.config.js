@@ -1,7 +1,6 @@
-/** @type {import('next').NextConfig} */
+// next.config.js
 const nextConfig = {
-  /* config options here */
-  reactCompiler: true,
 };
 
 export default nextConfig;
+

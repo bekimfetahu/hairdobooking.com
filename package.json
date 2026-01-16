@@ -2,12 +2,14 @@
   "name": "hairdobooking.com",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build --webpack",
-    "start": "next start",
+    "build": "next build",
+    "start": "node_modules/.bin/next",
     "lint": "eslint"
   },
+
   "dependencies": {
     "@react-oauth/google": "^0.12.2",
     "@reduxjs/toolkit": "^2.6.0",

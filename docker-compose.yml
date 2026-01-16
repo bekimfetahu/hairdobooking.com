@@ -1,0 +1,16 @@
+services:
+  hairdobooking_frontend:
+    build:
+      context: .
+    container_name: hairdobooking_frontend
+    ports:
+      - "${APP_PORT:-3800}:3000"
+    environment:
+      - HOST=0.0.0.0
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
