@@ -4,9 +4,9 @@ services:
       context: .
       target: production
     ports:
-      - "3000"   # container port; Plesk maps externally
+      - "3000"   # Plesk maps container port externally
     env_file:
-      - .env    # contains QA or Prod variables
+      - .env
     environment:
       HOST: 0.0.0.0
       PORT: 3000
