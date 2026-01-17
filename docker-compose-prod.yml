@@ -4,10 +4,10 @@ services:
       context: .
       target: production
     ports:
-      - "3000"   # Plesk maps container port externally
+      - "3001"   # Plesk maps container port externally
     env_file:
       - .env
     environment:
       HOST: 0.0.0.0
-      PORT: 3000
+      PORT: 3001
     restart: unless-stopped
