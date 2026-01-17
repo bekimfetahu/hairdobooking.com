@@ -1,0 +1,13 @@
+services:
+  hairdobooking_frontend:
+    build:
+      context: .
+      target: production
+    ports:
+      - "3000"   # container port; Plesk maps externally
+    env_file:
+      - .env    # contains QA or Prod variables
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+    restart: unless-stopped
