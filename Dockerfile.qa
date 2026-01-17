@@ -1,0 +1,41 @@
+# -------------------------
+# Base image (common)
+# -------------------------
+FROM node:20-alpine AS base
+
+WORKDIR /usr/src/app
+
+# Install dependencies for Node and Git
+RUN apk add --no-cache bash git libc6-compat
+
+# Copy package.json & lockfile, install dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy the rest of the source code
+COPY . .
+
+# Set default environment variables
+ENV HOST=0.0.0.0
+ENV PORT=3001
+EXPOSE 3001
+
+# -------------------------
+# Development stage
+# -------------------------
+FROM base AS dev
+
+# Keep the container interactive for SSH / dev commands
+# You can exec into it and run `npm run dev` manually
+CMD ["bash"]
+
+# -------------------------
+# Production stage (used for QA & Prod)
+# -------------------------
+FROM base AS production
+
+# Build Next.js for production (no HMR)
+RUN npm run build
+
+# Run production server
+CMD ["npm", "start"]

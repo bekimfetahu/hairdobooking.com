@@ -2,9 +2,10 @@ services:
   hairdobooking_frontend:
     build:
       context: .
+      dockerfile: Dockerfile.qa
       target: production
     ports:
-      - "3002"   # Plesk maps container port externally
+      - "3002"
     env_file:
       - .env
     environment:
