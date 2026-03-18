@@ -85,7 +85,7 @@ export default function RegisterPage() {
                 {/* Heading */}
                 <div className="text-center mb-8">
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-                        Take a Free Trial
+                        Take a Free Trial 2
                     </h1>
                     <p className="mt-2 text-gray-600">✨ No credit card required</p>
                 </div>

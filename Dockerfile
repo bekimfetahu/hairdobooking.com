@@ -29,13 +29,13 @@ FROM base AS dev
 # You can exec into it and run `npm run dev` manually
 CMD ["bash"]
 
-# -------------------------
-# Production stage (used for QA & Prod)
-# -------------------------
-FROM base AS production
-
-# Build Next.js for production (no HMR)
-RUN npm run build
-
-# Run production server
-CMD ["npm", "start"]
+## -------------------------
+## Production stage (used for QA & Prod)
+## -------------------------
+#FROM base AS production
+#
+## Build Next.js for production (no HMR)
+#RUN npm run build
+#
+## Run production server
+#CMD ["npm", "start"]

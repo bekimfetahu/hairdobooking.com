@@ -2,16 +2,25 @@ services:
   hairdobooking_frontend:
     build:
       context: .
-      target: production
+      dockerfile: Dockerfile
+    image: hairdobooking_frontend
+    container_name: hairdobooking_frontend
     ports:
-      - "${APP_PORT:-3800}:3000"
+      - "${APP_PORT:-3084}:3000"
     environment:
       - HOST=0.0.0.0
       - PORT=3000
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - WATCHPACK_POLLING_INTERVAL=1000
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
     networks:
       - app-network
     restart: unless-stopped
-
+    stdin_open: true
+    tty: true
 networks:
   app-network:
     driver: bridge

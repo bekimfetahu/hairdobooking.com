@@ -7,6 +7,7 @@ import {loginSuccess, logout} from "@/store/slices/authSlice";
 // import Header from "@/components/layouts/Header";
 // import Footer from "@/components/layouts/Footer";
 import Navbar from "@/components/Navbar";
+import Footer from "@/componentslayouts/Footer.js";
 
 export default function MainLayout({children}) {
     const isAuthenticated = useSelector((state) => state.auth.isAuthenticated); // Fetch Redux state

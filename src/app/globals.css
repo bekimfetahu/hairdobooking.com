@@ -66,7 +66,7 @@ body {
   min-width: min-content;
 }
 .container {
-  max-width: 72rem; /* 1152px */
+  max-width: 80rem; /* 1280px */
   margin-left: auto;
   margin-right: auto;
   padding-left: 1rem;

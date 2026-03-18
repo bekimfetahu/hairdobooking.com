@@ -64,16 +64,13 @@ export default function Navbar() {
             <div className="container mx-auto px-4">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
-                    <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                            <Scissors className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-xl font-bold text-gray-900 dark:text-white">BookSalon</span>
+                    <div className="flex items-left gap-2">
+                            <Image src={"/logo.png"} alt="Logo" width={270} height={35}  />
                     </div>
 
                     {/* Navigation Links */}
                     <div className="hidden md:flex items-center gap-8">
-                        <a href="#features" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Features</a>
+                        <a href="#features" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Features 2</a>
                         <a href="#how-it-works" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">How It Works</a>
                         <a href="#testimonials" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Testimonials</a>
                         <a href="#pricing" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Pricing</a>
