@@ -4,11 +4,31 @@ import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '@/store/slices/authSlice';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import AuthPageShell from '@/components/layouts/AuthPageShell';
 import BlackButton from "@/components/ui/BlackButton";
 import InputField from "@/components/ui/InputField";
 import CheckBox from "@/components/ui/CheckBox";
-import Image from "next/image";
 import GoogleSignInButton from "@/components/ui/GoogleSignInButton";
+import { CalendarDays, Heart, Sparkles } from 'lucide-react';
+
+const benefits = [
+    {
+        icon: CalendarDays,
+        title: 'Book appointments',
+        text: 'Find salons and manage upcoming visits in one place.',
+    },
+    {
+        icon: Heart,
+        title: 'Save favorites',
+        text: 'Keep the salons you like most close at hand.',
+    },
+    {
+        icon: Sparkles,
+        title: 'Simple and fast',
+        text: 'A clean booking experience built for clients.',
+    },
+];
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -32,8 +52,10 @@ export default function LoginPage() {
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'Login failed');
-            console.log(data.user)
+            if (!response.ok) {
+                setError(data.message || 'Login failed');
+                return;
+            }
 
             dispatch(loginSuccess({ user: data.user }));
             router.push('/dashboard');
@@ -45,83 +67,79 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex flex-col flex-grow justify-center items-center">
-            <div className="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                <form onSubmit={handleLogin}>
-                    {error && <p className="text-red-500 text-sm text-center mb-3">{error}</p>}
-
-                    {/* Email Input */}
-                    <div>
-                        <InputField
-                            id="email"
-                            label="Email"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            autoComplete="username"
-                        />
-                    </div>
-
-                    {/* Password Input */}
-                    <div className="mt-4">
-                        <InputField
-                            id="password"
-                            label="Password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            autoComplete="current-password"
-                        />
-                    </div>
-
-                    {/* Remember Me Checkbox */}
-                    <div className="block mt-4">
-                        <CheckBox
-                            checked={remember}
-                            onChange={(e) => setRemember(e.target.checked)}
-                            label="Remember me"
-                        />
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-end mt-4">
-                        <a
-                            href="/forgot-password"
-                            className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                            Forgot your password?
-                        </a>
-                        <BlackButton type="submit">
-                            {loading ? 'Logging in...' : 'Log in'}
-                        </BlackButton>
-                    </div>
-                </form>
+        <AuthPageShell
+            variant="default"
+            eyebrow="Client access"
+            title="Welcome back"
+            description="Log in to manage bookings, save your favorite salons, and stay on top of your appointments."
+            panelBadge="Built for your salon bookings"
+            panelTitle="Everything you need to book and manage appointments."
+            panelDescription="Keep your appointments organized, find salons faster, and return to your favorites anytime."
+            benefits={benefits}
+        >
+            <div className="mb-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Sign in</p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-950">Access your account</h2>
+                <p className="mt-2 text-sm leading-7 text-neutral-600">Use your email and password, or continue with Google.</p>
             </div>
-        {/*    ADD section to login with social login google and facebook */}
-            <div className="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                <div className="flex flex-col items-center justify-center space-y-4">
-                    <div className="w-full">
-                        <GoogleSignInButton />
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => window.location.href = '/api/auth/social/facebook'}
-                        className="relative w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+
+            {error && <p className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+                <InputField
+                    id="email"
+                    label="Email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="username"
+                />
+
+                <InputField
+                    id="password"
+                    label="Password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                />
+
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+                    <CheckBox
+                        checked={remember}
+                        onChange={(e) => setRemember(e.target.checked)}
+                        label="Remember me"
+                    />
+
+                    <Link
+                        href="/forgot-password"
+                        className="text-sm text-neutral-600 underline-offset-4 hover:text-black hover:underline"
                     >
-                        {/* Facebook logo centered like Google */}
-                        <div className="mr-2">
-                            <img src="/images/facebook-logo.png" alt="Facebook" className="w-6 h-6" />
-                        </div>
-
-                        {/* Centered label */}
-                        <span className="text-gray-700 font-medium">Continue with Facebook</span>
-                    </button>
-
-
+                        Forgot your password?
+                    </Link>
                 </div>
+
+                <BlackButton type="submit" className="w-full py-3 text-lg">
+                    {loading ? 'Logging in...' : 'Log in'}
+                </BlackButton>
+            </form>
+
+            <div className="my-6 border-t border-black/10" />
+
+            <div className="space-y-4">
+                <GoogleSignInButton />
+
+                <button
+                    type="button"
+                    onClick={() => window.location.href = '/api/auth/social/facebook'}
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-neutral-700 transition-colors hover:border-black hover:text-black"
+                >
+                    <img src="/images/facebook-logo.png" alt="Facebook" className="h-5 w-5" />
+                    Continue with Facebook
+                </button>
             </div>
-        </div>
+        </AuthPageShell>
     );
 }

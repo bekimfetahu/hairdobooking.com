@@ -19,13 +19,20 @@ export default function GoogleSignInButton({ provider = 'google' }) {
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.message || `${provider} login failed`);
-            console.log(data)
+            if (!res.ok) {
+                const details = Array.isArray(data.details)
+                    ? data.details.join(', ')
+                    : typeof data.details === 'object' && data.details
+                        ? JSON.stringify(data.details)
+                        : '';
+                console.error([data.message || `${provider} login failed`, details].filter(Boolean).join(' — '));
+                return;
+            }
 
             dispatch(loginSuccess({ user: data.user }));
             router.push('/dashboard');
         } catch (err) {
-            console.error(err);
+            console.error(`${provider} login failed:`, err);
         }
     };
 

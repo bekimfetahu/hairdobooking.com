@@ -18,9 +18,12 @@ services:
       - /usr/src/app/node_modules
     networks:
       - app-network
+      - shared-network
     restart: unless-stopped
     stdin_open: true
     tty: true
 networks:
   app-network:
     driver: bridge
+  shared-network:
+    external: true

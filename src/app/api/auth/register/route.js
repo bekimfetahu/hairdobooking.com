@@ -5,6 +5,7 @@ import laravelApp from '@/services/laravelApp';
 export async function POST(req) {
     try {
         const body = await req.json();
+        const isProduction = process.env.NODE_ENV === 'production';
 
         // Call Laravel API using the centralized Axios instance
         const response = await laravelApp.post('/client/register', body);
@@ -13,7 +14,7 @@ export async function POST(req) {
         const res = NextResponse.json(response.data, { status: 200 });
         res.headers.set(
             'Set-Cookie',
-            `token=${response.data.token}; Path=/; HttpOnly; Secure; SameSite=Strict`
+            `token=${response.data.token}; Path=/; HttpOnly; ${isProduction ? 'Secure; ' : ''}SameSite=Lax`
         );
 
         return res;

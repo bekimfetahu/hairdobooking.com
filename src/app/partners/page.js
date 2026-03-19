@@ -1,60 +1,154 @@
-import Title from "@/components/typography/Title";
+import PageShell from "@/components/layouts/PageShell";
+import Image from "next/image";
 import Link from "next/link";
+import Title from "@/components/typography/Title";
+import { ArrowRight, BriefcaseBusiness, CheckCircle2, CalendarDays, CreditCard, MapPin, Sparkles, Users } from "lucide-react";
+
+const features = [
+    {
+        icon: CalendarDays,
+        title: "Always-on booking",
+        text: "Let clients book 24/7 from any device with a smooth, branded experience.",
+    },
+    {
+        icon: CreditCard,
+        title: "No commission fees",
+        text: "Keep your revenue. Simple pricing, no hidden charges, no surprises.",
+    },
+    {
+        icon: Users,
+        title: "Team friendly",
+        text: "Manage multiple staff members, services, and schedules from one place.",
+    },
+    {
+        icon: MapPin,
+        title: "Multi-location ready",
+        text: "Scale from a single chair to multiple locations without changing tools.",
+    },
+    {
+        icon: Sparkles,
+        title: "Premium client flow",
+        text: "A clean, modern booking journey that feels polished on mobile and desktop.",
+    },
+    {
+        icon: CheckCircle2,
+        title: "Free to try",
+        text: "Start with confidence and move at your own pace — no credit card required.",
+    },
+];
 
 export default function PartnerPage() {
     return (
-        <main className="w-full py-16 ">
-            <div className="mx-auto max-w-6xl px-6">
-                {/* Hero Section */}
-                <div className="backdrop-blur-md shadow-md rounded-2xl p-10">
-                    <Title className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-center md:text-left">
-                        Crafted Exclusively for Beauty Salons & Barber Shops <br />
-                        <span className="text-blue-500">The All-In-One Booking Platform for Growth</span>
-                    </Title>
+        <PageShell variant="business" className="py-8 sm:py-10">
+            <div className="mx-auto max-w-6xl">
+                <section className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-2xl shadow-black/5">
+                    <div className="grid lg:grid-cols-2">
+                        <div className="p-8 sm:p-10 lg:p-12">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700">
+                                <BriefcaseBusiness className="h-4 w-4 text-black" />
+                                Built for salons and barbers
+                            </div>
 
-                    <p className="text-gray-600 mt-6 text-lg leading-relaxed max-w-5xl">
-                        Whether you’re a solo stylist or managing multiple locations,
-                        <strong className="text-gray-900"> Hairdobooking gives you everything you need to grow</strong>.
-                        Accept bookings 24/7, manage your team and services, and keep clients coming back —
-                        without hidden fees or complicated setups.
-                        <span className="block mt-2">Simple. Powerful. Built exclusively for Beauty & Hair Professionals.</span>
-                    </p>
+                            <Title className="mt-6 max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-neutral-950 md:text-5xl">
+                                A booking platform that feels <span className="text-primary">premium</span>, fast, and easy to use.
+                            </Title>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center mt-10">
-                        {/* Left Column: Features */}
-                        <div>
-                            <ul className="grid gap-4 text-gray-700 text-lg">
-                                <li className="flex items-center gap-2 bg-blue-50 rounded-lg px-4 py-3">📅 24/7 online booking</li>
-                                <li className="flex items-center gap-2 bg-purple-50 rounded-lg px-4 py-3">❤️&nbsp;Favorite & rebook functionality</li>
-                                <li className="flex items-center gap-2 bg-pink-50 rounded-lg px-4 py-3">💸 No commission fees</li>
-                                <li className="flex items-center gap-2 bg-green-50 rounded-lg px-4 py-3">📍 Unlimited salon locations</li>
-                                <li className="flex items-center gap-2 bg-yellow-50 rounded-lg px-4 py-3">👥 Scalable subscriptions — unsubscribe anytime</li>
-                                <li className="flex items-center gap-2 bg-indigo-50 rounded-lg px-4 py-3">🚀 Free trial, no credit card needed</li>
-                            </ul>
+                            <p className="mt-6 max-w-xl text-base leading-8 text-neutral-600 md:text-lg">
+                                HairdoBooking helps you take bookings, manage staff, and keep clients coming back —
+                                all with a clean brand experience that matches the quality of your business.
+                            </p>
+
+                            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <Link
+                                    href="/partners/register"
+                                    className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-6 py-3.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
+                                >
+                                    Start your free trial
+                                    <ArrowRight className="h-4 w-4" />
+                                </Link>
+                                <Link
+                                    href="/pricing"
+                                    className="inline-flex items-center justify-center rounded-full border border-black/10 px-6 py-3.5 text-sm font-medium text-neutral-700 transition-colors hover:border-black hover:text-black"
+                                >
+                                    View pricing
+                                </Link>
+                            </div>
+
+                            <div className="mt-8 flex flex-wrap gap-3 text-sm text-neutral-600">
+                                {[
+                                    "24/7 online booking",
+                                    "No commission fees",
+                                    "Built for growth",
+                                ].map((item) => (
+                                    <span key={item} className="rounded-full border border-black/10 bg-neutral-50 px-4 py-2">
+                                        {item}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Right Column: Model Image */}
-                        <div className="flex justify-center md:justify-end">
-                            <img
-                                src="images/model.png"
-                                alt="Hair salon model"
-                                style={{ width: '100%', height: 'auto' }}
-                                className="rounded-md shadow-lg object-cover object-center max-w-sm md:max-w-md"
-                            />
+                        <div className="relative flex items-center justify-center bg-[linear-gradient(180deg,#fffaf9_0%,#ffffff_100%)] p-8 sm:p-10 lg:p-12">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(208,0,0,0.10),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(17,17,17,0.06),transparent_35%)]" />
+                            <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-xl shadow-black/10">
+                                <div className="border-b border-black/5 px-6 py-5">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Partner preview</p>
+                                    <p className="mt-1 text-lg font-semibold text-neutral-950">A modern booking experience</p>
+                                </div>
+                                <div className="p-4">
+                                    <Image
+                                        src="/model.png"
+                                        alt="Hair salon model"
+                                        width={800}
+                                        height={900}
+                                        className="h-auto w-full rounded-[1.5rem] object-cover object-center"
+                                        priority
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                {/* CTA Button */}
-                <div className="flex justify-center mt-12">
-                    <Link
-                        href="/partners/register"
-                        className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xl font-semibold px-10 py-5 rounded-full shadow-lg hover:scale-105 transform transition"
-                    >
-                        Start Your Free Trial
-                    </Link>
-                </div>
+                <section id="features" className="mt-10">
+                    <div className="flex items-end justify-between gap-4">
+                        <div>
+                            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Why partners choose us</p>
+                            <h2 className="mt-2 text-2xl font-semibold text-neutral-950 md:text-3xl">Everything designed to help your business grow</h2>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {features.map((feature) => {
+                            const Icon = feature.icon;
+                            return (
+                                <article key={feature.title} className="rounded-[1.5rem] border border-black/10 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-neutral-50 text-black">
+                                        <Icon className="h-5 w-5" />
+                                    </div>
+                                    <h3 className="mt-4 text-lg font-semibold text-neutral-950">{feature.title}</h3>
+                                    <p className="mt-2 text-sm leading-7 text-neutral-600">{feature.text}</p>
+                                </article>
+                            );
+                        })}
+                    </div>
+                </section>
+
+                <section className="mt-10 rounded-[1.75rem] border border-black/10 bg-black px-6 py-8 text-white sm:px-8">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Ready to grow?</p>
+                            <h2 className="mt-2 text-2xl font-semibold">Bring a cleaner booking experience to your clients.</h2>
+                        </div>
+                        <Link
+                            href="/partners/register"
+                            className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-neutral-200"
+                        >
+                            Start your free trial
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                </section>
             </div>
-        </main>
+        </PageShell>
     );
 }

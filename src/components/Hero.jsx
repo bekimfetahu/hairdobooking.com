@@ -7,65 +7,37 @@ import { Calendar, Sparkles } from "lucide-react";
 export default function Hero() {
     return (
         <section
-            className="relative min-h-screen flex items-center justify-center overflow-hidden"
+            className="relative min-h-screen overflow-hidden flex items-center justify-center"
             style={{ background: "var(--gradient-hero)" }}
         >
-            {/* Gradient orbs */}
-            <div className="absolute top-20 left-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+            <div className="absolute top-24 left-8 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+            <div className="absolute bottom-16 right-0 h-[28rem] w-[28rem] rounded-full bg-black/5 blur-3xl" />
 
             <div className="container mx-auto px-4 py-20 relative z-10">
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     {/* Left content */}
                     <div className="space-y-8 animate-fade-in">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20">
-                            <Sparkles className="w-4 h-4 text-purple-500" />
-                            <span className="text-sm font-medium text-purple-500">
-                                Modern Booking Made Simple
+                        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2">
+                            <Sparkles className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-primary">
+                                Modern booking made simple
                              </span>
                         </div>
 
-                        <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
-                            Your Salon's
-                            <span className="block bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-                Smart Scheduler
-              </span>
+                        <h1 className="max-w-xl text-5xl font-semibold leading-[1.05] tracking-tight text-neutral-950 lg:text-7xl">
+                            Grow your salon with a
+                            <span className="block text-primary">premium booking experience</span>
                         </h1>
 
-                        <p className="text-xl text-gray-600 max-w-xl">
+                        <p className="max-w-xl text-lg leading-8 text-neutral-600 lg:text-xl">
                             Streamline appointments, delight clients, and grow your business
-                            with our intelligent booking platform designed for beauty
-                            professionals.
-                        </p>
-
-                        <p className="text-xl text-gray-600 max-w-xl">
-                            Streamline appointments, delight clients, and grow your business
-                            with our intelligent booking platform designed for beauty
-                            professionals.
-                        </p>
-
-                        <p className="text-xl text-gray-600 max-w-xl">
-                            Streamline appointments, delight clients, and grow your business
-                            with our intelligent booking platform designed for beauty
-                            professionals.
-                        </p>
-
-                        <p className="text-xl text-gray-600 max-w-xl">
-                            Streamline appointments, delight clients, and grow your business
-                            with our intelligent booking platform designed for beauty
-                            professionals.
-                        </p>
-
-                        <p className="text-xl text-gray-600 max-w-xl">
-                            Streamline appointments, delight clients, and grow your business
-                            with our intelligent booking platform designed for beauty
-                            professionals.
+                            with a polished experience that feels modern, fast, and easy to book from any device.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4">
                             <Button
                                 size="lg"
-                                className="text-lg px-8 py-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center"
+                                className="px-8 py-6 text-base shadow-lg shadow-black/10 hover:-translate-y-0.5 flex items-center"
                             >
                                 <Calendar className="w-5 h-5 mr-2" />
                                 Start Free Trial
@@ -74,42 +46,42 @@ export default function Hero() {
                             <Button
                                 size="lg"
                                 variant="outline"
-                                className="text-lg px-8 py-6 border-2 hover:bg-purple-500/5 transition-all duration-300"
+                                className="px-8 py-6 text-base border-black/15 hover:bg-neutral-50 transition-all duration-300"
                             >
                                 Watch Demo
                             </Button>
                         </div>
 
                         {/* Stats */}
-                        <div className="flex gap-8 pt-8 border-t border-gray-200">
+                        <div className="flex flex-wrap gap-8 pt-8 border-t border-black/10">
                             <div>
-                                <div className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                                <div className="text-3xl font-semibold text-primary">
                                     10k+
                                 </div>
-                                <div className="text-sm text-gray-500">Active Salons</div>
+                                <div className="text-sm text-neutral-500">Active salons</div>
                             </div>
                             <div>
-                                <div className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                                <div className="text-3xl font-semibold text-primary">
                                     500k+
                                 </div>
-                                <div className="text-sm text-gray-500">Monthly Bookings</div>
+                                <div className="text-sm text-neutral-500">Monthly bookings</div>
                             </div>
                             <div>
-                                <div className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                                <div className="text-3xl font-semibold text-primary">
                                     98%
                                 </div>
-                                <div className="text-sm text-gray-500">Client Satisfaction</div>
+                                <div className="text-sm text-neutral-500">Client satisfaction</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Right image */}
                     <div className="relative animate-fade-in delay-300">
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-3xl blur-2xl opacity-20 animate-pulse" />
+                        <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-primary/20 via-black/5 to-transparent blur-2xl" />
                         <img
                             src="/hero-booking.jpg"
                             alt="Hair booking scheduler interface"
-                            className="relative rounded-3xl shadow-lg w-full hover:scale-105 transition-transform duration-500"
+                            className="relative w-full rounded-[2rem] border border-black/10 shadow-2xl shadow-black/10 transition-transform duration-500 hover:scale-[1.02]"
                         />
                     </div>
                 </div>

@@ -1,99 +1,315 @@
 'use client';
-import React from "react";
-import Button from "@/components/ui/Button"; // your custom Button
-import { Scissors } from "lucide-react";
 
-import Link from "next/link";
-import Image from "next/image";
-import { useSelector, useDispatch } from "react-redux";
-import { useState, useEffect, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { FaUserCircle } from "react-icons/fa";
-// import DesktopNav from "@/components/DesktopNav";
-// import MobileNav from "@/components/MobileNav";
 import { logout } from "@/store/slices/authSlice";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+    CalendarDays,
+    Briefcase,
+    CreditCard,
+    ChevronDown,
+    Home,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    Settings2,
+    UserRound,
+    X,
+} from "lucide-react";
+
+const navLinks = [
+    { href: "/", label: "Home", icon: Home },
+    { href: "/pricing", label: "Pricing", icon: CreditCard },
+    { href: "/register", label: "Book now", icon: CalendarDays },
+];
+
+const accountLinks = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard?view=bookings", label: "Bookings", icon: CalendarDays },
+    { href: "/dashboard?view=settings", label: "Settings", icon: Settings2 },
+];
+
+const getBasePath = (href) => href.split("?")[0];
 
 export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const user = useSelector((state) => state.auth.user);
+    const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
     const pathname = usePathname();
     const dispatch = useDispatch();
     const router = useRouter();
+    const navRef = useRef(null);
 
-    const handleLogout = async () => {
-        try {
-            const res = await fetch('/api/auth/logout', {
-                method: 'POST',
-                credentials: 'include', // Include cookies in the request
-            });
-
-            if (res.ok) {
-                dispatch(logout()); // Clear user data in Redux
-                router.push('/login'); // Redirect to login page
-            }
-        } catch (err) {
-            console.error("Failed to restore session:", err.message);
-            router.push('/login');
-        }
-    };
-
-    const dropdownRef = useRef(null);
-
+    const displayName = useMemo(() => {
+        return (
+            user?.client?.first_name ||
+            user?.first_name ||
+            user?.name ||
+            user?.email?.split("@")[0] ||
+            "Account"
+        );
+    }, [user]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            if (navRef.current && !navRef.current.contains(event.target)) {
                 setIsDropdownOpen(false);
+                setIsMobileMenuOpen(false);
             }
         };
+
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                setIsDropdownOpen(false);
+                setIsMobileMenuOpen(false);
+            }
+        };
+
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleEscape);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleEscape);
+        };
     }, []);
 
     useEffect(() => {
-        if (user) {
+        setIsMobileMenuOpen(false);
+        setIsDropdownOpen(false);
+    }, [pathname]);
+
+    useEffect(() => {
+        if (!isAuthenticated) {
             setIsDropdownOpen(false);
         }
-    }, [user]);
+    }, [isAuthenticated]);
 
+    const handleLogout = async () => {
+        setIsMobileMenuOpen(false);
+        setIsDropdownOpen(false);
 
-    const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+        try {
+            const res = await fetch("/api/auth/logout", {
+                method: "POST",
+                credentials: "include",
+            });
+
+            dispatch(logout());
+
+            if (!res.ok) {
+                router.push("/login");
+                return;
+            }
+
+            router.push("/login");
+        } catch (err) {
+            console.error("Failed to log out:", err?.message || err);
+            router.push("/login");
+        }
+    };
+
+    const renderNavLink = (link, className = "") => {
+        const Icon = link.icon;
+        const basePath = getBasePath(link.href);
+        const isActive = basePath === "/"
+            ? pathname === "/"
+            : pathname === basePath || pathname.startsWith(`${basePath}/`);
+
+        return (
+            <Link
+                key={link.href}
+                href={link.href}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors ${isActive ? "bg-black text-white" : "text-neutral-700 hover:bg-neutral-100 hover:text-black"} ${className}`}
+            >
+                <Icon className="h-4 w-4" />
+                {link.label}
+            </Link>
+        );
+    };
+
     return (
-        <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-gray-900/50 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
-            <div className="container mx-auto px-4">
-                <div className="flex items-center justify-between h-16">
-                    {/* Logo */}
-                    <div className="flex items-left gap-2">
-                            <Image src={"/logo.png"} alt="Logo" width={270} height={35}  />
+        <nav ref={navRef} className="fixed top-0 z-50 w-full border-b border-black/10 bg-white/95 backdrop-blur-xl">
+            <div className="container mx-auto">
+                <div className="flex h-16 items-center justify-between gap-4">
+                    <Link href="/" className="flex items-center gap-3">
+                        <Image src="/logo.png" alt="Hairdo Booking" width={240} height={25}   />
+                    </Link>
+
+                    <div className="hidden items-center gap-2 md:flex">
+                        {navLinks.map((link) => renderNavLink(link))}
                     </div>
 
-                    {/* Navigation Links */}
-                    <div className="hidden md:flex items-center gap-8">
-                        <a href="#features" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Features 2</a>
-                        <a href="#how-it-works" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">How It Works</a>
-                        <a href="#testimonials" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Testimonials</a>
-                        <a href="#pricing" className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Pricing</a>
-                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        {isAuthenticated ? (
+                            <>
+                                <Link
+                                    href="/partners"
+                                    className="hidden items-center gap-2 rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:border-black hover:text-black md:inline-flex"
+                                >
+                                    <Briefcase className="h-4 w-4 text-black" />
+                                    For businesses
+                                </Link>
 
-                    {/* CTA Buttons */}
-                    <div className="flex items-center gap-4">
-                        <Link href="/login">
-                            <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
-                                Sign In
-                            </Button>
-                        </Link>
+                                <div className="relative hidden md:block">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsDropdownOpen((open) => !open)}
+                                        className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black transition-colors hover:border-black/20 hover:bg-neutral-50"
+                                        aria-haspopup="menu"
+                                        aria-expanded={isDropdownOpen}
+                                    >
+                                        <UserRound className="h-4 w-4 text-black" />
+                                        <span className="max-w-[140px] truncate">{displayName}</span>
+                                        <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+                                    </button>
 
-                        <Link href="/partners/register">
-                            <Button
-                                size="sm"
-                                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:shadow-lg transition-all duration-300">
-                                Start Free Trial
-                            </Button>
-                        </Link>
+                                    {isDropdownOpen && (
+                                        <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-xl">
+                                            <div className="border-b border-black/5 px-4 py-4">
+                                                <p className="text-xs uppercase tracking-[0.2em] text-primary">Signed in</p>
+                                                <p className="mt-1 text-sm font-semibold text-neutral-900">{displayName}</p>
+                                                <p className="text-xs text-neutral-500">Manage your bookings and profile</p>
+                                            </div>
+
+                                            <div className="p-2">
+                                                {accountLinks.map((link) => {
+                                                    const Icon = link.icon;
+                                                    const isActive = pathname === getBasePath(link.href) || pathname.startsWith(`${getBasePath(link.href)}/`);
+
+                                                    return (
+                                                        <Link
+                                                            key={link.href}
+                                                            href={link.href}
+                                                            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 mb-2 text-sm font-normal transition-colors ${isActive ? "text-black" : "text-neutral-700 hover:bg-neutral-50 hover:text-black"}`}
+                                                        >
+                                                            <Icon className="h-4 w-4 shrink-0 text-black" />
+                                                            {link.label}
+                                                        </Link>
+                                                    );
+                                                })}
+
+                                                <div className="mt-1 border-t border-black/10 pt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleLogout}
+                                                    className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                                                >
+                                                    <LogOut className="h-4 w-4 shrink-0 text-black" />
+                                                    Logout
+                                                </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <Link
+                                    href="/login"
+                                    className="hidden rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black sm:inline-flex"
+                                >
+                                    Sign in
+                                </Link>
+                                <Link
+                                    href="/register"
+                                    className="hidden rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 sm:inline-flex"
+                                >
+                                    Get started
+                                </Link>
+                            </>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => setIsMobileMenuOpen((open) => !open)}
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 text-neutral-800 transition-colors hover:bg-neutral-100 md:hidden"
+                            aria-label="Toggle menu"
+                            aria-expanded={isMobileMenuOpen}
+                        >
+                            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                        </button>
                     </div>
                 </div>
             </div>
+
+            {isMobileMenuOpen && (
+                <div className="border-t border-black/10 bg-white md:hidden">
+                    <div className="container mx-auto px-4 py-4">
+                        <div className="space-y-2">
+                            {navLinks.map((link) => renderNavLink(link, "w-full justify-start px-4 py-3"))}
+                        </div>
+
+                        <div className="mt-4 space-y-3 border-t border-black/10 pt-4">
+                            {isAuthenticated ? (
+                                <>
+                                    <div className="rounded-3xl bg-neutral-50 px-4 py-4">
+                                        <p className="text-xs uppercase tracking-[0.2em] text-primary">Account</p>
+                                        <p className="mt-1 text-base font-semibold text-neutral-900">{displayName}</p>
+                                        <p className="text-sm text-neutral-500">Quick access to your dashboard</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {accountLinks.map((link) => {
+                                            const Icon = link.icon;
+                                            const isActive = pathname === getBasePath(link.href) || pathname.startsWith(`${getBasePath(link.href)}/`);
+
+                                            return (
+                                                <Link
+                                                    key={link.href}
+                                                    href={link.href}
+                                                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-normal transition-colors ${isActive ? "text-black" : "text-neutral-700 hover:bg-neutral-50 hover:text-black"}`}
+                                                >
+                                                    <Icon className="h-4 w-4 shrink-0 text-black" />
+                                                    {link.label}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="border-t border-black/10 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleLogout}
+                                        className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                                    >
+                                        <LogOut className="h-4 w-4 shrink-0 text-black" />
+                                        Logout
+                                    </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="space-y-2">
+                                    <Link
+                                        href="/login"
+                                        className="flex items-center justify-center rounded-2xl border border-black/10 px-4 py-3 text-sm font-medium text-neutral-700 transition-colors hover:border-black hover:text-black"
+                                    >
+                                        Sign in
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        className="flex items-center justify-center rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
+                                    >
+                                        Get started
+                                    </Link>
+                                    <Link
+                                        href="/partners"
+                                        className="flex items-center justify-center gap-2 rounded-2xl bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-200"
+                                    >
+                                        <Briefcase className="h-4 w-4 text-black" />
+                                        For businesses
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </nav>
     );
 }

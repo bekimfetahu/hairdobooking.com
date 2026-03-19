@@ -3,7 +3,7 @@ import {NextResponse} from "next/server";
 import {fetchLocation} from "@/services/location/LocationService";
 
 export async function GET(req, { params }) {
-    const { slug } = params; // Get slug from the URL parameters
+    const { slug } = await params; // Get slug from the URL parameters
 
     // Fetch location data using the slug
     const locationData = await fetchLocation(slug);
