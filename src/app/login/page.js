@@ -10,6 +10,7 @@ import BlackButton from "@/components/ui/BlackButton";
 import InputField from "@/components/ui/InputField";
 import CheckBox from "@/components/ui/CheckBox";
 import GoogleSignInButton from "@/components/ui/GoogleSignInButton";
+import { fetchCurrentUser } from '@/services/auth/session';
 import { CalendarDays, Heart, Sparkles } from 'lucide-react';
 
 const benefits = [
@@ -57,7 +58,8 @@ export default function LoginPage() {
                 return;
             }
 
-            dispatch(loginSuccess({ user: data.user }));
+            const refreshedUser = await fetchCurrentUser();
+            dispatch(loginSuccess({ user: refreshedUser || data.user }));
             router.push('/dashboard');
         } catch (err) {
             setError(err.message);

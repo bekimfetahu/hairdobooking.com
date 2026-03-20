@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import {useDispatch} from 'react-redux';
+import {loginSuccess} from '@/store/slices/authSlice';
 import {useRouter} from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -11,6 +12,7 @@ import InputField from "@/components/ui/InputField";
 import CheckBox from "@/components/ui/CheckBox";
 import {EyeSlashIcon, EyeIcon} from "@/components/ui/svg/CustomIcons";
 import GoogleSignInButton from "@/components/ui/GoogleSignInButton";
+import { fetchCurrentUser } from '@/services/auth/session';
 import {CalendarDays, Heart, Sparkles} from 'lucide-react';
 
 const benefits = [
@@ -92,7 +94,8 @@ export default function UserRegister() {
                 return;
             }
 
-            dispatch({type: "REGISTER_SUCCESS", payload: data.user});
+            const refreshedUser = await fetchCurrentUser();
+            dispatch(loginSuccess({ user: refreshedUser || data.user }));
             router.push('/dashboard');
         } catch (err) {
             setError(err.message);

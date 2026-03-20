@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '@/store/slices/authSlice';
+import { fetchCurrentUser } from '@/services/auth/session';
 
 export default function GoogleSignInButton({ provider = 'google' }) {
     const router = useRouter();
@@ -29,7 +30,8 @@ export default function GoogleSignInButton({ provider = 'google' }) {
                 return;
             }
 
-            dispatch(loginSuccess({ user: data.user }));
+            const refreshedUser = await fetchCurrentUser();
+            dispatch(loginSuccess({ user: refreshedUser || data.user }));
             router.push('/dashboard');
         } catch (err) {
             console.error(`${provider} login failed:`, err);

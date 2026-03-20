@@ -96,10 +96,10 @@ export default function PartnerPage() {
                                 </div>
                                 <div className="p-4">
                                     <Image
-                                        src="/model.png"
+                                        src="/images/model.png"
                                         alt="Hair salon model"
-                                        width={800}
-                                        height={900}
+                                        width={900}
+                                        height={1000}
                                         className="h-auto w-full rounded-[1.5rem] object-cover object-center"
                                         priority
                                     />
