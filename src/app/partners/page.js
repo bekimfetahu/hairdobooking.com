@@ -86,25 +86,23 @@ export default function PartnerPage() {
                                 ))}
                             </div>
                         </div>
-
-                        <div className="relative flex items-center justify-center bg-[linear-gradient(180deg,#fffaf9_0%,#ffffff_100%)] p-8 sm:p-10 lg:p-12">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(208,0,0,0.10),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(17,17,17,0.06),transparent_35%)]" />
-                            <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-xl shadow-black/10">
-                                <div className="border-b border-black/5 px-6 py-5">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Partner preview</p>
-                                    <p className="mt-1 text-lg font-semibold text-neutral-950">A modern booking experience</p>
+                        <div className="p-8 sm:p-10 lg:p-12">
+                                <div className="relative w-full max-w-md overflow-hidden rounded-[1rem] border border-black/10 bg-white">
+                                    <div className="border-b border-black/5 px-6 py-5">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Partner preview</p>
+                                        <p className="mt-1 text-lg font-semibold text-neutral-950">A modern booking experience</p>
+                                    </div>
+                                    <div className="p-3">
+                                        <Image
+                                            src="/images/model.png"
+                                            alt="Hair salon model"
+                                            width={900}
+                                            height={1000}
+                                            className="h-auto w-full rounded-[0.4rem] object-cover object-center"
+                                            priority
+                                        />
+                                    </div>
                                 </div>
-                                <div className="p-4">
-                                    <Image
-                                        src="/images/model.png"
-                                        alt="Hair salon model"
-                                        width={900}
-                                        height={1000}
-                                        className="h-auto w-full rounded-[1.5rem] object-cover object-center"
-                                        priority
-                                    />
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </section>
