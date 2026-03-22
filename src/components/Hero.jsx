@@ -7,13 +7,13 @@ import { Calendar, Sparkles } from "lucide-react";
 export default function Hero() {
     return (
         <section
-            className="relative min-h-screen overflow-hidden flex items-center justify-center"
+            className="relative min-h-[70vh] overflow-hidden flex items-center justify-center"
             style={{ background: "var(--gradient-hero)" }}
         >
-            <div className="absolute top-24 left-8 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-            <div className="absolute bottom-16 right-0 h-[28rem] w-[28rem] rounded-full bg-black/5 blur-3xl" />
+            <div className="absolute top-12 left-8 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
+            <div className="absolute bottom-8 right-0 h-[20rem] w-[20rem] rounded-full bg-black/5 blur-3xl" aria-hidden="true" />
 
-            <div className="container mx-auto px-4 py-20 relative z-10">
+            <div className="container mx-auto px-4 py-10 relative z-10">
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     {/* Left content */}
                     <div className="space-y-8 animate-fade-in">
@@ -24,7 +24,8 @@ export default function Hero() {
                              </span>
                         </div>
 
-                        <h1 className="max-w-xl text-5xl font-semibold leading-[1.05] tracking-tight text-neutral-950 lg:text-7xl">
+                        {/* Reduced heading size: text-4xl (was text-5xl) and lg:text-6xl (was lg:text-7xl) */}
+                        <h1 className="max-w-xl text-4xl font-semibold leading-[1.05] tracking-tight text-neutral-950 lg:text-6xl">
                             Grow your salon with a
                             <span className="block text-primary">premium booking experience</span>
                         </h1>
@@ -53,33 +54,33 @@ export default function Hero() {
                         </div>
 
                         {/* Stats */}
-                        <div className="flex flex-wrap gap-8 pt-8 border-t border-black/10">
-                            <div>
-                                <div className="text-3xl font-semibold text-primary">
-                                    10k+
-                                </div>
-                                <div className="text-sm text-neutral-500">Active salons</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-semibold text-primary">
-                                    500k+
-                                </div>
-                                <div className="text-sm text-neutral-500">Monthly bookings</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-semibold text-primary">
-                                    98%
-                                </div>
-                                <div className="text-sm text-neutral-500">Client satisfaction</div>
-                            </div>
-                        </div>
+                        {/*<div className="flex flex-wrap gap-8 pt-8 border-t border-black/10">*/}
+                        {/*    <div>*/}
+                        {/*        <div className="text-3xl font-semibold text-primary">*/}
+                        {/*            10k+*/}
+                        {/*        </div>*/}
+                        {/*        <div className="text-sm text-neutral-500">Active salons</div>*/}
+                        {/*    </div>*/}
+                        {/*    <div>*/}
+                        {/*        <div className="text-3xl font-semibold text-primary">*/}
+                        {/*            500k+*/}
+                        {/*        </div>*/}
+                        {/*        <div className="text-sm text-neutral-500">Monthly bookings</div>*/}
+                        {/*    </div>*/}
+                        {/*    <div>*/}
+                        {/*        <div className="text-3xl font-semibold text-primary">*/}
+                        {/*            98%*/}
+                        {/*        </div>*/}
+                        {/*        <div className="text-sm text-neutral-500">Client satisfaction</div>*/}
+                        {/*    </div>*/}
+                        {/*</div>*/}
                     </div>
 
                     {/* Right image */}
                     <div className="relative animate-fade-in delay-300">
                         <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-primary/20 via-black/5 to-transparent blur-2xl" />
                         <img
-                            src="/hero-booking.jpg"
+                            src="/images/model.png"
                             alt="Hair booking scheduler interface"
                             className="relative w-full rounded-[2rem] border border-black/10 shadow-2xl shadow-black/10 transition-transform duration-500 hover:scale-[1.02]"
                         />

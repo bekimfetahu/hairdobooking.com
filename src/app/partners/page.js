@@ -1,149 +1,164 @@
 import PageShell from "@/components/layouts/PageShell";
 import Image from "next/image";
 import Link from "next/link";
-import Title from "@/components/typography/Title";
-import { ArrowRight, BriefcaseBusiness, CheckCircle2, CalendarDays, CreditCard, MapPin, Sparkles, Users } from "lucide-react";
-
-const features = [
-    {
-        icon: CalendarDays,
-        title: "Always-on booking",
-        text: "Let clients book 24/7 from any device with a smooth, branded experience.",
-    },
-    {
-        icon: CreditCard,
-        title: "No commission fees",
-        text: "Keep your revenue. Simple pricing, no hidden charges, no surprises.",
-    },
-    {
-        icon: Users,
-        title: "Team friendly",
-        text: "Manage multiple staff members, services, and schedules from one place.",
-    },
-    {
-        icon: MapPin,
-        title: "Multi-location ready",
-        text: "Scale from a single chair to multiple locations without changing tools.",
-    },
-    {
-        icon: Sparkles,
-        title: "Premium client flow",
-        text: "A clean, modern booking journey that feels polished on mobile and desktop.",
-    },
-    {
-        icon: CheckCircle2,
-        title: "Free to try",
-        text: "Start with confidence and move at your own pace — no credit card required.",
-    },
-];
+import Hero from '@/components/Hero';
+import { CalendarDays, MapPin, Sparkles, Users } from "lucide-react";
+import ImageSlider from '@/components/ui/ImageSlider';
 
 export default function PartnerPage() {
     return (
-        <PageShell variant="business" className="py-8 sm:py-10">
+        <PageShell variant="business" className="py-6 sm:py-10">
             <div className="mx-auto max-w-6xl">
-                <section className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-2xl shadow-black/5">
-                    <div className="grid lg:grid-cols-2">
-                        <div className="p-8 sm:p-10 lg:p-12">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700">
-                                <BriefcaseBusiness className="h-4 w-4 text-black" />
-                                Built for salons and barbers
+
+                <Hero />
+
+                {/* PRODUCT SHOWCASE - larger carousel (40/60 layout on desktop) */}
+                <section id="showcase" className="mt-10">
+                    <div className="grid gap-8 lg:grid-cols-5 lg:items-center">
+                        <div className="lg:col-span-2">
+                            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Product showcase</p>
+                            <h2 className="mt-2 text-3xl font-semibold text-neutral-950">Beautiful timelines, built for salons</h2>
+                            <p className="mt-4 text-base text-neutral-600">See the appointments view in action across devices. Colour-coded slots, quick actions, and a clean timeline make managing your day simple.</p>
+
+                            <div className="mt-6 flex gap-4">
+                                <Link href="/partners/register" className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white hover:bg-neutral-800">
+                                    Start free
+                                </Link>
+                                <Link href="/pricing" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-neutral-700 hover:border-black hover:text-black">
+                                    See plans
+                                </Link>
                             </div>
+                        </div>
 
-                            <Title className="mt-6 max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-neutral-950 md:text-5xl">
-                                A booking platform that feels <span className="text-primary">premium</span>, fast, and easy to use.
-                            </Title>
+                        <div className="lg:col-span-3">
+                            <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-lg">
+                                <ImageSlider />
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-                            <p className="mt-6 max-w-xl text-base leading-8 text-neutral-600 md:text-lg">
-                                HairdoBooking helps you take bookings, manage staff, and keep clients coming back —
-                                all with a clean brand experience that matches the quality of your business.
+                {/* CENTRAL CONTROL / MULTI-PLATFORM */}
+                <section id="control" className="mt-12 rounded-[1.25rem] border border-black/10 bg-white p-8 shadow-sm">
+                    <div className="grid gap-6 lg:grid-cols-2 lg:items-center">
+                        <div>
+                            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">All your bookings</p>
+                            <h3 className="mt-2 text-2xl font-semibold text-neutral-950">One calendar. Total clarity.</h3>
+                            <p className="mt-4 text-base text-neutral-600">
+                                One calendar, total clarity. Bring bookings from every source into a single place so your team can
+                                operate with confidence — no confusion, no double-bookings.
                             </p>
 
-                            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                                <Link
-                                    href="/partners/register"
-                                    className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-6 py-3.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
-                                >
-                                    Start your free trial
-                                    <ArrowRight className="h-4 w-4" />
-                                </Link>
-                                <Link
-                                    href="/pricing"
-                                    className="inline-flex items-center justify-center rounded-full border border-black/10 px-6 py-3.5 text-sm font-medium text-neutral-700 transition-colors hover:border-black hover:text-black"
-                                >
-                                    View pricing
-                                </Link>
-                            </div>
-
-                            <div className="mt-8 flex flex-wrap gap-3 text-sm text-neutral-600">
-                                {[
-                                    "24/7 online booking",
-                                    "No commission fees",
-                                    "Built for growth",
-                                ].map((item) => (
-                                    <span key={item} className="rounded-full border border-black/10 bg-neutral-50 px-4 py-2">
-                                        {item}
-                                    </span>
-                                ))}
-                            </div>
+                            <ul className="mt-6 space-y-3 text-sm text-neutral-700">
+                                <li>• Mixed bookings (online, phone & partner platforms) in one view</li>
+                                <li>• Clear labels so staff know where a booking came from</li>
+                                <li>• Quick block & edit tools that keep your calendar accurate</li>
+                            </ul>
                         </div>
-                        <div className="p-8 sm:p-10 lg:p-12">
-                                <div className="relative w-full max-w-md overflow-hidden rounded-[1rem] border border-black/10 bg-white">
-                                    <div className="border-b border-black/5 px-6 py-5">
-                                        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Partner preview</p>
-                                        <p className="mt-1 text-lg font-semibold text-neutral-950">A modern booking experience</p>
-                                    </div>
-                                    <div className="p-3">
-                                        <Image
-                                            src="/images/model.png"
-                                            alt="Hair salon model"
-                                            width={900}
-                                            height={1000}
-                                            className="h-auto w-full rounded-[0.4rem] object-cover object-center"
-                                            priority
-                                        />
-                                    </div>
-                                </div>
+
+                        <div className="flex items-center justify-center">
+                            <div className="rounded-2xl border border-black/5 bg-neutral-50 p-4">
+                                <Image src="/hero-booking.jpg" alt="Central calendar" width={720} height={420} className="w-[480px] max-w-full h-auto rounded" />
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                <section id="features" className="mt-10">
-                    <div className="flex items-end justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Why partners choose us</p>
-                            <h2 className="mt-2 text-2xl font-semibold text-neutral-950 md:text-3xl">Everything designed to help your business grow</h2>
+                {/* WHY HAIRDObooking */}
+                <section id="why" className="mt-12">
+                    <div className="grid gap-6 lg:grid-cols-3">
+                        <div className="rounded-[1rem] border border-black/10 bg-white p-6 shadow-sm">
+                            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Why HairdoBooking</p>
+                            <h4 className="mt-3 text-lg font-semibold text-neutral-950">A platform made for salons — not a one-size-fits-all marketplace</h4>
+                            <p className="mt-3 text-sm text-neutral-600">We focus on salon workflows, not generic growth metrics. That means fewer distractions and more time for clients.</p>
                         </div>
-                    </div>
 
-                    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {features.map((feature) => {
-                            const Icon = feature.icon;
-                            return (
-                                <article key={feature.title} className="rounded-[1.5rem] border border-black/10 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-neutral-50 text-black">
-                                        <Icon className="h-5 w-5" />
-                                    </div>
-                                    <h3 className="mt-4 text-lg font-semibold text-neutral-950">{feature.title}</h3>
-                                    <p className="mt-2 text-sm leading-7 text-neutral-600">{feature.text}</p>
-                                </article>
-                            );
-                        })}
+                        <div className="rounded-[1rem] border border-black/10 bg-white p-6 shadow-sm">
+                            <h4 className="text-lg font-semibold text-neutral-950">No public star ratings</h4>
+                            <p className="mt-3 text-sm text-neutral-600">We don’t surface negative public ratings. Your salon is presented professionally — we promote the positive and let your service speak for itself.</p>
+                        </div>
+
+                        <div className="rounded-[1rem] border border-black/10 bg-white p-6 shadow-sm">
+                            <h4 className="text-lg font-semibold text-neutral-950">Keep what you earn</h4>
+                            <p className="mt-3 text-sm text-neutral-600">No marketplace commission — owners receive payments directly via Stripe. (Stripe card fees apply; see Stripe for details).</p>
+                        </div>
                     </div>
                 </section>
 
-                <section className="mt-10 rounded-[1.75rem] border border-black/10 bg-black px-6 py-8 text-white sm:px-8">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                {/* CORE BENEFITS */}
+                <section id="benefits" className="mt-12">
+                    <div>
+                        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Core benefits</p>
+                        <h3 className="mt-2 text-2xl font-semibold text-neutral-950">Built to run your salon with confidence</h3>
+                    </div>
+
+                    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                            <CalendarDays className="mx-auto h-6 w-6 text-black" />
+                            <h5 className="mt-4 font-semibold">Effortless scheduling</h5>
+                            <p className="mt-2 text-sm text-neutral-600">A clean timeline that your team learns in minutes — colour-coded and easy to scan.</p>
+                        </article>
+
+                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                            <MapPin className="mx-auto h-6 w-6 text-black" />
+                            <h5 className="mt-4 font-semibold">Business control</h5>
+                            <p className="mt-2 text-sm text-neutral-600">Central tools for staff, locations and inventory — everything where you expect it.</p>
+                        </article>
+
+                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                            <Sparkles className="mx-auto h-6 w-6 text-black" />
+                            <h5 className="mt-4 font-semibold">Professional client experience</h5>
+                            <p className="mt-2 text-sm text-neutral-600">A polished booking experience that feels like your salon — fast, clear and reliable.</p>
+                        </article>
+
+                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                            <Users className="mx-auto h-6 w-6 text-black" />
+                            <h5 className="mt-4 font-semibold">Built for growth</h5>
+                            <p className="mt-2 text-sm text-neutral-600">From one chair to many locations — scale seamlessly without swapping tools.</p>
+                        </article>
+                    </div>
+                </section>
+
+                {/* SIMPLICITY */}
+                <section id="simplicity" className="mt-12 rounded-[1rem] border border-black/10 bg-black px-6 py-8 text-white sm:px-8">
+                    <div className="grid gap-4 lg:grid-cols-2 lg:items-center">
                         <div>
-                            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Ready to grow?</p>
-                            <h2 className="mt-2 text-2xl font-semibold">Bring a cleaner booking experience to your clients.</h2>
+                            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Simplicity</p>
+                            <h3 className="mt-2 text-2xl font-semibold">No learning curve. Just work.</h3>
+                            <p className="mt-4 text-neutral-200">Designed for busy salon teams — fast onboarding, intuitive controls and helpful defaults so you can focus on clients.</p>
                         </div>
-                        <Link
-                            href="/partners/register"
-                            className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-neutral-200"
-                        >
-                            Start your free trial
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
+                        <div className="flex items-center justify-end">
+                            <Link href="/partners/register" className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black hover:bg-neutral-200">
+                                Try it free
+                            </Link>
+                        </div>
+                    </div>
+                </section>
+
+                {/* PRICING MESSAGE */}
+                <section id="pricing" className="mt-12">
+                    <div className="rounded-[1rem] border border-black/10 bg-white p-8 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Pricing</p>
+                                <h3 className="mt-2 text-2xl font-semibold text-neutral-950">Transparent plans that scale with you</h3>
+                                <p className="mt-3 text-sm text-neutral-600">Choose the number of users and billing frequency — discounts apply automatically. No hidden fees, no marketplace commissions.</p>
+                            </div>
+                            <div className="text-right">
+                                <Link href="/pricing" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-medium hover:border-black hover:text-black">See pricing</Link>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* FINAL CTA */}
+                <section id="final-cta" className="mt-12 rounded-[1.25rem] border border-black/10 bg-white p-8 text-center shadow-xl">
+                    <h3 className="text-2xl font-semibold text-neutral-950">Bring a cleaner booking experience to your clients.</h3>
+                    <p className="mt-3 text-sm text-neutral-600">Free to start. No hidden costs. Keep your revenue.</p>
+
+                    <div className="mt-6 flex items-center justify-center gap-4">
+                        <Link href="/partners/register" className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3.5 text-sm font-medium text-white hover:bg-neutral-800">Start free — no card</Link>
+                        <Link href="/pricing" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-6 py-3.5 text-sm font-medium text-neutral-700 hover:border-black hover:text-black">See plans & discounts</Link>
                     </div>
                 </section>
             </div>

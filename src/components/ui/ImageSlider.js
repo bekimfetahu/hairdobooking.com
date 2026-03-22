@@ -5,68 +5,72 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 
-const images = [
-    '/images/1.jpg',
-    '/images/2.jpg',
-    '/images/3.jpg',
-    '/images/4.jpg',
+const slides = [
+    { src: '/hero-booking.jpg', label: 'Desktop' },
+    { src: '/images/model.png', label: 'Tablet' },
+    { src: '/images/model-2.png', label: 'Mobile' },
 ];
 
 export default function ImageSlider() {
     const [index, setIndex] = useState(0);
 
-    const next = () => {
-        if (index < images.length - 2) setIndex(index + 1);
-    };
+    const next = () => setIndex((prev) => (prev + 1) % slides.length);
+    const prev = () => setIndex((prev) => (prev - 1 + slides.length) % slides.length);
 
-    const prev = () => {
-        if (index > 0) setIndex(index - 1);
-    };
+    const current = slides[index];
 
     return (
-        <div className="relative w-full mx-auto overflow-hidden p-4 bg-white shadow-lg rounded-2xl">
-            <div className="flex items-center justify-between">
-                <button
-                    onClick={prev}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white/90 text-gray-700 rounded-full p-2 shadow"
-                >
-                    <ChevronLeft size={32} />
-                </button>
+        <div className="relative w-full mx-auto overflow-hidden bg-white rounded-2xl">
+            {/* Arrows */}
+            <button
+                onClick={prev}
+                aria-label="Previous"
+                className="absolute left-4 top-1/2 z-20 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-700 rounded-full p-2 shadow"
+            >
+                <ChevronLeft size={28} />
+            </button>
 
-                <div className="flex w-full overflow-hidden">
-                    <AnimatePresence initial={false}>
-                        {[0, 1].map((offset) => {
-                            const imageIndex = index + offset;
-                            if (imageIndex >= images.length) return null;
-                            return (
-                                <motion.div
-                                    key={images[imageIndex]}
-                                    initial={{ opacity: 0, x: 50 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -50 }}
-                                    transition={{ duration: 0.5 }}
-                                    className={`relative rounded-xl overflow-hidden h-96 ${offset === 0 ? 'w-3/4' : 'w-1/4 ml-4 opacity-80'}`}
-                                >
-                                    <Image
-                                        src={images[imageIndex]}
-                                        alt="Slide"
-                                        width={800}
-                                        height={500}
-                                        style={{ objectFit: 'cover' }}
-                                        priority
-                                    />
-                                </motion.div>
-                            );
-                        })}
-                    </AnimatePresence>
-                </div>
+            <button
+                onClick={next}
+                aria-label="Next"
+                className="absolute right-4 top-1/2 z-20 transform -translate-y-1/2 bg-white/80 hover:bg-white text-gray-700 rounded-full p-2 shadow"
+            >
+                <ChevronRight size={28} />
+            </button>
 
-                <button
-                    onClick={next}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white/90 text-gray-700 rounded-full p-2 shadow"
-                >
-                    <ChevronRight size={32} />
-                </button>
+            <div className="relative">
+                <AnimatePresence initial={false} mode="wait">
+                    <motion.div
+                        key={current.src}
+                        initial={{ opacity: 0, x: 30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -30 }}
+                        transition={{ duration: 0.45 }}
+                        className="w-full h-64 sm:h-80 md:h-96 lg:h-[480px] rounded-2xl overflow-hidden"
+                    >
+                        <Image
+                            src={current.src}
+                            alt={`${current.label} view`}
+                            fill
+                            sizes="(min-width: 1024px) 720px, 100vw"
+                            style={{ objectFit: 'cover' }}
+                            priority
+                        />
+                        <div className="absolute left-4 bottom-4 rounded-full bg-white/80 px-3 py-1 text-sm font-medium text-neutral-900">{current.label}</div>
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+
+            {/* Dots */}
+            <div className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2">
+                {slides.map((s, i) => (
+                    <button
+                        key={s.src}
+                        onClick={() => setIndex(i)}
+                        aria-label={`Go to ${s.label}`}
+                        className={`h-2 w-8 rounded-full transition-all ${i === index ? 'bg-primary' : 'bg-black/10'}`}
+                    />
+                ))}
             </div>
         </div>
     );
