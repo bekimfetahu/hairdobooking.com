@@ -48,7 +48,7 @@ export default function HeroMarketing() {
                     {/* Visual: preserve image aspect ratio. On desktop this appears to the right. */}
                     <div className="hidden lg:flex items-center justify-center">
                         <div className="relative rounded-2xl overflow-hidden shadow-lg w-full max-w-xl h-72 md:h-96 lg:h-[480px]">
-                            <Image src="/hero-booking.jpg" alt="Salon professional arranging appointments" fill={false} priority={true} width={880} height={560} className="h-full w-auto object-contain mx-auto" sizes="(min-width: 1024px) 600px, 100vw" />
+                            <Image src="/images/model.png" alt="Salon professional arranging appointments" fill={false} priority={true} width={880} height={560} className="h-full w-auto object-contain mx-auto" sizes="(min-width: 1024px) 600px, 100vw" />
                         </div>
                     </div>
                 </div>
