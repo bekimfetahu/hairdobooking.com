@@ -7,20 +7,53 @@ import ImageSlider from '@/components/ui/ImageSlider';
 
 export default function PartnerPage() {
     return (
-        <PageShell variant="business" className="py-6 sm:py-10">
+        <PageShell variant="business">
             <div className="mx-auto max-w-6xl">
 
                 <Hero />
 
-                {/* PRODUCT SHOWCASE - larger carousel (40/60 layout on desktop) */}
+                {/* PRODUCT SHOWCASE - stacked: description in container, full-bleed slider below */}
                 <section id="showcase" className="mt-10">
-                    <div className="grid gap-8 lg:grid-cols-5 lg:items-center">
-                        <div className="lg:col-span-2">
+                    {/* Description + CTAs inside normal site container */}
+                    <div className="mb-6">
+                        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Product showcase</p>
+                        <h2 className="mt-2 text-3xl font-semibold text-neutral-950">Beautiful timelines, built for salons</h2>
+
+                        {/* Richer, salon-owner focused description */}
+                        <p className="mt-4 text-base text-neutral-600">
+                            See your day at a glance — a single, clean timeline that brings in walk-ins, online bookings
+                            and partner appointments. Colour-coded statuses help your team scan the day quickly, one‑click
+                            actions make edits fast, and a simple block tool prevents accidental double-bookings.
+                            Designed for busy salon teams who need speed, clarity, and total control.
+                        </p>
+
+                        <div className="mt-6 flex flex-wrap gap-4 justify-end">
+                            <Link href="/partners/register" className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white hover:bg-neutral-800">
+                                Start free
+                            </Link>
+                            <Link href="/pricing" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-neutral-700 hover:border-black hover:text-black">
+                                See plans
+                            </Link>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Full-bleed slider section: negative margins cancel PageShell container padding (px-6 default).
+                    The description above is intentionally full-width, and the slider below is full-bleed for visual impact. */}
+                <div className="-mx-6 sm:-mx-8 mt-6">
+                    <div className="mx-auto max-w-6xl px-6 sm:px-8">
+                        {/* Left column text above the slider (full width) */}
+                        <div className="mb-6 text-center sm:text-left">
                             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Product showcase</p>
                             <h2 className="mt-2 text-3xl font-semibold text-neutral-950">Beautiful timelines, built for salons</h2>
-                            <p className="mt-4 text-base text-neutral-600">See the appointments view in action across devices. Colour-coded slots, quick actions, and a clean timeline make managing your day simple.</p>
 
-                            <div className="mt-6 flex gap-4">
+                            <p className="mt-4 text-base text-neutral-600">
+                                See your day at a glance — a single, clean timeline that brings in walk-ins, online bookings and partner appointments.
+                                Colour-coded statuses help your team scan the day quickly. One-click edits, quick block tools and clear labels keep your calendar accurate
+                                and your team in control. Designed for salons and barbers who need speed, clarity and reliability.
+                            </p>
+
+                            <div className="mt-6 flex flex-wrap gap-4 justify-center sm:justify-end">
                                 <Link href="/partners/register" className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white hover:bg-neutral-800">
                                     Start free
                                 </Link>
@@ -29,14 +62,15 @@ export default function PartnerPage() {
                                 </Link>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="lg:col-span-3">
-                            <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-lg">
-                                <ImageSlider />
-                            </div>
+                    {/* Edge-to-edge slider card */}
+                    <div className="mx-auto max-w-full px-0">
+                        <div className="shadow-lg">
+                            <ImageSlider fullBleed className="h-auto" />
                         </div>
                     </div>
-                </section>
+                </div>
 
                 {/* CENTRAL CONTROL / MULTI-PLATFORM */}
                 <section id="control" className="mt-12 rounded-[1.25rem] border border-black/10 bg-white p-8 shadow-sm">
