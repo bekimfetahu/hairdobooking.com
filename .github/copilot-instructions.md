@@ -9,7 +9,7 @@ The app supports two main audiences:
 
 ## Frontend architecture
 ### Main frontend stack
-- Next.js App Router
+- Next.js 16 App Router (with server components and SSR)
 - React 19
 - Tailwind CSS 4
 - Redux Toolkit for auth state
@@ -17,7 +17,7 @@ The app supports two main audiences:
 - Shared page wrappers in `src/components/layouts`
 
 ### Important frontend folders
-- `src/app` — route pages and route handlers
+- `src/app` — route pages, layouts, and route handlers (API)
 - `src/components` — reusable UI and layout components
 - `src/components/layouts` — shells and page wrappers
 - `src/components/ui` — buttons, inputs, checkboxes, sign-in buttons, SVG icons
@@ -27,20 +27,21 @@ The app supports two main audiences:
 - `public` — static assets such as `logo.png`, `logo.svg`, `hero-booking.jpg`, and other images
 
 ## Layout and page structure
-### Root layout
+### Root layout and SSR
 - `src/app/layout.js` is the root app wrapper.
-- It imports `globals.css`, `ClientProvider`, and `MainLayout`.
-- Keep the root layout minimal. Do not put page-specific UI there.
+- It imports `globals.css` and wraps children with the main layout/shell used across marketing and app pages.
+- Keep the root layout minimal and SSR-friendly. Do not put page-specific UI there.
 
-### Shared shells
+### Navigation and shared shells
 Use reusable shells instead of repeating page structure:
 - `src/components/layouts/PageShell.js` — shared page wrapper for marketing, business, and dashboard views
 - `src/components/layouts/AuthPageShell.js` — shared two-column auth shell with a benefit panel and a form panel
-- `src/components/Navbar.js` — single source of truth for the top navigation
+- `src/components/Navbar.js` — main interactive navigation for authenticated/interactive views
+- `src/components/NavbarStatic.js` — SSR-friendly navbar used from the root layout for marketing pages
 
 ### Current route patterns
 - `/` — homepage / hero content
-- `/pricing` — pricing placeholder page for later billing logic
+- `/pricing` — pricing page with live, API-driven pricing and calculator
 - `/partners` — business/marketing page for salons and businesses
 - `/partners/register` — business free-trial signup
 - `/login` — client login
@@ -151,11 +152,17 @@ The business experience should feel slightly different from the client experienc
 - more product-oriented
 - still aligned to the same black/red brand system
 
-The pricing page is currently a placeholder. Future pricing logic should support:
-- billing frequency selection
+The pricing page is a live, API-driven page. Pricing logic supports:
+- billing frequency selection (monthly/yearly)
 - number of users/seats
-- discount rules
-- API-driven price calculation
+- discount rules from Laravel
+- API-driven price calculation via a Next.js route handler that proxies to Laravel
+
+### Pricing API bridge and SSR
+- Frontend pricing UI (e.g. `/pricing`) should call a Next.js route handler under `src/app/api` rather than hitting Laravel directly.
+- That route handler should call the appropriate Laravel pricing endpoint, keep responses typed/normalized, and return only the data needed by the UI.
+- Prefer server components and SSR for marketing and pricing pages so content and main layout/nav render on the server.
+- Keep client components focused on local interactivity (sliders, toggles) and let them fetch from the Next.js API layer when they need live recalculation.
 
 ## Dev and runtime workflow
 ### Frontend

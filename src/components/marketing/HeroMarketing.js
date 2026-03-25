@@ -15,7 +15,7 @@ export default function HeroMarketing() {
 
                         {/* Slightly smaller headline for better layout */}
                         <h1 className="mt-2 text-2xl font-semibold leading-tight text-neutral-950 md:text-3xl">
-                            Book <span className="text-primary">hair &amp; beauty</span> appointments near you — fast, simple, trusted
+                            Book <span className="text-primary">hair &amp; beauty</span> appointments near you — fast, simple, tusted
                         </h1>
 
                         <p className="mt-4 text-base text-neutral-600">Discover nearby salons, barbers and beauty professionals. Quickly search services, choose a convenient time and book instantly — no rating noise, just clear choices.</p>

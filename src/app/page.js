@@ -15,8 +15,6 @@ export default function Home() {
 
                 <Categories />
 
-                <FeaturedSalons />
-
                 <HowItWorks />
 
                 <FinalCTA />

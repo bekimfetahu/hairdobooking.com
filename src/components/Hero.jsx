@@ -78,11 +78,11 @@ export default function Hero() {
 
                     {/* Right image */}
                     <div className="relative animate-fade-in delay-300">
-                        <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-primary/20 via-black/5 to-transparent blur-2xl" />
+                        <div className="absolute inset-0 rounded-[0.7rem] bg-gradient-to-br from-primary/20 via-black/5 to-transparent blur-1xl" />
                         <img
                             src="/images/model.png"
                             alt="Hair booking scheduler interface"
-                            className="relative w-full rounded-[2rem] border border-black/10 shadow-2xl shadow-black/10 transition-transform duration-500 hover:scale-[1.02]"
+                            className="relative w-full rounded-[0.7rem] border border-white shadow-1xl shadow-black/10 transition-transform duration-500 hover:scale-[1.02]"
                         />
                     </div>
                 </div>

@@ -47,6 +47,16 @@ export default function Navbar() {
     const router = useRouter();
     const navRef = useRef(null);
 
+    const isForBusinessPage = pathname === '/partners' || pathname.startsWith('/partners/');
+    const isPricingPage = pathname === '/pricing' || pathname.startsWith('/pricing/');
+    const isLoginPage = pathname === '/login' || pathname.startsWith('/login/');
+
+    const visibleNavLinks = navLinks.filter((link) => {
+        if (link.href === '/pricing' && !(isForBusinessPage || isPricingPage)) return false;
+        if (link.href === '/register' && (isForBusinessPage || isPricingPage)) return false;
+        return true;
+    });
+
     const displayName = useMemo(() => {
         return (
             user?.client?.first_name || user?.first_name || user?.name || user?.email?.split('@')[0] || 'Account'
@@ -122,12 +132,15 @@ export default function Navbar() {
         const Icon = link.icon;
         const basePath = getBasePath(link.href);
         const isActive = basePath === '/' ? pathname === '/' : pathname === basePath || pathname.startsWith(`${basePath}/`);
+
         return (
             <Link
                 key={link.href}
                 href={link.href}
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm ${
-                    isActive ? 'bg-black text-white' : 'text-neutral-700 hover:bg-neutral-100 hover:text-black'
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:shadow-sm ${
+                    isActive
+                        ? 'bg-neutral-100 text-black border-black/20'
+                        : 'border-transparent text-neutral-700 hover:bg-neutral-100 hover:text-black hover:border-black/10'
                 } ${className}`}
             >
                 <Icon className="h-4 w-4" />
@@ -145,7 +158,7 @@ export default function Navbar() {
                     </Link>
 
                     <div className="hidden items-center gap-2 md:flex">
-                        {navLinks.map((link) => renderNavLink(link))}
+                        {visibleNavLinks.map((link) => renderNavLink(link))}
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3">
@@ -157,7 +170,7 @@ export default function Navbar() {
                                         setIsDropdownOpen(false);
                                         setIsSalonPickerOpen(true);
                                     }}
-                                    className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black/20 hover:bg-neutral-50 md:inline-flex"
+                                    className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50 md:inline-flex"
                                     aria-label="Change primary salon"
                                 >
                                     <MapPin className="h-4 w-4 text-black" />
@@ -171,7 +184,7 @@ export default function Navbar() {
                                             setIsSalonPickerOpen(false);
                                             setIsDropdownOpen((open) => !open);
                                         }}
-                                        className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black/20 hover:bg-neutral-50"
+                                        className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50"
                                         aria-haspopup="menu"
                                         aria-expanded={isDropdownOpen}
                                     >
@@ -208,7 +221,7 @@ export default function Navbar() {
                                                     <button
                                                         type="button"
                                                         onClick={handleLogout}
-                                                        className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm text-neutral-700 transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:bg-neutral-50 hover:text-black"
+                                                        className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm text-neutral-700 transition-colors duration-150 ease-out hover:shadow-sm hover:bg-neutral-50 hover:text-black"
                                                     >
                                                         <LogOut className="h-4 w-4 shrink-0 text-black" />
                                                         Logout
@@ -221,25 +234,35 @@ export default function Navbar() {
                             </>
                         ) : (
                             <>
-                                <Link href="/login" className="hidden rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-black sm:inline-flex">
+                                <Link
+                                    href="/login"
+                                    className={`hidden rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-150 ease-out sm:inline-flex ${
+                                        isLoginPage
+                                            ? 'bg-neutral-100 text-black border-black/20'
+                                            : 'border-transparent text-neutral-700 hover:bg-neutral-100 hover:text-black hover:border-black/10'
+                                    }`}
+                                >
                                     Sign in
                                 </Link>
-
-                                <Link href="/register" className="hidden rounded-full bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800 sm:inline-flex">
-                                    Get started
-                                </Link>
-
-                                {/* For businesses CTA: black border, red icon, black label */}<Link href="/partners" className="hidden items-center gap-2 rounded-full border border-black px-4 py-2 text-sm font-medium text-primary md:inline-flex">
+                                {/* For businesses CTA: adjusts styling when active on /partners */}
+                                <Link
+                                    href="/partners"
+                                    className={`hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium md:inline-flex ${
+                                        isForBusinessPage
+                                            ? 'bg-neutral-100 border-black/20 text-primary'
+                                            : 'border-transparent text-primary hover:bg-neutral-50 hover:border-black/10'
+                                    }`}
+                                >
                                     <Briefcase className="h-4 w-4 text-black" />
                                     For businesses
                                 </Link>
                             </>
                         )}
 
-                        <button
-                            type="button"
-                            onClick={() => setIsMobileMenuOpen((open) => !open)}
-                              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 text-neutral-800 transition-colors transform transition-transform duration-150 ease-out hover:scale-105 hover:shadow-sm hover:bg-neutral-100 md:hidden"
+                                                <button
+                                                        type="button"
+                                                        onClick={() => setIsMobileMenuOpen((open) => !open)}
+                                                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 text-neutral-800 transition-colors duration-150 ease-out hover:shadow-sm hover:bg-neutral-100 md:hidden"
                             aria-label="Toggle menu"
                             aria-expanded={isMobileMenuOpen}
                         >
@@ -252,7 +275,7 @@ export default function Navbar() {
             {isMobileMenuOpen && (
                 <div className="border-t border-black/10 bg-white md:hidden">
                     <div className="container mx-auto px-4 py-4">
-                        <div className="space-y-2">{navLinks.map((link) => renderNavLink(link, 'w-full justify-start px-4 py-3'))}</div>
+                        <div className="space-y-2">{visibleNavLinks.map((link) => renderNavLink(link, 'w-full justify-start px-4 py-3'))}</div>
 
                         <div className="mt-4 space-y-3 border-t border-black/10 pt-4">
                             {isAuthenticated ? (

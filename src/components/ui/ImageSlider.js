@@ -10,11 +10,11 @@ const slides = [
 ];
 
 export default function ImageSlider({
-                                        autoplay = true,
-                                        delay = 5000, // ms
-                                        className = "",
-                                        fullBleed = false,
-                                    }) {
+                                    autorun = false,
+                                    delay = 5000, // ms
+                                    className = "",
+                                    fullBleed = false,
+                                }) {
     const n = slides.length;
     // extended slides (triple) for seamless looping
     const extended = [...slides, ...slides, ...slides];
@@ -68,14 +68,14 @@ export default function ImageSlider({
 
     // autoplay
     useEffect(() => {
-        if (!autoplay) return;
+        if (!autorun) return;
         if (paused) return;
         autoplayRef.current = setInterval(() => {
             // advance virtual index
             setVirtualIndex((v) => v + 1);
         }, delay);
         return () => clearInterval(autoplayRef.current);
-    }, [autoplay, paused, delay]);
+    }, [autorun, paused, delay]);
 
     // keyboard navigation
     useEffect(() => {

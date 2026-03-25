@@ -12,36 +12,9 @@ export default function PartnerPage() {
 
                 <Hero />
 
-                {/* PRODUCT SHOWCASE - stacked: description in container, full-bleed slider below */}
-                <section id="showcase" className="mt-10">
-                    {/* Description + CTAs inside normal site container */}
-                    <div className="mb-6">
-                        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Product showcase</p>
-                        <h2 className="mt-2 text-3xl font-semibold text-neutral-950">Beautiful timelines, built for salons</h2>
-
-                        {/* Richer, salon-owner focused description */}
-                        <p className="mt-4 text-base text-neutral-600">
-                            See your day at a glance — a single, clean timeline that brings in walk-ins, online bookings
-                            and partner appointments. Colour-coded statuses help your team scan the day quickly, one‑click
-                            actions make edits fast, and a simple block tool prevents accidental double-bookings.
-                            Designed for busy salon teams who need speed, clarity, and total control.
-                        </p>
-
-                        <div className="mt-6 flex flex-wrap gap-4 justify-end">
-                            <Link href="/partners/register" className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-medium text-white hover:bg-neutral-800">
-                                Start free
-                            </Link>
-                            <Link href="/pricing" className="inline-flex items-center gap-2 rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-neutral-700 hover:border-black hover:text-black">
-                                See plans
-                            </Link>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Full-bleed slider section: negative margins cancel PageShell container padding (px-6 default).
-                    The description above is intentionally full-width, and the slider below is full-bleed for visual impact. */}
-                <div className="-mx-6 sm:-mx-8 mt-6">
-                    <div className="mx-auto max-w-6xl px-6 sm:px-8">
+                {/* Product showcase section with subtle background to highlight container border */}
+                <div className="mt-10 rounded-[1.25rem] border border-black/10 bg-neutral-50/80 px-4 py-8 sm:px-6">
+                    <div className="mx-auto max-w-6xl">
                         {/* Left column text above the slider (full width) */}
                         <div className="mb-6 text-center sm:text-left">
                             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Product showcase</p>
@@ -50,7 +23,7 @@ export default function PartnerPage() {
                             <p className="mt-4 text-base text-neutral-600">
                                 See your day at a glance — a single, clean timeline that brings in walk-ins, online bookings and partner appointments.
                                 Colour-coded statuses help your team scan the day quickly. One-click edits, quick block tools and clear labels keep your calendar accurate
-                                and your team in control. Designed for salons and barbers who need speed, clarity and reliability.
+                                and your team in control. Designed for Hair & Beauty salons and Barbers who need speed, clarity and reliability.
                             </p>
 
                             <div className="mt-6 flex flex-wrap gap-4 justify-center sm:justify-end">
@@ -64,10 +37,13 @@ export default function PartnerPage() {
                         </div>
                     </div>
 
-                    {/* Edge-to-edge slider card */}
-                    <div className="mx-auto max-w-full px-0">
-                        <div className="shadow-lg">
-                            <ImageSlider fullBleed className="h-auto" />
+                    {/* Slider card */}
+                    <div className="mt-6 mx-auto max-w-full">
+                        <div className="bg-white shadow-lg">
+                             <img
+                                src="/images/appointments.png"
+                                alt="Hairdresser using tablet to book an appointment"
+                                className="w-full h-full object-cover" />
                         </div>
                     </div>
                 </div>
