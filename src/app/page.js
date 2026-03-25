@@ -10,15 +10,13 @@ import FinalCTA from "@/components/marketing/FinalCTA";
 export default function Home() {
     return (
         <PageShell variant="marketing" className="py-6">
-            <div className="mx-auto max-w-6xl">
-                <HeroMarketing />
+            <HeroMarketing />
 
-                <Categories />
+            <Categories />
 
-                <HowItWorks />
+            <HowItWorks />
 
-                <FinalCTA />
-            </div>
+            <FinalCTA />
         </PageShell>
     );
 }

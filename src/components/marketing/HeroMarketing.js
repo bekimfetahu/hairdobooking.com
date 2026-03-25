@@ -3,9 +3,10 @@ import Link from "next/link";
 
 export default function HeroMarketing() {
     return (
-        <section aria-label="Hero" className="relative bg-[linear-gradient(180deg,#fffdfc_0%,#ffffff_45%,#fff7f5_100%)] py-12 sm:py-16">
-            <div className="mx-auto max-w-6xl px-6">
-                <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+        <section aria-label="Hero" className="relative py-10 sm:py-14">
+    			<div className="mx-auto max-w-7xl px-6">
+                <div className="rounded-3xl border border-black/10 bg-white/95 px-6 py-8 shadow-sm sm:px-8 sm:py-10">
+                    <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
                     <div>
                         {/* Intro with black + red combination */}
                         <p className="text-sm font-semibold uppercase tracking-[0.25em]">
@@ -47,9 +48,10 @@ export default function HeroMarketing() {
 
                     {/* Visual: preserve image aspect ratio. On desktop this appears to the right. */}
                     <div className="hidden lg:flex items-center justify-center">
-                        <div className="relative rounded-2xl overflow-hidden shadow-lg w-full max-w-xl h-72 md:h-96 lg:h-[480px]">
+                        <div className="relative h-auto w-full max-w-xl overflow-hidden rounded-2xl shadow-xs">
                             <Image src="/images/model.png" alt="Salon professional arranging appointments" fill={false} priority={true} width={880} height={560} className="h-full w-auto object-contain mx-auto" sizes="(min-width: 1024px) 600px, 100vw" />
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>

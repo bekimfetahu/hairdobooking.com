@@ -1,6 +1,6 @@
 "use client";
 import { logout, loginSuccess } from '@/store/slices/authSlice';
-import PrimarySalonPickerModal from '@/components/PrimarySalonPickerModal';
+import PreferredSalonModal from '@/components/PreferredSalonModal';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -20,7 +20,6 @@ import {
     UserRound,
     X,
 } from 'lucide-react';
-import { setPrimarySalon } from '@/services/auth/primarySalon';
 
 const navLinks = [
     { href: '/', label: 'Home', icon: Home },
@@ -65,7 +64,7 @@ export default function Navbar() {
 
     const primaryVenue = user?.client?.primary_venue ?? null;
     const primaryVenueUuid = primaryVenue?.uuid ?? null;
-    const primaryVenueLabel = primaryVenue?.name || 'Set primary salon';
+    const primaryVenueLabel = primaryVenue?.name || 'Choose preferred salon';
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -121,13 +120,6 @@ export default function Navbar() {
         }
     };
 
-    const handleSelectSalon = async (venue) => {
-        const updatedUser = await setPrimarySalon(venue.uuid);
-        dispatch(loginSuccess({ user: updatedUser }));
-        setIsSalonPickerOpen(false);
-        setIsMobileMenuOpen(false);
-    };
-
     const renderNavLink = (link, className = '') => {
         const Icon = link.icon;
         const basePath = getBasePath(link.href);
@@ -166,15 +158,14 @@ export default function Navbar() {
                             <>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setIsDropdownOpen(false);
-                                        setIsSalonPickerOpen(true);
-                                    }}
-                                    className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50 md:inline-flex"
-                                    aria-label="Change primary salon"
+                                    onClick={() => setIsSalonPickerOpen(true)}
+                                    className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50 md:inline-flex"
+                                    aria-label="View and change your preferred salon"
                                 >
                                     <MapPin className="h-4 w-4 text-black" />
-                                    <span className="max-w-[180px] truncate">{primaryVenueLabel}</span>
+                                    <span className="max-w-[180px] truncate text-xs text-primary">
+                                        {primaryVenueLabel}
+                                    </span>
                                 </button>
 
                                 <div className="relative hidden md:block">
@@ -293,12 +284,9 @@ export default function Navbar() {
                                             setIsDropdownOpen(false);
                                             setIsSalonPickerOpen(true);
                                         }}
-                                          className="flex w-full items-center justify-between rounded-3xl border border-black/10 bg-white px-4 py-4 text-left transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black hover:bg-neutral-50"
+                                        className="flex w-full items-center justify-between rounded-3xl border border-black/10 bg-white px-4 py-4 text-left transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black hover:bg-neutral-50"
                                     >
-                                        <span>
-                                            <span className="block text-xs uppercase tracking-[0.2em] text-primary">Primary salon</span>
-                                            <span className="mt-1 block text-sm font-semibold text-neutral-950">{primaryVenueLabel}</span>
-                                        </span>
+                                        <span className="block max-w-[200px] truncate text-sm font-semibold text-primary">{primaryVenueLabel}</span>
                                         <MapPin className="h-5 w-5 text-black" />
                                     </button>
 
@@ -361,13 +349,16 @@ export default function Navbar() {
                     </div>
                 </div>
             )}
-
-            <PrimarySalonPickerModal
+            <PreferredSalonModal
                 open={isSalonPickerOpen}
                 onClose={() => setIsSalonPickerOpen(false)}
-                currentVenueUuid={primaryVenueUuid}
-                currentVenueLabel={primaryVenueLabel}
-                onSelect={handleSelectSalon}
+                onPrimaryUpdated={(updatedUser) => {
+                    if (updatedUser) {
+                        dispatch(loginSuccess({ user: updatedUser }));
+                        setIsSalonPickerOpen(false);
+                        setIsMobileMenuOpen(false);
+                    }
+                }}
             />
         </nav>
     );

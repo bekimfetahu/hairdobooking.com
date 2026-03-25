@@ -15,7 +15,7 @@ export default function PageShell({
     actions,
     variant = "default",
     className = "",
-    containerClassName = "mx-auto max-w-6xl px-6 py-5 sm:py-10",
+    containerClassName = "mx-auto max-w-7xl px-6 py-5 sm:py-10",
     contentClassName = "",
     headerClassName = "",
     titleClassName = "",

@@ -27,13 +27,23 @@ export async function fetchPrimarySalonLocations({ search = '', perPage = 20, pa
             };
         }
 
-        const items = (data?.data || []).flatMap((ownerGroup) => {
-            const company = ownerGroup?.company || null;
-            return (ownerGroup?.locations || []).map((location) => ({
-                ...location,
-                company,
-            }));
-        });
+        const raw = data?.data || [];
+
+        // Backend now returns a flat, paginated list of VenueResource items.
+        // If the older owner-grouped shape is ever returned, keep a small
+        // compatibility layer that flattens it.
+        let items;
+        if (raw.length && Array.isArray(raw[0]?.locations)) {
+            items = raw.flatMap((ownerGroup) => {
+                const company = ownerGroup?.company || null;
+                return (ownerGroup?.locations || []).map((location) => ({
+                    ...location,
+                    company,
+                }));
+            });
+        } else {
+            items = raw;
+        }
 
         return {
             items,
