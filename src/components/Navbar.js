@@ -11,7 +11,6 @@ import {
     CalendarDays,
     ChevronDown,
     CreditCard,
-    Home,
     LayoutDashboard,
     LogOut,
     MapPin,
@@ -22,7 +21,6 @@ import {
 } from 'lucide-react';
 
 const navLinks = [
-    { href: '/', label: 'Home', icon: Home },
     { href: '/pricing', label: 'Pricing', icon: CreditCard },
     { href: '/register', label: 'Book now', icon: CalendarDays },
 ];
@@ -64,6 +62,7 @@ export default function Navbar() {
 
     const primaryVenue = user?.client?.primary_venue ?? null;
     const primaryVenueUuid = primaryVenue?.uuid ?? null;
+    const primaryVenueSlug = primaryVenue?.slug ?? null;
     const primaryVenueLabel = primaryVenue?.name || 'Choose preferred salon';
 
     useEffect(() => {
@@ -120,6 +119,27 @@ export default function Navbar() {
         }
     };
 
+    const handleGoPreferredSalon = () => {
+        // Open the preferred-salon picker modal from the main nav pill
+        // so users can change their preferred salon.
+        setIsDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+        setIsSalonPickerOpen(true);
+    };
+
+    const handleNavigatePreferredSalon = () => {
+        // From dropdown entries, go directly to the preferred salon page
+        // (or open the picker if none is set yet).
+        setIsDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+
+        if (primaryVenueSlug) {
+            router.push(`/salon/${primaryVenueSlug}`);
+        } else {
+            setIsSalonPickerOpen(true);
+        }
+    };
+
     const renderNavLink = (link, className = '') => {
         const Icon = link.icon;
         const basePath = getBasePath(link.href);
@@ -143,31 +163,33 @@ export default function Navbar() {
 
     return (
         <nav ref={navRef} className="fixed top-0 z-50 w-full border-b border-black/10 bg-white/95 backdrop-blur-xl">
-            <div className="container mx-auto">
+            <div className="mx-auto max-w-[1200px]">
                 <div className="flex h-16 items-center justify-between gap-4">
                     <Link href="/" className="flex items-center gap-3">
                         <Image src="/logo.png" alt="Hairdo Booking" width={240} height={25} />
                     </Link>
 
                     <div className="hidden items-center gap-2 md:flex">
+                        {isAuthenticated && (
+                            <button
+                                type="button"
+                                onClick={handleGoPreferredSalon}
+                                className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50"
+                                aria-label="Go to your preferred salon"
+                            >
+                                <MapPin className="h-4 w-4 text-black" />
+                                <span className="max-w-[180px] truncate text-xs text-primary">
+                                    {primaryVenueLabel}
+                                </span>
+                            </button>
+                        )}
+
                         {visibleNavLinks.map((link) => renderNavLink(link))}
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3">
                         {isAuthenticated ? (
                             <>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsSalonPickerOpen(true)}
-                                    className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50 md:inline-flex"
-                                    aria-label="View and change your preferred salon"
-                                >
-                                    <MapPin className="h-4 w-4 text-black" />
-                                    <span className="max-w-[180px] truncate text-xs text-primary">
-                                        {primaryVenueLabel}
-                                    </span>
-                                </button>
-
                                 <div className="relative hidden md:block">
                                     <button
                                         type="button"
@@ -192,6 +214,19 @@ export default function Navbar() {
                                                 <p className="text-xs text-neutral-500">Manage your bookings and profile</p>
                                             </div>
                                             <div className="p-2">
+                                                {primaryVenueSlug && (
+                                                    <Link
+                                                        href={`/salon/${primaryVenueSlug}`}
+                                                        className={`mb-2 flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-normal transition-colors ${
+                                                            pathname === `/salon/${primaryVenueSlug}` || pathname.startsWith(`/salon/${primaryVenueSlug}/`)
+                                                                ? 'text-black'
+                                                                : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
+                                                        }`}
+                                                    >
+                                                        <MapPin className="h-4 w-4 shrink-0 text-black" />
+                                                        <span className="truncate">Preferred salon</span>
+                                                    </Link>
+                                                )}
                                                 {accountLinks.map((link) => {
                                                     const Icon = link.icon;
                                                     const isActive = pathname === getBasePath(link.href) || pathname.startsWith(`${getBasePath(link.href)}/`);
@@ -291,6 +326,14 @@ export default function Navbar() {
                                     </button>
 
                                     <div className="space-y-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleNavigatePreferredSalon}
+                                            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                                        >
+                                            <MapPin className="h-4 w-4 shrink-0 text-black" />
+                                            <span className="truncate">My preferred salon</span>
+                                        </button>
                                         {accountLinks.map((link) => {
                                             const Icon = link.icon;
                                             const isActive = pathname === getBasePath(link.href) || pathname.startsWith(`${getBasePath(link.href)}/`);

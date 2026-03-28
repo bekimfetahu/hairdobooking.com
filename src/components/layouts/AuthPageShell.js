@@ -26,7 +26,7 @@ export default function AuthPageShell({
             className={pageClassName}
         >
             <div className={cn("grid gap-8 lg:grid-cols-[0.95fr_1.05fr]", className)}>
-                <section className={cn("rounded-[2rem] border border-black/10 bg-white p-6 shadow-xl shadow-black/5 sm:p-8", leftCardClassName)}>
+                <section className={cn("rounded-2xl border border-black/10 bg-white p-6 shadow-xl shadow-black/5 sm:p-8", leftCardClassName)}>
                     {panelBadge && (
                         <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-700">
                             <CheckCircle2 className="h-4 w-4 text-black" />
@@ -69,7 +69,7 @@ export default function AuthPageShell({
                     )}
                 </section>
 
-                <section className={cn("rounded-[2rem] border border-black/10 bg-white p-6 shadow-xl shadow-black/5 sm:p-8", rightCardClassName)}>
+                <section className={cn("rounded-2xl border border-black/10 bg-white p-6 shadow-xl shadow-black/5 sm:p-8", rightCardClassName)}>
                     {children}
                 </section>
             </div>

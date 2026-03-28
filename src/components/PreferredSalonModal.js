@@ -5,6 +5,15 @@ import { X } from "lucide-react";
 import PreferredSalonSearch from "@/components/PreferredSalonSearch";
 
 export default function PreferredSalonModal({ open, onClose, onPrimaryUpdated }) {
+    const handlePrimaryUpdated = (updatedUser) => {
+        if (typeof onPrimaryUpdated === "function") {
+            onPrimaryUpdated(updatedUser);
+        }
+        if (updatedUser) {
+            onClose?.();
+        }
+    };
+
     useEffect(() => {
         if (!open) return;
 
@@ -30,14 +39,14 @@ export default function PreferredSalonModal({ open, onClose, onPrimaryUpdated })
 
     return (
         <div
-            className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-4 py-6 pt-20 backdrop-blur-sm sm:py-8 sm:pt-24 lg:pt-28"
+            className="fixed inset-0 z-[999] flex items-start justify-center bg-black/50 px-3 py-3 pt-8 backdrop-blur-sm sm:px-4 sm:py-4 sm:pt-10 lg:pt-12"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) {
                     onClose?.();
                 }
             }}
         >
-            <div className="flex max-h-[calc(100vh-8rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-2xl sm:max-h-[calc(100vh-9rem)]">
+            <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-2xl">
                 <div className="border-b border-black/10 px-5 py-5 sm:px-6">
                     <div className="flex items-start justify-between gap-4">
                         <div>
@@ -60,7 +69,7 @@ export default function PreferredSalonModal({ open, onClose, onPrimaryUpdated })
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-                    <PreferredSalonSearch onPrimaryUpdated={onPrimaryUpdated} />
+                    <PreferredSalonSearch onPrimaryUpdated={handlePrimaryUpdated} onClose={onClose} />
                 </div>
             </div>
         </div>

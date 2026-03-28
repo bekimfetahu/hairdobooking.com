@@ -59,8 +59,15 @@ export default function LoginPage() {
             }
 
             const refreshedUser = await fetchCurrentUser();
-            dispatch(loginSuccess({ user: refreshedUser || data.user }));
-            router.push('/dashboard');
+            const user = refreshedUser || data.user;
+            dispatch(loginSuccess({ user }));
+
+            const preferredSlug = user?.client?.primary_venue?.slug;
+            if (preferredSlug) {
+                router.push(`/salon/${preferredSlug}`);
+            } else {
+                router.push('/dashboard');
+            }
         } catch (err) {
             setError(err.message);
         } finally {

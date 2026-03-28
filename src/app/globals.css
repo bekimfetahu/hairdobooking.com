@@ -79,7 +79,7 @@ body {
   min-width: min-content;
 }
 .container {
-  max-width: 80rem; /* 1280px */
+  max-width: 90rem; /* 1440px */
   margin-left: auto;
   margin-right: auto;
   padding-left: 1rem;

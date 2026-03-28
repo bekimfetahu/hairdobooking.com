@@ -1,7 +1,9 @@
 // src/laravelApp/dashboard/page.js
 'use client';
 
+import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useRouter } from 'next/navigation';
 import PageShell from '@/components/layouts/PageShell';
 import { CalendarDays, Heart, MapPin, Sparkles } from 'lucide-react';
 
@@ -18,6 +20,7 @@ const shortcuts = [
 ];
 
 export default function DashboardPage() {
+    const router = useRouter();
     const user = useSelector((state) => state.auth.user);
     const displayName = user?.client?.first_name || user?.first_name || user?.name || 'there';
 

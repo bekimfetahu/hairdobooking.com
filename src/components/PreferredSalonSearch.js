@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
+import { MapPin } from "lucide-react";
 
 import { fetchPrimarySalonLocations, setPrimarySalon } from "@/services/auth/primarySalon";
 
@@ -40,7 +41,7 @@ function computeCenter(locations) {
     };
 }
 
-export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpdated } = {}) {
+export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpdated, onClose } = {}) {
     const router = useRouter();
 
     const [search, setSearch] = useState(initialSearch);
@@ -54,6 +55,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
     const [preferredError, setPreferredError] = useState("");
     const [settingPreferredId, setSettingPreferredId] = useState(null);
     const [primaryVenueId, setPrimaryVenueId] = useState(null);
+    const [primarySalon, setPrimarySalonState] = useState(null);
 
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
@@ -61,10 +63,11 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
 
     const center = useMemo(() => computeCenter(salons), [salons]);
 
-    const selectedSalon = useMemo(
-        () => salons.find((s) => s.uuid === selectedSalonId) || null,
-        [salons, selectedSalonId]
-    );
+    const preferredSalon = useMemo(() => {
+        if (primarySalon) return primarySalon;
+        if (!primaryVenueId) return null;
+        return salons.find((s) => s.uuid === primaryVenueId) || null;
+    }, [primarySalon, primaryVenueId, salons]);
 
     useEffect(() => {
         let cancelled = false;
@@ -83,6 +86,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                 const primaryVenue = user?.client?.primary_venue ?? user?.client?.primaryVenue ?? null;
                 if (!cancelled && primaryVenue?.uuid) {
                     setPrimaryVenueId(primaryVenue.uuid);
+                    setPrimarySalonState(primaryVenue);
                 }
             } catch {
                 // ignore auth errors
@@ -150,42 +154,172 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
         if (!window.google || !window.google.maps) return;
         if (!mapRef.current) return;
 
+        const hasMapId = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID);
+
         if (!mapInstanceRef.current) {
-            mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+            const mapOptions = {
                 center,
                 zoom: 12,
                 mapTypeControl: false,
                 streetViewControl: false,
-            });
+            };
+
+            // Only set mapId when provided; otherwise stay on standard map
+            if (hasMapId) {
+                mapOptions.mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
+            }
+
+            // @ts-ignore - mapId is supported when using the JS API v3.49+
+            mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
         } else {
             mapInstanceRef.current.setCenter(center);
         }
 
-        markersRef.current.forEach(({ marker }) => marker.setMap(null));
+        // Clear existing markers from the map
+        markersRef.current.forEach(({ marker }) => {
+            if (marker) {
+                marker.setMap(null);
+            }
+        });
         markersRef.current = [];
 
-        salons.forEach((salon) => {
-            const coords = getCoordsFromSalon(salon);
-            if (!coords) return;
+        let cancelled = false;
 
-            const marker = new window.google.maps.Marker({
-                position: coords,
-                map: mapInstanceRef.current,
-                title: salon.name,
-            });
-            markersRef.current.push({ uuid: salon.uuid, marker });
-        });
-    }, [salons, center]);
+        (async () => {
+            try {
+                const entries = [];
+
+                if (hasMapId && window.google.maps.importLibrary) {
+                    // Use Advanced Markers when a Map ID is configured
+                    const { AdvancedMarkerElement } = await window.google.maps.importLibrary("marker");
+
+                    salons.forEach((salon) => {
+                        const coords = getCoordsFromSalon(salon);
+                        if (!coords) return;
+
+                        const isPrimary = primaryVenueId && salon.uuid === primaryVenueId;
+                        const baseIconUrl = isPrimary
+                            ? "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
+                            : "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+
+                        const img = document.createElement("img");
+                        img.src = baseIconUrl;
+                        img.alt = salon.name;
+                        img.style.width = "24px";
+                        img.style.height = "24px";
+
+                        const marker = new AdvancedMarkerElement({
+                            position: coords,
+                            map: mapInstanceRef.current,
+                            title: salon.name,
+                            content: img,
+                        });
+
+                        // Use the Advanced Marker click event
+                        marker.addListener("gmp-click", () => {
+                            setSelectedSalonId(salon.uuid);
+                            setHoveredSalonId(salon.uuid);
+
+                            const card = document.querySelector(
+                                `[data-salon-id="${salon.uuid}"]`
+                            );
+                            if (card && typeof card.scrollIntoView === "function") {
+                                card.scrollIntoView({ behavior: "smooth", block: "center" });
+                            }
+                        });
+
+                        entries.push({
+                            uuid: salon.uuid,
+                            marker,
+                            img,
+                            baseIconUrl,
+                            isAdvanced: true,
+                        });
+                    });
+                } else {
+                    // Fallback to classic Marker when no Map ID is configured
+                    salons.forEach((salon) => {
+                        const coords = getCoordsFromSalon(salon);
+                        if (!coords) return;
+
+                        const isPrimary = primaryVenueId && salon.uuid === primaryVenueId;
+                        const baseIconUrl = isPrimary
+                            ? "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
+                            : "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+
+                        const marker = new window.google.maps.Marker({
+                            position: coords,
+                            map: mapInstanceRef.current,
+                            title: salon.name,
+                            icon: baseIconUrl,
+                        });
+
+                        marker.addListener("click", () => {
+                            setSelectedSalonId(salon.uuid);
+                            setHoveredSalonId(salon.uuid);
+
+                            const card = document.querySelector(
+                                `[data-salon-id="${salon.uuid}"]`
+                            );
+                            if (card && typeof card.scrollIntoView === "function") {
+                                card.scrollIntoView({ behavior: "smooth", block: "center" });
+                            }
+                        });
+
+                        entries.push({
+                            uuid: salon.uuid,
+                            marker,
+                            baseIconUrl,
+                            isAdvanced: false,
+                        });
+                    });
+                }
+
+                if (!cancelled) {
+                    markersRef.current = entries;
+                } else {
+                    entries.forEach((entry) => {
+                        if (entry.marker) {
+                            entry.marker.setMap(null);
+                        }
+                    });
+                }
+            } catch {
+                // If Advanced Marker import fails, do nothing; map remains usable.
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [salons, center, primaryVenueId]);
 
     useEffect(() => {
-        if (!hoveredSalonId) return;
         if (!mapInstanceRef.current) return;
         if (!window.google || !window.google.maps) return;
+
+        // Reset all markers to their base icon first
+        markersRef.current.forEach((entry) => {
+            if (entry.isAdvanced && entry.img && entry.baseIconUrl) {
+                entry.img.src = entry.baseIconUrl;
+            } else if (!entry.isAdvanced && entry.baseIconUrl && entry.marker?.setIcon) {
+                entry.marker.setIcon(entry.baseIconUrl);
+            }
+        });
+
+        if (!hoveredSalonId) return;
 
         const entry = markersRef.current.find((item) => item.uuid === hoveredSalonId);
         if (!entry) return;
 
-        const position = entry.marker.getPosition();
+        // Highlight hovered marker so it stands out among nearby locations
+        if (entry.isAdvanced && entry.img) {
+            entry.img.src = "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+        } else if (!entry.isAdvanced && entry.marker?.setIcon) {
+            entry.marker.setIcon("https://maps.google.com/mapfiles/ms/icons/yellow-dot.png");
+        }
+
+        const position = entry.marker.position || entry.marker.getPosition?.();
         if (!position) return;
 
         mapInstanceRef.current.panTo(position);
@@ -218,8 +352,10 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
             const primaryVenue = updatedUser?.client?.primary_venue ?? updatedUser?.client?.primaryVenue ?? null;
             if (primaryVenue?.uuid) {
                 setPrimaryVenueId(primaryVenue.uuid);
+                setPrimarySalonState(primaryVenue);
             } else {
                 setPrimaryVenueId(salon.uuid);
+                setPrimarySalonState(salon);
             }
 
             if (updatedUser && typeof window !== "undefined") {
@@ -235,6 +371,14 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
             }
 
             setPreferredStatus("Your preferred salon has been updated.");
+
+            // After successfully setting the preferred salon, redirect to it.
+            const slugFromUser = primaryVenue?.slug;
+            const slugFromSalon = salon.slug;
+            const targetSlug = slugFromUser || slugFromSalon || null;
+            if (targetSlug) {
+                router.push(`/salon/${targetSlug}`);
+            }
         } catch (err) {
             const message = err?.message || "Failed to set preferred salon";
             setPreferredError(message);
@@ -254,12 +398,9 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                 strategy="lazyOnload"
             />
 
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)]">
-                <section className="flex flex-col rounded-3xl bg-white/80 p-4 shadow-sm ring-1 ring-black/5 lg:overflow-hidden">
-                    <form
-                        onSubmit={onSubmit}
-                        className="flex flex-col gap-3 rounded-2xl bg-neutral-50 p-3 ring-1 ring-black/5"
-                    >
+            <div className="grid h-full gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)]">
+                <section className="flex h-full flex-col rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/5 lg:overflow-hidden">
+                    <form onSubmit={onSubmit} className="w-full">
                         <input
                             aria-label="Search"
                             placeholder="Salon Name, Address, Postcode"
@@ -275,33 +416,75 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                                 ? "Searching salons..."
                                 : `${salons.length} salon${salons.length === 1 ? "" : "s"} found`}
                         </span>
-                        <span>Results are based on marketplace-enabled salons.</span>
                     </div>
 
-                    {selectedSalon && (
-                        <div className="mt-2 rounded-xl bg-primary/5 px-3 py-2 text-xs text-neutral-800">
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="truncate font-medium">
-                                        Selected salon: {selectedSalon.name}
-                                    </p>
-                                    <p className="truncate text-[11px] text-neutral-500">
-                                        {selectedSalon.address?.postcode ||
-                                            selectedSalon.address?.line2 ||
-                                            "Address not available"}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handleSetPreferredSalon(selectedSalon)}
-                                    disabled={settingPreferredId === selectedSalon.uuid}
-                                    className="shrink-0 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-white shadow-sm hover:bg-primary/90 disabled:opacity-60"
-                                >
-                                    {settingPreferredId === selectedSalon.uuid
-                                        ? "Saving..."
-                                        : "Confirm as my preferred salon"}
-                                </button>
-                            </div>
+                    {preferredSalon && (
+                        <div className="mt-3">
+                            {(() => {
+                                const addressParts = [];
+                                const addr = preferredSalon.address || {};
+                                if (addr.line1) addressParts.push(addr.line1);
+                                if (addr.line2) addressParts.push(addr.line2);
+                                if (addr.line3) addressParts.push(addr.line3);
+                                if (addr.postcode) addressParts.push(addr.postcode);
+
+                                const addressInline = addressParts.join(", ");
+
+                                return (
+                                    <article
+										className="flex flex-col gap-1 rounded-2xl bg-emerald-50 px-3.5 py-3 text-sm ring-1 ring-emerald-500"
+                                        onClick={() => {
+                                            if (preferredSalon.uuid) {
+                                                setSelectedSalonId(preferredSalon.uuid);
+                                                setHoveredSalonId(preferredSalon.uuid);
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-neutral-950">
+                                                    {preferredSalon.name}
+                                                </p>
+                                                {preferredSalon.company?.company_name && (
+                                                    <p className="truncate text-xs text-neutral-500">
+                                                        {preferredSalon.company.company_name}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <p className="mt-1 text-xs text-neutral-600">
+                                            {addressInline || "Address not available"}
+                                        </p>
+
+                                        {preferredSalon.phone && (
+                                            <p className="mt-0.5 text-xs text-neutral-500">{preferredSalon.phone}</p>
+                                        )}
+
+                                        <div className="mt-2 flex justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (preferredSalon.slug) {
+                                                        router.push(`/salon/${preferredSalon.slug}`);
+                                                    }
+                                                    if (typeof onClose === "function") {
+                                                        onClose();
+                                                    }
+                                                }}
+                                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-primary bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+                                            >
+                                                <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10">
+                                                    <MapPin className="h-3 w-3" />
+                                                </span>
+                                                <span>Your preferred salon</span>
+                                            </button>
+                                        </div>
+                                    </article>
+                                );
+                            })()}
+
                             {preferredStatus && (
                                 <p className="mt-1 text-[11px] text-emerald-700">{preferredStatus}</p>
                             )}
@@ -324,7 +507,9 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                             </div>
                         )}
 
-                        {salons.map((salon) => {
+                        {salons
+                            .filter((salon) => !primaryVenueId || salon.uuid !== primaryVenueId)
+                            .map((salon) => {
                             const addressParts = [];
                             const addr = salon.address || {};
                             if (addr.line1) addressParts.push(addr.line1);
@@ -336,11 +521,17 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
 
                             const isPrimary = primaryVenueId && salon.uuid === primaryVenueId;
                             const isHovered = hoveredSalonId === salon.uuid;
+                            const isSelected = selectedSalonId === salon.uuid;
 
                             return (
                                 <article
                                     key={salon.uuid}
-                                    className="flex flex-col gap-1 rounded-2xl bg-white px-3.5 py-3 text-sm ring-1 ring-black/5 hover:ring-black/20"
+                                    data-salon-id={salon.uuid}
+                                    className={`flex flex-col gap-1 rounded-2xl px-3.5 py-3 text-sm ring-1 transition-colors ${
+                                        isSelected
+                                            ? "bg-primary/5 ring-primary/40"
+                                            : "bg-white ring-black/5 hover:ring-black/20"
+                                    }`}
                                     onClick={() => handleSelectSalon(salon)}
                                     onMouseEnter={() => setHoveredSalonId(salon.uuid)}
                                     onMouseLeave={() => setHoveredSalonId(null)}
@@ -370,10 +561,21 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                                         {isPrimary ? (
                                             <button
                                                 type="button"
-                                                disabled
-                                                className="cursor-default rounded-full border border-emerald-500 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (salon.slug) {
+                                                        router.push(`/salon/${salon.slug}`);
+                                                    }
+                                                    if (typeof onClose === "function") {
+                                                        onClose();
+                                                    }
+                                                }}
+                                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-primary bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
                                             >
-                                                Your preferred salon
+                                                <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10">
+                                                    <MapPin className="h-3 w-3" />
+                                                </span>
+                                                <span>Your preferred salon</span>
                                             </button>
                                         ) : (
                                             isHovered && (
@@ -385,7 +587,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                                                         handleSetPreferredSalon(salon);
                                                     }}
                                                     disabled={settingPreferredId === salon.uuid}
-                                                    className="rounded-full border border-primary bg-white px-3 py-1 text-[11px] font-medium text-primary shadow-sm hover:bg-primary/5 disabled:opacity-60"
+                                                    className="cursor-pointer rounded-full border border-neutral-900 bg-white px-3 py-1 text-[11px] font-medium text-neutral-900 shadow-sm hover:bg-neutral-900/5 disabled:opacity-60"
                                                 >
                                                     {settingPreferredId === salon.uuid
                                                         ? "Saving..."
@@ -400,10 +602,10 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                     </div>
                 </section>
 
-                <section className="relative flex flex-col overflow-hidden rounded-3xl bg-neutral-900/95 p-3 text-white shadow-sm ring-1 ring-black/10">
+                <section className="relative flex h-full flex-col overflow-hidden rounded-3xl bg-neutral-900/95 p-3 text-white shadow-sm ring-1 ring-black/10">
                     <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white">
                                 Map view
                             </p>
                             <p className="text-sm text-neutral-100">
@@ -414,7 +616,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
 
                     <div
                         ref={mapRef}
-                        className="h-64 w-full rounded-2xl bg-neutral-800 md:h-[420px] lg:h-[480px]"
+                        className="flex-1 w-full rounded-2xl bg-neutral-800 min-h-[260px] md:min-h-[360px] lg:min-h-[420px]"
                     />
 
                     {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
