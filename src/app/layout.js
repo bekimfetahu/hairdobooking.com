@@ -1,21 +1,23 @@
+// Server root layout: keep this as a server component to ensure marketing pages are
+// rendered server-side for SEO. Client-only behavior (Redux, session, heavy
+// interactivity) should live in a nested client layout for authenticated routes.
 
 import "./globals.css";
-
-import Navbar from "../components/Navbar";
-import ClientProvider from "@/components/ClientProvider";
-import MainLayout from "@/components/layouts/MainLayout"; // A new component for layout logic
+import NavbarStatic from '@/components/NavbarStatic';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body
-        className={`antialiased`}
-      >
-      <ClientProvider>
-          <div className="pt-15">
-          <MainLayout>{children}</MainLayout>
-          </div>
-      </ClientProvider>
+      <body className="antialiased bg-background text-foreground">
+        <div className="pt-16">
+          {/* Server-only static navbar for SEO and initial load */}
+          <NavbarStatic />
+
+          {/* Page content */}
+          <main>
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );

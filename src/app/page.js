@@ -1,17 +1,22 @@
-// src/app/page.js
+// src/app/page.js - Marketing home page
 
-import Hero from "../components/Hero";
+import PageShell from "@/components/layouts/PageShell";
+import HeroMarketing from "@/components/marketing/HeroMarketing";
+import Categories from "@/components/marketing/Categories";
+import FeaturedSalons from "@/components/marketing/FeaturedSalons";
+import HowItWorks from "@/components/marketing/HowItWorks";
+import FinalCTA from "@/components/marketing/FinalCTA";
 
 export default function Home() {
     return (
-        <Hero />
-        // <main className="bg-background text-foreground min-h-screen p-8">
-        //     <h1 className="text-4xl font-bold text-primary">
-        //         Welcome to HairdoBooking
-        //     </h1>
-        //     <div className="bg-background shadow-lg p-6 rounded-lg mt-6 text-foreground">
-        //         Your custom card content
-        //     </div>
-        // </main>
+        <PageShell variant="marketing" className="py-6">
+            <HeroMarketing />
+
+            <Categories />
+
+            <HowItWorks />
+
+            <FinalCTA />
+        </PageShell>
     );
 }

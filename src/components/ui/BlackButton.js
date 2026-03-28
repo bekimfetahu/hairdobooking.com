@@ -1,10 +1,23 @@
-export default function BlackButton({ children, onClick, type = "button", disabled = false, sizeClass = "text-xs" }) {
+import { cn } from "@/lib/utils";
+
+export default function BlackButton({
+    children,
+    onClick,
+    type = "button",
+    disabled = false,
+    sizeClass = "text-xs",
+    className = "",
+}) {
     return (
         <button
             type={type}
             onClick={onClick}
             disabled={disabled}
-            className={`ms-4 cursor-pointer inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold ${sizeClass} text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150`}
+            className={cn(
+                "cursor-pointer inline-flex items-center justify-center px-4 py-2 rounded-full font-semibold text-white uppercase tracking-wide bg-black border border-black hover:bg-neutral-800 active:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition ease-in-out duration-150",
+                sizeClass,
+                className,
+            )}
         >
             {children}
         </button>
