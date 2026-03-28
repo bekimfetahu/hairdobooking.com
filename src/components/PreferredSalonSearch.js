@@ -61,13 +61,16 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
     const mapInstanceRef = useRef(null);
     const markersRef = useRef([]);
 
-    const center = useMemo(() => computeCenter(salons), [salons]);
-
     const preferredSalon = useMemo(() => {
         if (primarySalon) return primarySalon;
         if (!primaryVenueId) return null;
         return salons.find((s) => s.uuid === primaryVenueId) || null;
     }, [primarySalon, primaryVenueId, salons]);
+
+    const center = useMemo(
+        () => computeCenter(preferredSalon ? [...salons, preferredSalon] : salons),
+        [salons, preferredSalon]
+    );
 
     useEffect(() => {
         let cancelled = false;
@@ -189,11 +192,17 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
             try {
                 const entries = [];
 
+                // Ensure the preferred salon is included on the map even if it's not
+                // present in the current search results so its marker can render red.
+                const markerSalons =
+                    preferredSalon && !salons.some((s) => s.uuid === preferredSalon.uuid)
+                        ? [...salons, preferredSalon]
+                        : salons;
+
                 if (hasMapId && window.google.maps.importLibrary) {
                     // Use Advanced Markers when a Map ID is configured
                     const { AdvancedMarkerElement } = await window.google.maps.importLibrary("marker");
-
-                    salons.forEach((salon) => {
+                    markerSalons.forEach((salon) => {
                         const coords = getCoordsFromSalon(salon);
                         if (!coords) return;
 
@@ -238,7 +247,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                     });
                 } else {
                     // Fallback to classic Marker when no Map ID is configured
-                    salons.forEach((salon) => {
+                    markerSalons.forEach((salon) => {
                         const coords = getCoordsFromSalon(salon);
                         if (!coords) return;
 
@@ -292,7 +301,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
         return () => {
             cancelled = true;
         };
-    }, [salons, center, primaryVenueId]);
+    }, [salons, center, primaryVenueId, preferredSalon]);
 
     useEffect(() => {
         if (!mapInstanceRef.current) return;
