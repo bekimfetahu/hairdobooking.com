@@ -39,15 +39,18 @@ export default function GoogleSignInButton({ provider = 'google' }) {
     };
 
     return (
-    <GoogleLogin
-        onSuccess={handleGoogleSuccess}
-        onError={() => console.log(`${provider} login failed`)}
-        theme="outline"
-        size="large"
-        text="signin_with"
-        shape="rectangular"
-        logo_alignment="center"
-        width="100%" // ✅ makes it full width
-    />
+        <div className="w-full">
+            <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => console.log(`${provider} login failed`)}
+                theme="outline"
+                size="large"
+                text="signin_with"
+                shape="rectangular"
+                logo_alignment="center"
+                width="100%"
+                containerProps={{ style: { width: '100%' }, className: 'w-full' }}
+            />
+        </div>
     );
 }
