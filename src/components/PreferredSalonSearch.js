@@ -62,7 +62,10 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
     const markersRef = useRef([]);
 
     const preferredSalon = useMemo(() => {
-        if (primarySalon) return primarySalon;
+        if (primarySalon) {
+            const match = salons.find((s) => s.uuid === primarySalon.uuid);
+            return match ? { ...primarySalon, ...match } : primarySalon;
+        }
         if (!primaryVenueId) return null;
         return salons.find((s) => s.uuid === primaryVenueId) || null;
     }, [primarySalon, primaryVenueId, salons]);
@@ -71,6 +74,36 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
         () => computeCenter(preferredSalon ? [...salons, preferredSalon] : salons),
         [salons, preferredSalon]
     );
+
+    function getAddressInline(salon) {
+        if (!salon) return '';
+
+        const parts = [];
+
+        const addr = salon.address || {};
+        if (addr.line1) parts.push(addr.line1);
+        if (addr.line2) parts.push(addr.line2);
+        if (addr.line3) parts.push(addr.line3);
+        if (addr.postcode) parts.push(addr.postcode);
+
+        // Backwards-compatible flat fields
+        if (parts.length === 0) {
+            if (salon.building_name) parts.push(salon.building_name);
+            if (salon.street) parts.push(salon.street);
+            if (salon.town) parts.push(salon.town);
+            if (salon.city) parts.push(salon.city);
+            if (salon.postcode) parts.push(salon.postcode);
+        }
+
+        // Other potential shape fallbacks
+        if (parts.length === 0) {
+            if (salon.address_line1) parts.push(salon.address_line1);
+            if (salon.address_line2) parts.push(salon.address_line2);
+            if (salon.postal_code) parts.push(salon.postal_code);
+        }
+
+        return parts.join(', ');
+    }
 
     useEffect(() => {
         let cancelled = false;
@@ -430,18 +463,11 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                     {preferredSalon && (
                         <div className="mt-3">
                             {(() => {
-                                const addressParts = [];
-                                const addr = preferredSalon.address || {};
-                                if (addr.line1) addressParts.push(addr.line1);
-                                if (addr.line2) addressParts.push(addr.line2);
-                                if (addr.line3) addressParts.push(addr.line3);
-                                if (addr.postcode) addressParts.push(addr.postcode);
-
-                                const addressInline = addressParts.join(", ");
+                                const addressInline = getAddressInline(preferredSalon);
 
                                 return (
                                     <article
-										className="flex flex-col gap-1 rounded-2xl bg-emerald-50 px-3.5 py-3 text-sm ring-1 ring-emerald-500"
+                                        className="flex flex-col gap-1 rounded-2xl bg-emerald-50 px-3.5 py-3 text-sm ring-1 ring-emerald-500"
                                         onClick={() => {
                                             if (preferredSalon.uuid) {
                                                 setSelectedSalonId(preferredSalon.uuid);
@@ -519,14 +545,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                         {salons
                             .filter((salon) => !primaryVenueId || salon.uuid !== primaryVenueId)
                             .map((salon) => {
-                            const addressParts = [];
-                            const addr = salon.address || {};
-                            if (addr.line1) addressParts.push(addr.line1);
-                            if (addr.line2) addressParts.push(addr.line2);
-                            if (addr.line3) addressParts.push(addr.line3);
-                            if (addr.postcode) addressParts.push(addr.postcode);
-
-                            const addressInline = addressParts.join(", ");
+                            const addressInline = getAddressInline(salon);
 
                             const isPrimary = primaryVenueId && salon.uuid === primaryVenueId;
                             const isHovered = hoveredSalonId === salon.uuid;
