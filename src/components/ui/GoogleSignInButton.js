@@ -39,7 +39,7 @@ export default function GoogleSignInButton({ provider = 'google' }) {
     };
 
     return (
-        <div className="w-full">
+        <div className="w-full google-signin-fullwidth">
             <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => console.log(`${provider} login failed`)}

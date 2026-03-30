@@ -9,7 +9,7 @@ import AuthPageShell from '@/components/layouts/AuthPageShell';
 import BlackButton from "@/components/ui/BlackButton";
 import InputField from "@/components/ui/InputField";
 import CheckBox from "@/components/ui/CheckBox";
-import GoogleSignInButton from "@/components/ui/GoogleSignInButton";
+import SocialSSOButtons from "@/components/ui/SocialSSOButtons";
 import { fetchCurrentUser } from '@/services/auth/session';
 import { CalendarDays, Heart, Sparkles } from 'lucide-react';
 
@@ -138,16 +138,7 @@ export default function LoginPage() {
             <div className="my-6 border-t border-black/10" />
 
             <div className="space-y-4">
-                <GoogleSignInButton />
-
-                <button
-                    type="button"
-                    onClick={() => window.location.href = '/api/auth/social/facebook'}
-                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-medium text-neutral-700 transition-colors hover:border-black hover:text-black"
-                >
-                    <img src="/images/facebook-logo.png" alt="Facebook" className="h-5 w-5" />
-                    Continue with Facebook
-                </button>
+                <SocialSSOButtons />
             </div>
         </AuthPageShell>
     );

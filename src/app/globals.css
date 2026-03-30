@@ -158,3 +158,25 @@ body {
   background-color: #303030;
   opacity: 8%;
 }
+
+/* Make Google Sign-In full-width (don't override inner layout so Google can show account hint) */
+.google-signin-fullwidth .gsi-material-button {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  border-radius: 0.375rem !important;
+  box-sizing: border-box;
+}
+
+/* Facebook helper button */
+.social-sso-button {
+  width: 100%;
+  border-radius: 0.375rem;
+  box-sizing: border-box;
+}
+
+/* Make Facebook hover visually similar (don't override Google's internal hover) */
+.social-sso-button:hover {
+  border-color: #000 !important;
+  color: #000 !important;
+}

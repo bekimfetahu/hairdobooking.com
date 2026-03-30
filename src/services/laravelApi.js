@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Base API Setup
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_LARAVEL_URL}/api`; // Laravel backend URL
+const API_BASE_URL = `${process.env.LARAVEL_INTERNAL_URL || process.env.NEXT_PUBLIC_LARAVEL_URL}/api`; // Laravel backend URL
 
 const laravelApi = axios.create({
     baseURL: API_BASE_URL,

@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_LARAVEL_URL}/api`;
+const API_BASE_URL = `${process.env.LARAVEL_INTERNAL_URL || process.env.NEXT_PUBLIC_LARAVEL_URL}/api`;
 
 const laravelApp = axios.create({
     baseURL: API_BASE_URL,
