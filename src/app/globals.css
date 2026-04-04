@@ -37,6 +37,17 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* Make all enabled interactive controls feel clickable by default */
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]),
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+summary {
+  cursor: pointer;
+}
+
 /* Example usage of CSS variables in Tailwind classes */
 .bg-background { background-color: var(--background); }
 .text-foreground { color: var(--foreground); }
@@ -168,15 +179,55 @@ body {
   box-sizing: border-box;
 }
 
-/* Facebook helper button */
 .social-sso-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
   width: 100%;
-  border-radius: 0.375rem;
+  min-height: 3.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.75rem;
   box-sizing: border-box;
+  background: #ffffff;
+  color: #404040;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  transition: border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-/* Make Facebook hover visually similar (don't override Google's internal hover) */
-.social-sso-button:hover {
-  border-color: #000 !important;
-  color: #000 !important;
+.social-sso-button:hover:not(:disabled) {
+  border-color: #111111;
+  color: #111111;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.social-sso-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.social-sso-button:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.social-sso-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 1.25rem;
+}
+
+.social-sso-button__icon > svg,
+.social-sso-button__icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
