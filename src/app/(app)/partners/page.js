@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Hero from '@/components/Hero';
 import { CalendarDays, MapPin, Sparkles, Users } from "lucide-react";
-import ImageSlider from '@/components/ui/ImageSlider';
+
 
 export default function PartnerPage() {
     return (

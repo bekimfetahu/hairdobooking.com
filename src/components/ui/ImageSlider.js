@@ -3,17 +3,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const slides = [
-    { src: "/images/appointments.png", label: "Desktop" },
-    { src: "/images/model.png", label: "Tablet" },
-    { src: "/images/model-2.png", label: "Mobile" },
-];
-
 export default function ImageSlider({
+                                    slides = [],
                                     autorun = false,
                                     delay = 5000, // ms
                                     className = "",
                                     fullBleed = false,
+                                    showLabel = true,
+                                    sliderHeight = 320,
+                                    sliderHeightMobile = null,
                                 }) {
     const n = slides.length;
     // extended slides (triple) for seamless looping
@@ -28,20 +26,32 @@ export default function ImageSlider({
     const [offsets, setOffsets] = useState([]);
     const [transitionEnabled, setTransitionEnabled] = useState(true);
     const autoplayRef = useRef(null);
+    const [isMobile, setIsMobile] = useState(false);
+    const pendingSnapIndexRef = useRef(null);
+
+    const resolveHeightValue = (height) => (typeof height === "number" ? `${height}px` : height);
+    const sliderHeightValue = isMobile && sliderHeightMobile != null
+        ? resolveHeightValue(sliderHeightMobile)
+        : resolveHeightValue(sliderHeight);
 
     // compute offsets of each slide relative to track
     const computeOffsets = () => {
         const track = trackRef.current;
         if (!track) return;
-        const offs = slideRefs.current.map((el) => (el ? el.offsetLeft : 0));
+        const offs = slideRefs.current.map((el) => (el ? Math.round(el.offsetLeft) : 0));
         setOffsets(offs);
     };
 
     useEffect(() => {
         computeOffsets();
-        const onResize = () => computeOffsets();
-        window.addEventListener("resize", onResize);
-        return () => window.removeEventListener("resize", onResize);
+        const updateMobileState = () => setIsMobile(window.innerWidth < 768);
+        updateMobileState();
+        window.addEventListener("resize", computeOffsets);
+        window.addEventListener("resize", updateMobileState);
+        return () => {
+            window.removeEventListener("resize", computeOffsets);
+            window.removeEventListener("resize", updateMobileState);
+        };
     }, []);
 
     // Recompute when images load
@@ -90,10 +100,10 @@ export default function ImageSlider({
     const next = () => setVirtualIndex((v) => v + 1);
     const prev = () => setVirtualIndex((v) => v - 1);
 
-    // transform style based on offsets
+    // transform style based on offsets — use measured slide edges so the next slide fills any remaining space
     const getTransform = () => {
         if (!offsets.length) return 'translateX(0px)';
-        const x = offsets[virtualIndex] || 0;
+        const x = Math.round(offsets[virtualIndex] || 0);
         return `translateX(${-x}px)`;
     };
 
@@ -103,39 +113,30 @@ export default function ImageSlider({
         const newIndex = ((virtualIndex % n) + n) % n;
         setIndex(newIndex);
 
-        // if virtualIndex goes beyond the second copy, reset to middle copy silently
-        const min = 0;
-        const max = extended.length - 1;
-
-        // after transition duration, if we're in an edge copy, snap back to middle
-        if (virtualIndex <= n - 1) {
-            // left edge reached (before middle)
-            // schedule snapping to middle equivalent
-            const timer = setTimeout(() => {
-                setTransitionEnabled(false);
-                const snapped = n + (virtualIndex % n);
-                setVirtualIndex(snapped);
-                // re-enable transition next tick
-                setTimeout(() => setTransitionEnabled(true), 40);
-            }, 510);
-            return () => clearTimeout(timer);
-        }
-
-        if (virtualIndex >= 2 * n) {
-            const timer = setTimeout(() => {
-                setTransitionEnabled(false);
-                const snapped = n + (virtualIndex % n);
-                setVirtualIndex(snapped);
-                setTimeout(() => setTransitionEnabled(true), 40);
-            }, 510);
-            return () => clearTimeout(timer);
+        // When we move into one of the outer copies, prepare a silent snap back
+        // to the matching slide in the middle copy after the animation ends.
+        if (virtualIndex < n || virtualIndex >= 2 * n) {
+            pendingSnapIndexRef.current = n + (virtualIndex % n);
+        } else {
+            pendingSnapIndexRef.current = null;
         }
     }, [virtualIndex]);
+
+    const handleTrackTransitionEnd = () => {
+        if (pendingSnapIndexRef.current === null) return;
+        const snapped = pendingSnapIndexRef.current;
+        pendingSnapIndexRef.current = null;
+        setTransitionEnabled(false);
+        setVirtualIndex(snapped);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => setTransitionEnabled(true));
+        });
+    };
 
     return (
         <div
             className={
-                `relative w-full mx-auto overflow-hidden ${fullBleed ? '' : 'bg-white rounded-2xl'} ${className}`
+                `relative w-full mx-auto overflow-hidden rounded-lg bg-[#f0f2f5] ${className}`
             }
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
@@ -159,41 +160,38 @@ export default function ImageSlider({
                 <ChevronRight size={22} />
             </button>
 
-            {/* Track container with explicit heights to control image sizing */}
-            <div className="relative w-full">
+            {/* Track container with a fixed viewport height and natural-width slides */}
+            <div className="relative w-full overflow-hidden">
                 <div
                     ref={trackRef}
-                    className="flex will-change-transform"
+                    className="flex items-stretch will-change-transform"
+                    onTransitionEnd={handleTrackTransitionEnd}
                     style={{ transform: getTransform(), transition: transitionEnabled ? 'transform 500ms ease-in-out' : 'none' }}
                 >
                     {extended.map((s, i) => (
                         <div
                             key={`${s.src}-${i}`}
                             ref={(el) => (slideRefs.current[i] = el)}
-                            className="flex-shrink-0 flex items-center justify-start h-[260px] sm:h-[360px] md:h-[420px] lg:h-[560px]"
+                            className="flex-shrink-0 flex items-stretch justify-start overflow-hidden w-auto"
+                            style={{ height: sliderHeightValue }}
                         >
-                            <img src={s.src} alt={`${s.label} view`} style={{ height: '100%', width: 'auto', display: 'block' }} />
+                            <img
+                                src={s.src}
+                                alt={`${s.label} view`}
+                                className="block h-full w-auto max-w-none object-contain"
+                            />
                         </div>
                     ))}
                 </div>
 
                 {/* Labels overlay */}
-                <div className="absolute left-4 bottom-4 rounded-full bg-white/90 px-3 py-1 text-sm font-medium text-neutral-900 shadow-sm">
-                    {slides[index].label}
-                </div>
+                {showLabel && slides[index]?.label && (
+                    <div className="absolute left-4 bottom-4 rounded-full bg-white/90 px-3 py-1 text-sm font-medium text-neutral-900 shadow-sm">
+                        {slides[index].label}
+                    </div>
+                )}
             </div>
 
-            {/* Dots */}
-            <div className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 flex items-center gap-2">
-                {slides.map((s, i) => (
-                    <button
-                        key={s.src}
-                        onClick={() => setVirtualIndex(n + i)}
-                        aria-label={`Go to ${s.label}`}
-                        className={`h-2 w-8 rounded-full transition-all ${i === index ? "bg-primary" : "bg-black/10"}`}
-                    />
-                ))}
-            </div>
         </div>
     );
 }

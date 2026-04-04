@@ -4,20 +4,23 @@
 
 import "./globals.css";
 import NavbarStatic from '@/components/NavbarStatic';
+import StoreProvider from '@/components/StoreProvider';
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="antialiased bg-background text-foreground">
-        <div className="pt-16">
-          {/* Server-only static navbar for SEO and initial load */}
-          <NavbarStatic />
+        <StoreProvider>
+          <div className="pt-16">
+            {/* Server-only static navbar for SEO and initial load */}
+            <NavbarStatic />
 
-          {/* Page content */}
-          <main>
-            {children}
-          </main>
-        </div>
+            {/* Page content */}
+            <main>
+              {children}
+            </main>
+          </div>
+        </StoreProvider>
       </body>
     </html>
   );

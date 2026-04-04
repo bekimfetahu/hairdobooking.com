@@ -1,5 +1,11 @@
 import ImageSlider from "@/components/ui/ImageSlider";
 
+const showcaseSlides = [
+    { src: "/images/appointments.png", label: "Desktop" },
+    { src: "/images/model.png", label: "Tablet" },
+    { src: "/images/model-2.png", label: "Mobile" },
+];
+
 export default function FeaturedSalons() {
     return (
         <section className="py-12">
@@ -34,12 +40,12 @@ export default function FeaturedSalons() {
                             {/* Interactive slider (client component) — will hydrate on client */}
                             <div className="block sm:hidden">
                                 {/* On small screens, mount the interactive slider directly */}
-                                <ImageSlider fullBleed className="h-auto" />
+                                <ImageSlider slides={showcaseSlides} sliderHeight={220} sliderHeightMobile={160} fullBleed className="h-auto" />
                             </div>
 
                             {/* On larger screens, also mount the interactive slider (hydration will replace/augment preview) */}
                             <div className="hidden sm:block">
-                                <ImageSlider fullBleed className="h-auto" />
+                                <ImageSlider slides={showcaseSlides} sliderHeight={280} fullBleed className="h-auto" />
                             </div>
                         </div>
                     </div>
