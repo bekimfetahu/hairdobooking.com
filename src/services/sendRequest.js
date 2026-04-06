@@ -44,7 +44,25 @@ export async function sendRequest({ method, access_type, api, data }) {
         return response.data;
 
     } catch (error) {
-        console.error("Laravel error:", error?.response?.data);
-        throw new Error(error?.response?.data?.message || "Laravel request failed");
+        const sanitizedConfig = error?.config
+            ? {
+                  url: error.config.url,
+                  method: error.config.method,
+                  params: error.config.params,
+                  data: error.config.data,
+              }
+            : undefined;
+
+        console.error("Laravel request failed", {
+            message: error?.message,
+            api,
+            access_type,
+            method,
+            request: sanitizedConfig,
+            responseStatus: error?.response?.status,
+            responseData: error?.response?.data,
+        });
+
+        throw new Error(error?.response?.data?.message || error?.message || "Laravel request failed");
     }
 }

@@ -128,6 +128,20 @@ The social login endpoint expects normalized user data such as:
 - Route handlers are the bridge between UI and Laravel
 - Avoid putting business logic in React components when it belongs in a route handler or service
 
+### Information flow: Client → Next.js proxy → Laravel
+
+- Client requests: always call Next.js API routes under `src/app/api/*`. Do NOT call Laravel endpoints directly from browser JS — never send raw Laravel `url` strings or app tokens from the client.
+- Example pattern: browser POSTs to `/api/appointments` (body: `{ slug, data }`) → Next.js handler at `src/app/api/appointments/route.js` validates the request and forwards it server-side to Laravel `client/salons/{slug}/appointments` via the appropriate service.
+- Which service to use:
+	- `laravelApi` (`src/services/laravelApi.js`): user-scoped requests. Uses Sanctum cookies or server-added `Authorization` header. `withCredentials: true`.
+	- `laravelApp` (`src/services/laravelApp.js`): application-to-application requests. Sends `X-App-Token` from `CLIENT_ACCESS_TOKEN`.
+- Server-side Next.js code (server components, route handlers, or `src/services/sendRequest.js`) may call `laravelApp`/`laravelApi` directly without an intermediary API route when no browser-origin is involved.
+- Security best-practices:
+	- Prefer dedicated proxy routes (for example `src/app/api/salons/*`, `src/app/api/appointments`) rather than a generic proxy that accepts arbitrary Laravel URLs from the client.
+	- Validate HTTP method, body, and expected fields server-side; reject requests with unexpected `url` or method values.
+	- Keep tokens and cookies HttpOnly and assemble Authorization headers server-side — never accept tokens from client JS.
+- Migration note: dedicated proxies have been added for salons and appointments (see `src/app/api/salons/*` and `src/app/api/appointments`). Update client-side services to call these proxies instead of sending Laravel endpoint strings to the generic proxy.
+
 ## Coding conventions
 ### Prefer these patterns
 - Use the `@/` import alias for app code

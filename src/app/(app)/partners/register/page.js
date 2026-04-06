@@ -39,18 +39,13 @@ export default function RegisterPage() {
             * });
             *
      */
-        const formData = {
-            method: 'post',
-            access_type: 'laravelApp',
-            url: '/client/free-trial',
-            data: data,
-        }
+        const body = { data };
 
         try {
-            const response = await fetch('/api', {
+            const response = await fetch('/api/partners/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(body),
             });
 
             if (!response.ok) {

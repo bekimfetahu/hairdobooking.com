@@ -1,0 +1,1001 @@
+"use client";
+
+import { useEffect, useState, useMemo, useCallback } from "react";
+import dayjs from "dayjs";
+import { Calendar, Sparkles, Banknote, User, Clock, ChevronDown, MapPin } from "lucide-react";
+import {
+  fetchSalonBySlug,
+  fetchSalonProfessionals,
+  fetchSalonTimeSlots,
+  fetchSalonAvailabilityByDateRange,
+  createSalonAppointment,
+} from "@/services/salon/salonService";
+import SalonDatePicker from "@/components/SalonDatePicker";
+import StepSection from "@/components/StepSection";
+import ImageSlider from "@/components/ui/ImageSlider";
+import Select from "react-select";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  initBooking,
+  selectBooking,
+  setSelectedDate as setDate,
+  setSelectedServiceUuid as setService,
+  setSelectedCategoryUuid as setCategory,
+  setSelectedAudienceUuid as setAudience,
+  setSelectedProfessionalUuid as setProfessional,
+  setSelectedTime as setTime,
+  setSelectedComments as setComments,
+  setServiceSearch as setSearch,
+  setIsServiceSectionOpen as setServiceOpen,
+  setIsProfessionalSectionOpen as setProfessionalOpen,
+  setIsTimeSectionOpen as setTimeOpen,
+  setIsCommentsSectionOpen as setCommentsOpen,
+} from "@/store/slices/bookingSlice";
+
+const TIME_GROUPS = [
+  { key: "morning", label: "Morning", start: 0, end: 719 },
+  { key: "midday", label: "Midday", start: 720, end: 899 },
+  { key: "afternoon", label: "Afternoon", start: 900, end: 1439 },
+];
+
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(":").map((value) => Number.parseInt(value, 10));
+  return hours * 60 + minutes;
+}
+
+function groupTimeSlots(slots) {
+  const grouped = {
+    morning: [],
+    midday: [],
+    afternoon: [],
+  };
+
+  for (const slot of Array.isArray(slots) ? slots : []) {
+    const label = typeof slot === "string" ? slot : slot?.label;
+    const value = typeof slot === "string" ? slot : slot?.value;
+
+    if (typeof label !== "string" || !label.includes(":") || typeof value !== "string") {
+      continue;
+    }
+
+    const minutes = timeToMinutes(label);
+    const group = TIME_GROUPS.find((item) => minutes >= item.start && minutes <= item.end);
+    if (group && grouped[group.key]) {
+      grouped[group.key].push({ label, value });
+    }
+  }
+
+  return grouped;
+}
+
+export default function SalonClient({ slug, initialSalon }) {
+  const dispatch = useDispatch();
+  const booking = useSelector(selectBooking(slug));
+  const {
+    selectedDate,
+    selectedServiceUuid,
+    selectedCategoryUuid,
+    selectedAudienceUuid,
+    selectedProfessionalUuid,
+    selectedTime,
+    selectedComments,
+    serviceSearch,
+    isServiceSectionOpen,
+    isProfessionalSectionOpen,
+    isTimeSectionOpen,
+    isCommentsSectionOpen,
+  } = booking;
+
+  // Initialize booking state for this slug on first render
+  useEffect(() => {
+    if (slug) dispatch(initBooking({ slug }));
+  }, [slug, dispatch]);
+
+  const [loading, setLoading] = useState(initialSalon ? false : true);
+  const [error, setError] = useState("");
+  const [salon, setSalon] = useState(initialSalon || null);
+  const [professionals, setProfessionals] = useState([]);
+  const [professionalsLoading, setProfessionalsLoading] = useState(false);
+  const [professionalsError, setProfessionalsError] = useState("");
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [timeSlotsLoading, setTimeSlotsLoading] = useState(false);
+  const [timeSlotsError, setTimeSlotsError] = useState("");
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+  const [bookingSuccess, setBookingSuccess] = useState("");
+  const [serviceAvailableDates, setServiceAvailableDates] = useState(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [expandedServices, setExpandedServices] = useState({});
+
+  useEffect(() => {
+    if (!slug || initialSalon) return;
+
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await fetchSalonBySlug(slug);
+        if (!cancelled) {
+          setSalon(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Failed to load salon");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, initialSalon]);
+
+  const venueName = salon?.venue?.name || "Salon";
+  const venueAddress = salon?.venue?.address?.formatted || "";
+  const images = salon?.images || [];
+  const n = images.length;
+  const unavailableDates = salon?.availability?.unavailable_dates || [];
+  const services = Array.isArray(salon?.services) ? salon.services : [];
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Map();
+    for (const s of services) {
+      if (s.category && s.category.uuid && s.category.name && !seen.has(s.category.uuid)) {
+        seen.set(s.category.uuid, s.category.name);
+      }
+    }
+    return Array.from(seen.entries()).map(([uuid, name]) => ({ uuid, name }));
+  }, [services]);
+
+  const audienceOptions = useMemo(() => {
+    const seen = new Map();
+    for (const s of services) {
+      if (s.audience && s.audience.uuid && s.audience.name && !seen.has(s.audience.uuid)) {
+        seen.set(s.audience.uuid, s.audience.name);
+      }
+    }
+    return Array.from(seen.entries()).map(([uuid, name]) => ({ uuid, name }));
+  }, [services]);
+
+  const filteredServices = useMemo(() => {
+    if (!services.length) return [];
+    const q = serviceSearch.trim().toLowerCase();
+
+    return services.filter((service) => {
+      const name = service.display_name || service.service_name || service.name || "";
+      const matchesSearch = !q || name.toLowerCase().includes(q);
+
+      const matchesCategory = !selectedCategoryUuid || service.category?.uuid === selectedCategoryUuid;
+
+      const matchesAudience = !selectedAudienceUuid || service.audience?.uuid === selectedAudienceUuid;
+
+      return matchesSearch && matchesCategory && matchesAudience;
+    });
+  }, [services, serviceSearch, selectedCategoryUuid, selectedAudienceUuid]);
+
+  const selectedService = useMemo(() => services.find((s) => s.uuid === selectedServiceUuid) || null, [services, selectedServiceUuid]);
+
+  const selectedProfessional = useMemo(() => professionals.find((professional) => professional.uuid === selectedProfessionalUuid) || null, [professionals, selectedProfessionalUuid]);
+
+  const minProfessionalPrice = useMemo(() => {
+    if (professionals.length === 0) return null;
+    const prices = professionals
+      .map((p) => p.price)
+      .filter((price) => price !== null && price !== undefined);
+    if (prices.length === 0) return null;
+    return Math.min(...prices);
+  }, [professionals]);
+
+  const selectedTimeSlot = useMemo(() => timeSlots.find((slot) => (slot?.value ?? slot) === selectedTime) || null, [timeSlots, selectedTime]);
+
+  const groupedTimeSlots = useMemo(() => groupTimeSlots(timeSlots), [timeSlots]);
+
+  useEffect(() => {
+    if (!slug || !selectedDate || !selectedServiceUuid) {
+      setProfessionals([]);
+      setProfessionalsError("");
+      setProfessionalsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadProfessionals() {
+      setProfessionalsLoading(true);
+      setProfessionalsError("");
+
+      try {
+        const data = await fetchSalonProfessionals(slug, {
+          date: selectedDate,
+          service_uuid: selectedServiceUuid,
+        });
+
+        if (!cancelled) {
+          setProfessionals(Array.isArray(data.professionals) ? data.professionals : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setProfessionals([]);
+          setProfessionalsError(err?.message || "Failed to load professionals");
+        }
+      } finally {
+        if (!cancelled) {
+          setProfessionalsLoading(false);
+        }
+      }
+    }
+
+    loadProfessionals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, selectedDate, selectedServiceUuid]);
+
+  useEffect(() => {
+    if (!slug || !selectedDate || !selectedServiceUuid || !selectedProfessionalUuid) {
+      setTimeSlots([]);
+      setTimeSlotsError("");
+      setTimeSlotsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadTimeSlots() {
+      setTimeSlotsLoading(true);
+      setTimeSlotsError("");
+
+      try {
+        const data = await fetchSalonTimeSlots(slug, {
+          date: selectedDate,
+          service_uuid: selectedServiceUuid,
+          employee_uuid: selectedProfessionalUuid,
+        });
+
+        if (!cancelled) {
+          setTimeSlots(Array.isArray(data.slots) ? data.slots : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTimeSlots([]);
+          setTimeSlotsError(err?.message || "Failed to load time slots");
+        }
+      } finally {
+        if (!cancelled) {
+          setTimeSlotsLoading(false);
+        }
+      }
+    }
+
+    loadTimeSlots();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, selectedDate, selectedServiceUuid, selectedProfessionalUuid]);
+
+  // Fetch availability for a service across a date range in one API call.
+  // Returns: { "2026-04-01": { available: true, professionals: [...] }, ... }
+  async function fetchAvailableDatesInRange(startIso, endIso, serviceUuid) {
+    if (!slug || !serviceUuid) return {};
+    setAvailabilityLoading(true);
+    try {
+      // Try the optimized batch endpoint first
+      try {
+        const response = await fetchSalonAvailabilityByDateRange(slug, {
+          start_date: startIso,
+          end_date: endIso,
+          service_uuid: serviceUuid,
+        });
+
+        // Response is already in the format { "2026-04-01": { available: true, professionals: [...] }, ... }
+        // Extract just the available dates array for backward compatibility
+        const availableDates = Object.keys(response).filter((date) => response[date]?.available === true);
+        return { availabilityMap: response, availableDates };
+      } catch (batchErr) {
+        // Fallback to the old method if batch endpoint doesn't exist yet
+        console.warn("Batch endpoint not available, falling back to individual date checks:", batchErr?.message);
+        return await fallbackCheckAvailableDates(startIso, endIso, serviceUuid);
+      }
+    } catch (err) {
+      console.error("Error in fetchAvailableDatesInRange:", err);
+      return {};
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  }
+
+  // Fallback method: Check each date individually (slower but works with old backend)
+  async function fallbackCheckAvailableDates(startIso, endIso, serviceUuid) {
+    const start = dayjs(startIso);
+    const end = dayjs(endIso);
+    const days = [];
+    for (let d = start.clone(); d.isBefore(end) || d.isSame(end, "day"); d = d.add(1, "day")) {
+      days.push(d.format("YYYY-MM-DD"));
+    }
+
+    const availableDates = [];
+    const availabilityMap = {};
+
+    // For each date, check if ANY professional has available slots
+    for (const date of days) {
+      try {
+        // Step 1: Fetch all professionals available for this service on this date
+        const profData = await fetchSalonProfessionals(slug, {
+          date,
+          service_uuid: serviceUuid,
+        });
+
+        const professionals = Array.isArray(profData.professionals) ? profData.professionals : [];
+
+        // If no professionals are available on this date, skip it
+        if (professionals.length === 0) {
+          availabilityMap[date] = { available: false, professionals: [] };
+          continue;
+        }
+
+        // Step 2: Check if ANY professional has available slots
+        const slotChecks = await Promise.allSettled(
+          professionals.map((prof) =>
+            fetchSalonTimeSlots(slug, {
+              date,
+              service_uuid: serviceUuid,
+              employee_uuid: prof.uuid,
+            })
+          )
+        );
+
+        // Mark date as available if at least one professional has slots
+        let dateHasSlots = false;
+        for (const result of slotChecks) {
+          if (result.status === "fulfilled") {
+            const data = result.value;
+            const slots = Array.isArray(data.slots) ? data.slots : data?.slots?.data ?? [];
+            if (Array.isArray(slots) && slots.length > 0) {
+              dateHasSlots = true;
+              break;
+            }
+          }
+        }
+
+        if (dateHasSlots) {
+          availableDates.push(date);
+          availabilityMap[date] = { available: true, professionals };
+        } else {
+          availabilityMap[date] = { available: false, professionals: [] };
+        }
+      } catch (err) {
+        console.warn(`Error checking availability for ${date}:`, err?.message);
+        availabilityMap[date] = { available: false, professionals: [] };
+      }
+    }
+
+    return { availabilityMap, availableDates };
+  }
+
+  // When service changes, prefetch availability for the coming two weeks
+  useEffect(() => {
+    if (!selectedServiceUuid) {
+      setServiceAvailableDates(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const start = dayjs().startOf("day");
+      const end = start.add(13, "day");
+      const result = await fetchAvailableDatesInRange(start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD"), selectedServiceUuid);
+      if (!cancelled) setServiceAvailableDates(result.availableDates || []);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, selectedServiceUuid]);
+
+  // Called by the datepicker when the visible month changes so we can fetch month availability
+  const handleDatepickerMonthChange = useCallback(async (monthIso) => {
+    if (!selectedServiceUuid) return;
+    let start = dayjs(monthIso).startOf("month");
+    const today = dayjs().startOf("day");
+    // Defensive: ensure start_date is never before today (backend requires this)
+    if (start.isBefore(today)) {
+      start = today;
+    }
+    const end = dayjs(monthIso).endOf("month");
+    const result = await fetchAvailableDatesInRange(start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD"), selectedServiceUuid);
+    setServiceAvailableDates(result.availableDates || []);
+  }, [selectedServiceUuid]);
+
+  const handleBookNow = useCallback(async () => {
+    if (!selectedServiceUuid || !selectedProfessionalUuid || !selectedTime || !selectedDate) {
+      return;
+    }
+
+    setBookingSubmitting(true);
+    setBookingError("");
+    setBookingSuccess("");
+
+    try {
+      const response = await createSalonAppointment(slug, {
+        from_time: selectedTime,
+        service_uuid: selectedServiceUuid,
+        employee_uuid: selectedProfessionalUuid,
+        comments: selectedComments,
+      });
+
+      setBookingSuccess(response?.message || "Appointment created successfully.");
+      dispatch(setCommentsOpen({ slug, open: false }));
+    } catch (error) {
+      setBookingError(error?.message || "Failed to create appointment");
+    } finally {
+      setBookingSubmitting(false);
+    }
+  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, dispatch]);
+
+  return (
+    <>
+      {loading && (
+        <div className="rounded-3xl border border-black/10 bg-white p-6 text-sm text-neutral-600">Loading salon...</div>
+      )}
+
+      {error && !loading && (
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">{error}</div>
+      )}
+
+      {!loading && !error && (
+        <div className="space-y-6">
+          {/* Gallery slider */}
+          <section className="relative">
+            {images.length === 0 && (
+              <p className="mt-2 text-sm text-neutral-500">This salon has not added any gallery images yet.</p>
+            )}
+
+            {images.length > 0 && (
+              <ImageSlider
+                slides={images.map((img) => ({ src: img.path ? `${process.env.NEXT_PUBLIC_LARAVEL_URL}/storage/${img.path}` : "", label: img.caption || "" }))}
+                sliderHeight={300}
+                sliderHeightMobile={180}
+                fullBleed
+                showLabel={false}
+                showDots
+              />
+            )}
+          </section>
+
+          {/* Booking layout */}
+          <section className="grid gap-6 lg:flex lg:items-start">
+            {/* Left column: booking steps (visually left on large screens) */}
+            <div className="space-y-4 lg:order-1 lg:w-[58%]">
+              {/* Step 1: Select a service (collapsible) */}
+              <StepSection
+                stepNumber={1}
+                title={selectedService && !isServiceSectionOpen ? "Service" : "Select Service"}
+                isOpen={isServiceSectionOpen}
+                headerSummary={
+                  selectedService && !isServiceSectionOpen ? (
+                    <>
+                      <p className="truncate text-xs font-medium text-neutral-900">
+                        {selectedService.display_name || selectedService.service_name || selectedService.name}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="text-[11px] text-neutral-500">
+                          {selectedService.duration || selectedService.display_duration || `${selectedService.duration} min`}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-900">
+                          <span className="text-[11px] font-normal text-neutral-500">from</span>
+                          <span>
+                            {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
+                            {typeof selectedService.price === "number" ? selectedService.price.toFixed(2) : selectedService.price}
+                          </span>
+                        </span>
+                      </div>
+                    </>
+                  ) : !selectedService && !services.length ? (
+                    <p className="text-xs text-neutral-500">This salon has not added any services yet.</p>
+                  ) : null
+                }
+                headerRight={
+                  selectedService && !isServiceSectionOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch(setServiceOpen({ slug, open: true }));
+                        dispatch(setProfessionalOpen({ slug, open: false }));
+                      }}
+                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
+                    >
+                      Change
+                    </button>
+                  ) : null
+                }
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={serviceSearch}
+                    onChange={(e) => dispatch(setSearch({ slug, query: e.target.value }))}
+                    placeholder="Search services by name"
+                    className="h-[38px] flex-1 min-w-[160px] rounded-md border border-black/10 bg-white px-3 text-xs text-neutral-800 placeholder:text-neutral-400 focus:border-black/40 focus:outline-none focus:ring-0"
+                  />
+
+                  {categoryOptions.length > 0 && (
+                    <div className="ml-2 min-w-[160px]">
+                      <Select
+                        instanceId={`salon-category-${slug}`}
+                        options={categoryOptions.map((c) => ({ value: c.uuid, label: c.name }))}
+                        value={
+                          selectedCategoryUuid
+                            ? { value: selectedCategoryUuid, label: categoryOptions.find((c) => c.uuid === selectedCategoryUuid)?.name }
+                            : null
+                        }
+                        onChange={(opt) => dispatch(setCategory({ slug, uuid: opt ? opt.value : "" }))}
+                        isClearable
+                        placeholder="All categories"
+                        classNamePrefix="react-select"
+                        styles={{
+                          control: (base) => ({ ...base, minHeight: 32, fontSize: 12 }),
+                          placeholder: (base) => ({ ...base, fontSize: 12 }),
+                          option: (base) => ({ ...base, fontSize: 12 }),
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {audienceOptions.length > 0 && (
+                    <div className="ml-2 min-w-[160px]">
+                      <Select
+                        instanceId={`salon-audience-${slug}`}
+                        options={audienceOptions.map((a) => ({ value: a.uuid, label: a.name }))}
+                        value={
+                          selectedAudienceUuid
+                            ? { value: selectedAudienceUuid, label: audienceOptions.find((a) => a.uuid === selectedAudienceUuid)?.name }
+                            : null
+                        }
+                        onChange={(opt) => dispatch(setAudience({ slug, uuid: opt ? opt.value : "" }))}
+                        isClearable
+                        placeholder="All audiences"
+                        classNamePrefix="react-select"
+                        styles={{
+                          control: (base) => ({ ...base, minHeight: 32, fontSize: 12 }),
+                          placeholder: (base) => ({ ...base, fontSize: 12 }),
+                          option: (base) => ({ ...base, fontSize: 12 }),
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {services.length > 0 && filteredServices.length === 0 && (
+                  <p className="mt-3 text-xs text-neutral-500">No services match your search.</p>
+                )}
+
+                {filteredServices.length > 0 && (
+                  <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pt-1">
+                    {filteredServices.map((service) => {
+                      const isSelected = service.uuid === selectedServiceUuid;
+                      const isExpanded = !!expandedServices[service.uuid];
+                      const name = service.display_name || service.service_name || service.name;
+                      const durationLabel =
+                        service.duration ||
+                        service.display_duration ||
+                        (service.duration ? `${service.duration} min` : null);
+                      const priceLabel = typeof service.price === "number" ? service.price.toFixed(2) : service.price;
+                      const currencySymbol = service.currency?.symbol || "";
+                      const description = service.description || "";
+
+                      return (
+                        <div
+                          key={service.uuid}
+                          className={`overflow-hidden rounded-md border transition-all cursor-pointer ${
+                            isSelected
+                              ? "border-primary/80 bg-primary/5"
+                              : "border-neutral-300 bg-white hover:border-neutral-600 hover:bg-primary/8 hover:shadow-md"
+                          }`}
+                        >
+                          <div className="px-4 py-3">
+                            <div className="flex items-start justify-between gap-3">
+                              {/* Service info - clickable to select */}
+                              <div
+                                onClick={() => {
+                                  dispatch(setService({ slug, uuid: service.uuid }));
+                                  dispatch(setProfessional({ slug, uuid: null }));
+                                  dispatch(setTime({ slug, time: null }));
+                                  dispatch(setComments({ slug, comments: "" }));
+                                  dispatch(setServiceOpen({ slug, open: false }));
+                                  dispatch(setProfessionalOpen({ slug, open: true }));
+                                  dispatch(setTimeOpen({ slug, open: false }));
+                                  dispatch(setCommentsOpen({ slug, open: false }));
+                                }}
+                                className="flex-1 min-w-0"
+                              >
+                                <p className={`truncate text-sm font-medium ${isSelected ? "text-primary" : "text-neutral-900"}`}>
+                                  {name}
+                                </p>
+                                <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-neutral-600">
+                                  {durationLabel && <span>{durationLabel}</span>}
+                                  <span className="inline-flex items-center gap-1 font-semibold text-neutral-900">
+                                    <span className="text-[12px] font-normal text-neutral-500">from</span>
+                                    <span>
+                                      {currencySymbol && `${currencySymbol}`}
+                                      {priceLabel}
+                                    </span>
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Dropdown button - inline with service name */}
+                              {description && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedServices((prev) => ({
+                                      ...prev,
+                                      [service.uuid]: !prev[service.uuid],
+                                    }));
+                                  }}
+                                  className="flex-shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-neutral-50 transition-colors hover:border-primary/60 hover:bg-primary/10"
+                                >
+                                  <ChevronDown
+                                    size={14}
+                                    strokeWidth={2}
+                                    className={`text-neutral-600 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                                  />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {description && isExpanded && (
+                            <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-3">
+                              <p className="text-sm text-neutral-700">{description}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </StepSection>
+
+              {/* Step 2: Select Date (compact) */}
+              <StepSection stepNumber={2} title="Select Date" isOpen>
+                <SalonDatePicker
+                  value={selectedDate}
+                  onChange={(val) => {
+                    dispatch(setDate({ slug, date: val }));
+                    dispatch(setProfessional({ slug, uuid: null }));
+                    dispatch(setTime({ slug, time: null }));
+                    dispatch(setComments({ slug, comments: "" }));
+                    dispatch(setTimeOpen({ slug, open: false }));
+                    dispatch(setCommentsOpen({ slug, open: false }));
+                    if (selectedServiceUuid) {
+                      dispatch(setProfessionalOpen({ slug, open: true }));
+                    }
+                  }}
+                  unavailableDates={unavailableDates}
+                  availableDates={serviceAvailableDates}
+                  onMonthChange={handleDatepickerMonthChange}
+                />
+              </StepSection>
+
+              {/* Step 3: Choose a professional (collapsible, placeholder for now) */}
+              <StepSection
+                stepNumber={3}
+                title={selectedProfessional && !isProfessionalSectionOpen ? "Professional" : "Choose Professional"}
+                isOpen={!!selectedService && isProfessionalSectionOpen}
+                headerSummary={
+                  !selectedService ? (
+                    <p className="text-xs text-neutral-600">First select a service to see available professionals.</p>
+                  ) : selectedProfessional ? (
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-200 text-[10px] font-semibold text-neutral-700">
+                        {selectedProfessional.avatar ? (
+                          <img src={selectedProfessional.avatar} alt={selectedProfessional.full_name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span>{(selectedProfessional.full_name || "P").slice(0, 1)}</span>
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium text-neutral-900">{selectedProfessional.full_name}</p>
+                        {selectedProfessional.position && <p className="truncate text-[11px] text-neutral-500">{selectedProfessional.position}</p>}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-600">Choose the professional who will handle this service.</p>
+                  )
+                }
+                headerRight={
+                  selectedService ? (
+                    <button
+                      type="button"
+                      onClick={() => dispatch(setProfessionalOpen({ slug, open: !isProfessionalSectionOpen }))}
+                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
+                    >
+                      {selectedProfessional && !isProfessionalSectionOpen ? "Change" : isProfessionalSectionOpen ? "Hide" : "Show"}
+                    </button>
+                  ) : null
+                }
+              >
+                {selectedService && (
+                  <div className="space-y-3">
+                    {professionalsLoading && (
+                      <div className="rounded-lg border border-dashed border-black/15 bg-neutral-50 p-3 text-xs text-neutral-600">Loading professionals...</div>
+                    )}
+
+                    {professionalsError && !professionalsLoading && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{professionalsError}</div>
+                    )}
+
+                    {!professionalsLoading && !professionalsError && professionals.length === 0 && (
+                      <div className="rounded-lg border border-dashed border-black/15 bg-neutral-50 p-3 text-xs text-neutral-600">No professionals are available for this service on the selected date.</div>
+                    )}
+
+                    {!professionalsLoading && !professionalsError && professionals.length > 0 && (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {professionals.map((professional) => {
+                          const isSelectedProfessional = professional.uuid === selectedProfessionalUuid;
+
+                          return (
+                            <button
+                              key={professional.uuid}
+                              type="button"
+                              onClick={() => {
+                                dispatch(setProfessional({ slug, uuid: professional.uuid }));
+                                dispatch(setProfessionalOpen({ slug, open: false }));
+                                dispatch(setTime({ slug, time: null }));
+                                dispatch(setTimeOpen({ slug, open: true }));
+                                dispatch(setComments({ slug, comments: "" }));
+                                dispatch(setCommentsOpen({ slug, open: false }));
+                              }}
+                              className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${
+                                isSelectedProfessional ? "border-primary/60 bg-primary/5" : "border-black/10 bg-white hover:border-black/20 hover:bg-neutral-50"
+                              }`}
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-200 text-xs font-semibold text-neutral-700">
+                                  {professional.avatar ? (
+                                    <img src={professional.avatar} alt={professional.full_name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span>{(professional.full_name || "P").slice(0, 1)}</span>
+                                  )}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-semibold text-neutral-950">{professional.full_name}</p>
+                                  {professional.position && <p className="truncate text-xs text-neutral-500">{professional.position}</p>}
+                                </div>
+                              </div>
+
+                              {professional.price !== undefined && professional.price !== null && (
+                                <div className="flex-shrink-0 text-right">
+                                  <p className="text-xs font-bold text-emerald-600">
+                                    {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
+                                    {typeof professional.price === "number" ? professional.price.toFixed(2) : professional.price}
+                                  </p>
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </StepSection>
+
+              <StepSection stepNumber={4} title={selectedTime && !isTimeSectionOpen ? "Time" : "Choose Time"} isOpen={!!selectedProfessional && isTimeSectionOpen} headerSummary={!selectedProfessional ? (<p className="text-xs text-neutral-600">First choose a professional to see available booking times.</p>) : selectedTime ? (<p className="text-xs font-medium text-neutral-900">{selectedTimeSlot?.label || selectedTime}</p>) : (<p className="text-xs text-neutral-600">Choose the time that works best for you.</p>)} headerRight={selectedProfessional ? (<button type="button" onClick={() => dispatch(setTimeOpen({ slug, open: !isTimeSectionOpen }))} className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50">{selectedTime && !isTimeSectionOpen ? "Change" : isTimeSectionOpen ? "Hide" : "Show"}</button>) : null}>
+                {selectedProfessional && (
+                  <div className="space-y-3">
+                    {timeSlotsLoading && (
+                      <div className="rounded-lg border border-dashed border-black/15 bg-neutral-50 p-3 text-xs text-neutral-600">Loading time slots...</div>
+                    )}
+
+                    {timeSlotsError && !timeSlotsLoading && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{timeSlotsError}</div>
+                    )}
+
+                    {!timeSlotsLoading && !timeSlotsError && timeSlots.length === 0 && (
+                      <div className="rounded-lg border border-dashed border-black/15 bg-neutral-50 p-3 text-xs text-neutral-600">No available times for the selected professional and service.</div>
+                    )}
+
+                    {!timeSlotsLoading && !timeSlotsError && timeSlots.length > 0 && (
+                      <div className="grid gap-4 lg:grid-cols-3">
+                        {TIME_GROUPS.map((group) => {
+                          const slotsForGroup = groupedTimeSlots[group.key] || [];
+
+                          return (
+                            <div key={group.key} className="rounded-xl border border-black/10 bg-neutral-50 p-3">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-700">{group.label}</p>
+
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {slotsForGroup.length > 0 ? (
+                                  slotsForGroup.map((slot) => {
+                                    const isSelectedTime = slot.value === selectedTime;
+
+                                    return (
+                                      <button
+                                        key={slot.value}
+                                        type="button"
+                                        onClick={() => {
+                                          dispatch(setTime({ slug, time: slot.value }));
+                                          dispatch(setTimeOpen({ slug, open: false }));
+                                          dispatch(setCommentsOpen({ slug, open: true }));
+                                        }}
+                                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                                          isSelectedTime ? "border-primary/60 bg-primary/5 text-neutral-900 shadow-sm" : "border-black/15 bg-white text-neutral-900 hover:border-black/30 hover:bg-neutral-50"
+                                        }`}
+                                      >
+                                        {slot.label}
+                                      </button>
+                                    );
+                                  })
+                                ) : (
+                                  <p className="text-xs text-neutral-500">No slots.</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </StepSection>
+            </div>
+
+            {/* Right column: selection summary (visually right on large screens) */}
+            <div className="space-y-4 lg:order-2 lg:w-[42%]">
+              <div className="rounded-xl border border-black/10 bg-white shadow-sm">
+                <div className="border-b border-black/8 bg-gradient-to-r from-neutral-50 to-white px-5 py-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                      <MapPin size={18} strokeWidth={1.5} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-neutral-950">{venueName}</p>
+                      {venueAddress && (
+                        <p className="mt-1 text-xs text-neutral-600 line-clamp-2">{venueAddress}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {!selectedService && (
+                  <div className="p-5">
+                    <p className="text-xs text-neutral-500">Choose a date and a service to start your booking.</p>
+                  </div>
+                )}
+
+                {selectedService && (
+                  <div className="divide-y divide-black/5 p-5">
+                    {/* Service */}
+                    <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                      <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600">
+                        <Sparkles size={18} strokeWidth={1.5} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Service</p>
+                        <p className="mt-1 text-sm font-semibold text-neutral-950">{selectedService.display_name || selectedService.service_name || selectedService.name}</p>
+                        <p className="mt-0.5 text-xs text-neutral-500">{selectedService.duration || selectedService.display_duration || `${selectedService.duration} min`}</p>
+                      </div>
+                    </div>
+
+                    {/* Price - From professionals or Selected professional */}
+                    {(minProfessionalPrice !== null || (selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null)) && (
+                      <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                          <Banknote size={18} strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          {selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null ? (
+                            <>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Price</p>
+                              <p className="mt-1 text-sm font-bold text-neutral-950">
+                                {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
+                                {typeof selectedProfessional.price === "number"
+                                  ? selectedProfessional.price.toFixed(2)
+                                  : selectedProfessional.price}
+                              </p>
+                              <p className="mt-0.5 text-xs text-neutral-500">({selectedProfessional.full_name})</p>
+                            </>
+                          ) : minProfessionalPrice !== null ? (
+                            <>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">From Price</p>
+                              <p className="mt-1 text-sm font-bold text-neutral-950">
+                                {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
+                                {typeof minProfessionalPrice === "number"
+                                  ? minProfessionalPrice.toFixed(2)
+                                  : minProfessionalPrice}
+                              </p>
+                              <p className="mt-0.5 text-xs text-neutral-500">(Select professional for exact price)</p>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date */}
+                    <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                      <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                        <Calendar size={18} strokeWidth={1.5} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Date</p>
+                        <p className="mt-1 text-sm font-semibold text-neutral-950">
+                          {dayjs(selectedDate).format("dddd, D MMMM YYYY")}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Time */}
+                    {selectedTime && (
+                      <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                          <Clock size={18} strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Time</p>
+                          <p className="mt-1 text-sm font-semibold text-neutral-950">{selectedTimeSlot?.label || selectedTime}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Professional */}
+                    {selectedProfessional && (
+                      <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
+                          <User size={18} strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Professional</p>
+                          <p className="mt-1 text-sm font-semibold text-neutral-950">{selectedProfessional.full_name}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Comments and Book Now */}
+              {selectedTime && (
+                <div className="space-y-3">
+                  <textarea
+                    value={selectedComments}
+                    onChange={(e) => dispatch(setComments({ slug, comments: e.target.value }))}
+                    placeholder="Comments (optional)"
+                    rows={4}
+                    className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-black/30 focus:outline-none focus:ring-0"
+                  />
+
+                  {bookingError && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{bookingError}</div>}
+
+                  <button
+                    type="button"
+                    onClick={handleBookNow}
+                    disabled={bookingSubmitting}
+                    className="inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {bookingSubmitting ? "Booking..." : "Book now"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+    </>
+  );
+}

@@ -1,5 +1,5 @@
 export async function fetchSalonBySlug(slug) {
-  const response = await fetch("/api", {
+  const response = await fetch(`/api/salons/${slug}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -7,7 +7,6 @@ export async function fetchSalonBySlug(slug) {
     body: JSON.stringify({
       method: "get",
       access_type: "laravelApp",
-      url: `client/salons/${slug}`,
       data: {},
     }),
   });
@@ -22,7 +21,7 @@ export async function fetchSalonBySlug(slug) {
 }
 
 export async function fetchSalonProfessionals(slug, { date, service_uuid }) {
-  const response = await fetch("/api", {
+  const response = await fetch(`/api/salons/${slug}/professionals`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -30,7 +29,6 @@ export async function fetchSalonProfessionals(slug, { date, service_uuid }) {
     body: JSON.stringify({
       method: "get",
       access_type: "laravelApp",
-      url: `client/salons/${slug}/professionals`,
       data: {
         date,
         service_uuid,
@@ -51,7 +49,7 @@ export async function fetchSalonProfessionals(slug, { date, service_uuid }) {
 }
 
 export async function fetchSalonTimeSlots(slug, { date, service_uuid, employee_uuid }) {
-  const response = await fetch("/api", {
+  const response = await fetch(`/api/salons/${slug}/time-slots`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -59,7 +57,6 @@ export async function fetchSalonTimeSlots(slug, { date, service_uuid, employee_u
     body: JSON.stringify({
       method: "get",
       access_type: "laravelApp",
-      url: `client/salons/${slug}/time-slots`,
       data: {
         date,
         service_uuid,
@@ -77,16 +74,42 @@ export async function fetchSalonTimeSlots(slug, { date, service_uuid, employee_u
   return data;
 }
 
-export async function createSalonAppointment(slug, payload) {
-  const response = await fetch("/api", {
+export async function fetchSalonAvailabilityByDateRange(slug, { start_date, end_date, service_uuid }) {
+  const response = await fetch(`/api/salons/${slug}/availability-range`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      method: "post",
-      access_type: "laravelApi",
-      url: `client/salons/${slug}/appointments`,
+      method: "get",
+      access_type: "laravelApp",
+      data: {
+        start_date,
+        end_date,
+        service_uuid,
+      },
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to load availability range");
+  }
+
+  // Response format: { "2026-04-01": { available: true, professionals: [...] }, ... }
+  return data;
+}
+
+export async function createSalonAppointment(slug, payload) {
+  // Use a dedicated appointments proxy so the client can't supply arbitrary URLs
+  const response = await fetch("/api/appointments", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      slug,
       data: payload,
     }),
   });

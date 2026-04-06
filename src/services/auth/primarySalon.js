@@ -1,6 +1,6 @@
 export async function fetchPrimarySalonLocations({ search = '', perPage = 20, page = 1, signal } = {}) {
     try {
-        const response = await fetch('/api', {
+        const response = await fetch('/api/locations', {
             method: 'POST',
             signal,
             headers: {
@@ -9,7 +9,6 @@ export async function fetchPrimarySalonLocations({ search = '', perPage = 20, pa
             body: JSON.stringify({
                 method: 'get',
                 access_type: 'laravelApp',
-                url: 'client/locations',
                 data: {
                     perPage,
                     page,
@@ -59,15 +58,15 @@ export async function fetchPrimarySalonLocations({ search = '', perPage = 20, pa
 }
 
 export async function setPrimarySalon(venueUuid) {
-    const response = await fetch('/api', {
+    const response = await fetch(`/api/primary-salon/${venueUuid}`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
             method: 'put',
             access_type: 'laravelApi',
-            url: `client/primary-salon/${venueUuid}`,
             data: {},
         }),
     });
