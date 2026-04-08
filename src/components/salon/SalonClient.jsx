@@ -893,39 +893,7 @@ export default function SalonClient({ slug, initialSalon }) {
                       </div>
                     </div>
 
-                    {/* Price - From professionals or Selected professional */}
-                    {(minProfessionalPrice !== null || (selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null)) && (
-                      <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
-                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-                          <Banknote size={18} strokeWidth={1.5} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          {selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null ? (
-                            <>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Price</p>
-                              <p className="mt-1 text-sm font-bold text-neutral-950">
-                                {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
-                                {typeof selectedProfessional.price === "number"
-                                  ? selectedProfessional.price.toFixed(2)
-                                  : selectedProfessional.price}
-                              </p>
-                              <p className="mt-0.5 text-xs text-neutral-500">({selectedProfessional.full_name})</p>
-                            </>
-                          ) : minProfessionalPrice !== null ? (
-                            <>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">From Price</p>
-                              <p className="mt-1 text-sm font-bold text-neutral-950">
-                                {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
-                                {typeof minProfessionalPrice === "number"
-                                  ? minProfessionalPrice.toFixed(2)
-                                  : minProfessionalPrice}
-                              </p>
-                              <p className="mt-0.5 text-xs text-neutral-500">(Select professional for exact price)</p>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                    )}
+          
 
                     {/* Date */}
                     <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
@@ -962,6 +930,38 @@ export default function SalonClient({ slug, initialSalon }) {
                         <div className="min-w-0 flex-1">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Professional</p>
                           <p className="mt-1 text-sm font-semibold text-neutral-950">{selectedProfessional.full_name}</p>
+                        </div>
+                      </div>
+                    )}
+                     {/* Price - From professionals or Selected professional */}
+                    {(minProfessionalPrice !== null || (selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null)) && (
+                      <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                          <Banknote size={18} strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          {selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null ? (
+                            <>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Price</p>
+                              <p className="mt-1 text-sm font-bold text-neutral-950">
+                                {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
+                                {typeof selectedProfessional.price === "number"
+                                  ? selectedProfessional.price.toFixed(2)
+                                  : selectedProfessional.price}
+                              </p>                
+                            </>
+                          ) : minProfessionalPrice !== null ? (
+                            <>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">From Price</p>
+                              <p className="mt-1 text-sm font-bold text-neutral-950">
+                                {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
+                                {typeof minProfessionalPrice === "number"
+                                  ? minProfessionalPrice.toFixed(2)
+                                  : minProfessionalPrice}
+                              </p>
+                              <p className="mt-0.5 text-xs text-neutral-500">(Select professional for exact price)</p>
+                            </>
+                          ) : null}
                         </div>
                       </div>
                     )}
