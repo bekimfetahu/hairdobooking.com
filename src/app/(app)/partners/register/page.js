@@ -1,6 +1,7 @@
-'use client'
+ 'use client'
 
 import { useState } from "react";
+import PageShell from '@/components/layouts/PageShell';
 
 
 export default function RegisterPage() {
@@ -75,25 +76,26 @@ export default function RegisterPage() {
     };
 
     return (
-        <section
-            className="relative min-h-[70vh] overflow-hidden flex items-center justify-center px-4 py-10"
-            style={{ background: "var(--gradient-hero)" }}
-        >
-            <div className="absolute top-12 left-8 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
-            <div className="absolute bottom-8 right-0 h-[20rem] w-[20rem] rounded-full bg-black/5 blur-3xl" aria-hidden="true" />
+        <PageShell variant="business">
+            <section
+                className="relative min-h-[70vh] overflow-hidden flex items-center justify-center px-4 py-10"
+            
+            >
+                <div className="absolute top-12 left-8 h-72 w-72 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
+                <div className="absolute bottom-8 right-0 h-[20rem] w-[20rem] rounded-full bg-black/5 blur-3xl" aria-hidden="true" />
 
-            <div className="relative z-10 container mx-auto">
+                <div className="relative z-10">
                 <div className="grid gap-10 lg:grid-cols-2 items-stretch">
                     {/* Left: form card */}
                     <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-black/10 shadow-xl p-8 md:p-10 h-full flex flex-col">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mb-6">
+                        {/* <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mb-6">
                             <span className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
                                 Free trial for salons owners
                             </span>
-                        </div>
+                        </div> */}
 
                         <h1 className="text-3xl md:text-4xl font-semibold text-neutral-950">
-                            Start your free salon trial
+                            <span className="text-primary">Start</span> your free salon trial
                         </h1>
                         <p className="mt-3 text-sm md:text-base text-neutral-600">
                             Share a few details about your salon and we&apos;ll set up your account.
@@ -182,7 +184,7 @@ export default function RegisterPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full py-3.5 px-6 rounded-lg bg-black text-white font-medium text-sm md:text-base shadow-lg shadow-black/10 hover:bg-neutral-800 transition disabled:opacity-60 mt-4"
+                                className="w-full py-3.5 px-6 rounded-full bg-black text-white font-medium text-sm md:text-base shadow-lg shadow-black/10 hover:bg-neutral-800 transition disabled:opacity-60 mt-4"
                             >
                                 {loading ? "Registering..." : "Start free trial"}
                             </button>
@@ -191,8 +193,8 @@ export default function RegisterPage() {
 
                     {/* Right: hero-style image */}
                     <div className="relative hidden lg:flex h-full items-stretch">
-                        <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-br from-primary/20 via-black/5 to-transparent blur-2xl" aria-hidden="true" />
-                        <div className="relative rounded-[1.25rem] border border-white/70 bg-white/70 shadow-2xl shadow-black/20 overflow-hidden flex-1">
+                        <div className="absolute inset-0 rounded-[1rem]" aria-hidden="true" />
+                        <div className="relative rounded-[1rem] border border-white/70 bg-white/70 shadow-2xl shadow-black/20 overflow-hidden flex-1">
                             <img
                                 src="/images/reservations.png"
                                 alt="Hairdresser using tablet to book an appointment"
@@ -201,7 +203,8 @@ export default function RegisterPage() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+                </div>
+            </section>
+        </PageShell>
     );
 }
