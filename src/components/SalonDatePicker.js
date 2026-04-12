@@ -4,19 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 
 export default function SalonDatePicker({ value, onChange, unavailableDates = [], availableDates = null, onMonthChange = () => {} }) {
-  const today = dayjs().startOf("day");
-  const selected = value ? dayjs(value) : null;
-
   const unavailableSet = useMemo(() => new Set(unavailableDates), [unavailableDates]);
   const availableSet = useMemo(() => (Array.isArray(availableDates) ? new Set(availableDates) : null), [availableDates]);
 
-  const [weekStart, setWeekStart] = useState(() => (selected || today).startOf("week"));
-  const [currentMonth, setCurrentMonth] = useState(() => (selected || today).startOf("month"));
+  const [weekStart, setWeekStart] = useState(null);
+  const [currentMonth, setCurrentMonth] = useState(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
+  // Initialize state after hydration to avoid SSR/client mismatch from timezone differences
   useEffect(() => {
-    const base = value ? dayjs(value) : dayjs().startOf("day");
-    setWeekStart(base.startOf("week"));
-    setCurrentMonth(base.startOf("month"));
+    const today = dayjs().startOf("day");
+    const selected = value ? dayjs(value) : null;
+    setWeekStart((selected || today).startOf("week"));
+    setCurrentMonth((selected || today).startOf("month"));
+    setIsHydrated(true);
   }, [value]);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
   }, [weekStart, currentMonth]);
 
   useEffect(() => {
+    if (!currentMonth) return;
     try {
       onMonthChange(currentMonth.format("YYYY-MM-DD"));
     } catch (e) {
@@ -36,6 +38,9 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
   }, [currentMonth, onMonthChange]);
 
   // days grid removed - we only render a 7-day horizontal scroller
+
+  const today = dayjs().startOf("day");
+  const selected = value ? dayjs(value) : null;
 
   const isDisabled = (date) => {
     const iso = date.format("YYYY-MM-DD");
@@ -50,6 +55,11 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
     if (!onChange) return;
     onChange(date.format("YYYY-MM-DD"));
   };
+
+  // Prevent hydration mismatch - don't render until hydrated
+  if (!isHydrated || !weekStart || !currentMonth) {
+    return <div className="w-full h-32" />;
+  }
 
   const monthLabel = currentMonth.format("MMMM YYYY");
   const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
