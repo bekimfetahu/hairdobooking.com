@@ -90,7 +90,15 @@ export default function UserRegister() {
 
             const data = await response.json();
             if (!response.ok) {
-                setError(data.message || 'Registration failed');
+                // Handle validation errors (422) with field-specific messages
+                if (response.status === 422 && data.errors) {
+                    const errorMessages = Object.values(data.errors)
+                        .flat()
+                        .join('; ');
+                    setError(errorMessages || data.message || 'Registration failed');
+                } else {
+                    setError(data.message || 'Registration failed');
+                }
                 return;
             }
 

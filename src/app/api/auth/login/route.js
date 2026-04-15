@@ -23,11 +23,13 @@ export async function POST(req) {
         return res;
     } catch (error) {
         const status = error.response?.status || 500;
-        const message = error.response?.data?.message || 'An error occurred.';
+        const data = error.response?.data || {};
+        const message = data.message || 'An error occurred.';
+        const errors = data.errors || null;
 
-        // Forward the original Laravel message and status
+        // Forward the original Laravel message, errors (for 422), and status
         return NextResponse.json(
-            { message },
+            { message, errors },
             { status }
         );
     }
