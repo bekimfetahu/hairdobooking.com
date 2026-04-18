@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import PreferredSalonSearch from "@/components/PreferredSalonSearch";
+import PreferredSalonSearch from "@/components/modals/PreferredSalonSearch";
 
 export default function SearchClient() {
     const searchParams = useSearchParams();
