@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import dayjs from "dayjs";
 import { Calendar, Sparkles, Banknote, User, Clock, ChevronDown, MapPin } from "lucide-react";
+import { useSalonSlider } from "@/context/SalonSliderContext";
 import {
   fetchSalonBySlug,
   fetchSalonProfessionals,
@@ -106,6 +107,12 @@ export default function SalonClient({ slug, initialSalon }) {
   const [serviceAvailableDates, setServiceAvailableDates] = useState(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [expandedServices, setExpandedServices] = useState({});
+  const { showImageSlider, setShowImageSlider } = useSalonSlider();
+
+  // Hide slider when user clicks in services section
+  const handleServiceSectionClick = useCallback(() => {
+    setShowImageSlider(false);
+  }, [setShowImageSlider]);
 
   useEffect(() => {
     if (!slug || initialSalon) return;
@@ -455,13 +462,13 @@ export default function SalonClient({ slug, initialSalon }) {
 
       {!loading && !error && (
         <div className="space-y-6">
-          {/* Gallery slider */}
+          {/* Gallery slider - only shown when slider is expanded */}
           <section className="relative">
             {images.length === 0 && (
               <p className="mt-2 text-sm text-neutral-500">This salon has not added any gallery images yet.</p>
             )}
 
-            {images.length > 0 && (
+            {images.length > 0 && showImageSlider && (
               <ImageSlider
                 slides={images.map((img) => ({ src: img.path ? `${process.env.NEXT_PUBLIC_LARAVEL_URL}/storage/${img.path}` : "", label: img.caption || "" }))}
                 sliderHeight={300}
@@ -476,7 +483,7 @@ export default function SalonClient({ slug, initialSalon }) {
           {/* Booking layout */}
           <section className="grid gap-6 lg:flex lg:items-start">
             {/* Left column: booking steps (visually left on large screens) */}
-            <div className="space-y-4 lg:order-1 lg:w-[58%]">
+            <div className="space-y-4 lg:order-1 lg:w-[58%]" onClick={handleServiceSectionClick}>
               {/* Step 1: Select a service (collapsible) */}
               <StepSection
                 stepNumber={1}
@@ -581,7 +588,7 @@ export default function SalonClient({ slug, initialSalon }) {
                 )}
 
                 {filteredServices.length > 0 && (
-                  <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pt-1">
+                  <div className="mt-3 max-h-[600px] space-y-2 overflow-y-auto pt-1">
                     {filteredServices.map((service) => {
                       const isSelected = service.uuid === selectedServiceUuid;
                       const isExpanded = !!expandedServices[service.uuid];
@@ -669,26 +676,25 @@ export default function SalonClient({ slug, initialSalon }) {
                 )}
               </StepSection>
 
-              {/* Step 2: Select Date (compact) */}
-              <StepSection stepNumber={2} title="Select Date" isOpen>
-                <SalonDatePicker
-                  value={selectedDate}
-                  onChange={(val) => {
-                    dispatch(setDate({ slug, date: val }));
-                    dispatch(setProfessional({ slug, uuid: null }));
-                    dispatch(setTime({ slug, time: null }));
-                    dispatch(setComments({ slug, comments: "" }));
-                    dispatch(setTimeOpen({ slug, open: false }));
-                    dispatch(setCommentsOpen({ slug, open: false }));
-                    if (selectedServiceUuid) {
-                      dispatch(setProfessionalOpen({ slug, open: true }));
-                    }
-                  }}
-                  unavailableDates={unavailableDates}
-                  availableDates={serviceAvailableDates}
-                  onMonthChange={handleDatepickerMonthChange}
-                />
-              </StepSection>
+              {/* Step 2: Select Date */}
+              <SalonDatePicker
+                value={selectedDate}
+                onChange={(val) => {
+                  dispatch(setDate({ slug, date: val }));
+                  dispatch(setProfessional({ slug, uuid: null }));
+                  dispatch(setTime({ slug, time: null }));
+                  dispatch(setComments({ slug, comments: "" }));
+                  dispatch(setTimeOpen({ slug, open: false }));
+                  dispatch(setCommentsOpen({ slug, open: false }));
+                  if (selectedServiceUuid) {
+                    dispatch(setProfessionalOpen({ slug, open: true }));
+                  }
+                }}
+                unavailableDates={unavailableDates}
+                availableDates={serviceAvailableDates}
+                onMonthChange={handleDatepickerMonthChange}
+                isLoading={availabilityLoading}
+              />
 
               {/* Step 3: Choose a professional (collapsible, placeholder for now) */}
               <StepSection
@@ -812,7 +818,7 @@ export default function SalonClient({ slug, initialSalon }) {
                     )}
 
                     {!timeSlotsLoading && !timeSlotsError && timeSlots.length > 0 && (
-                      <div className="grid gap-4 lg:grid-cols-3">
+                      <div className="grid gap-5 lg:grid-cols-3">
                         {TIME_GROUPS.map((group) => {
                           const slotsForGroup = groupedTimeSlots[group.key] || [];
 
@@ -858,7 +864,7 @@ export default function SalonClient({ slug, initialSalon }) {
 
             {/* Right column: selection summary (visually right on large screens) */}
             <div className="space-y-4 lg:order-2 lg:w-[42%]">
-              <div className="rounded-xl border border-black/10 bg-white shadow-sm">
+              <div className="rounded-md border border-black/10 bg-white p-4 shadow-sm">
                 <div className="border-b border-black/8 bg-gradient-to-r from-neutral-50 to-white px-5 py-4">
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
@@ -867,7 +873,7 @@ export default function SalonClient({ slug, initialSalon }) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-neutral-950">{venueName}</p>
                       {venueAddress && (
-                        <p className="mt-1 text-xs text-neutral-600 line-clamp-2">{venueAddress}</p>
+                        <p className="mt-0 text-xs text-neutral-600 line-clamp-2">{venueAddress}</p>
                       )}
                     </div>
                   </div>
@@ -888,8 +894,10 @@ export default function SalonClient({ slug, initialSalon }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Service</p>
-                        <p className="mt-1 text-sm font-semibold text-neutral-950">{selectedService.display_name || selectedService.service_name || selectedService.name}</p>
-                        <p className="mt-0.5 text-xs text-neutral-500">{selectedService.duration || selectedService.display_duration || `${selectedService.duration} min`}</p>
+                        <p className="mt-1 text-sm font-semibold text-neutral-950">
+                          {selectedService.display_name || selectedService.service_name || selectedService.name} 
+                          <span className="text-neutral-500 font-normal"> — {selectedService.duration || selectedService.display_duration || `${selectedService.duration} min`}</span>
+                        </p>
                       </div>
                     </div>
 
@@ -965,33 +973,33 @@ export default function SalonClient({ slug, initialSalon }) {
                         </div>
                       </div>
                     )}
+
+                    {/* Comments section */}
+                    {selectedTime && (
+                      <div className="pt-4 mt-2">
+                        <textarea
+                          value={selectedComments}
+                          onChange={(e) => dispatch(setComments({ slug, comments: e.target.value }))}
+                          placeholder="Comments (optional)"
+                          rows={3}
+                          className="w-full rounded-md border border-black/10 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-black/30 focus:outline-none focus:ring-0"
+                        />
+
+                        {bookingError && <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">{bookingError}</div>}
+
+                        <button
+                          type="button"
+                          onClick={handleBookNow}
+                          disabled={bookingSubmitting}
+                          className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {bookingSubmitting ? "Booking..." : "Book now"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-
-              {/* Comments and Book Now */}
-              {selectedTime && (
-                <div className="space-y-3">
-                  <textarea
-                    value={selectedComments}
-                    onChange={(e) => dispatch(setComments({ slug, comments: e.target.value }))}
-                    placeholder="Comments (optional)"
-                    rows={4}
-                    className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-black/30 focus:outline-none focus:ring-0"
-                  />
-
-                  {bookingError && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{bookingError}</div>}
-
-                  <button
-                    type="button"
-                    onClick={handleBookNow}
-                    disabled={bookingSubmitting}
-                    className="inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {bookingSubmitting ? "Booking..." : "Book now"}
-                  </button>
-                </div>
-              )}
             </div>
           </section>
         </div>

@@ -13,6 +13,8 @@ export default function PageShell({
     title,
     description,
     actions,
+    customHeader = false,
+    customHeaderContent = null,
     variant = "default",
     className = "",
     containerClassName = "mx-auto max-w-[1200px] px-4 sm:px-6 py-5 sm:py-10",
@@ -25,7 +27,13 @@ export default function PageShell({
     return (
         <main className={cn("min-h-screen", variantStyles[variant] || variantStyles.default, className)}>
             <div className={containerClassName}>
-                {(eyebrow || title || description || actions) && (
+                {customHeader && customHeaderContent && (
+                    <div className={cn("mb-8", headerClassName)}>
+                        {customHeaderContent}
+                    </div>
+                )}
+                
+                {!customHeader && (eyebrow || title || description || actions) && (
                     <header className={cn("mb-8 flex flex-col gap-4", headerClassName)}>
                         {eyebrow && (
                             <p className={cn("text-sm font-semibold uppercase tracking-[0.25em] text-primary", eyebrowClassName)}>

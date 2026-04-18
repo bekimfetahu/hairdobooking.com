@@ -1,5 +1,7 @@
 import PageShell from "@/components/layouts/PageShell";
 import SalonClient from "@/components/salon/SalonClient";
+import SalonHeader from "@/components/salon/SalonHeader";
+import { SalonSliderProvider } from "@/context/SalonSliderContext";
 import { sendRequest } from "@/services/sendRequest";
 import { notFound } from "next/navigation";
 
@@ -22,8 +24,15 @@ export default async function SalonPage({ params }) {
   const description = salon?.venue?.address?.formatted || "";
 
   return (
-    <PageShell variant="dashboard" eyebrow="Your salon" title={title} description={description} contentClassName="mt-6">
-      <SalonClient slug={slug} initialSalon={salon} />
-    </PageShell>
+    <SalonSliderProvider>
+      <PageShell 
+        variant="dashboard" 
+        customHeader={true}
+        customHeaderContent={<SalonHeader salon={salon} />}
+        contentClassName="mt-6"
+      >
+        <SalonClient slug={slug} initialSalon={salon} />
+      </PageShell>
+    </SalonSliderProvider>
   );
 }

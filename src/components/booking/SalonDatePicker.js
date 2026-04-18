@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 
-export default function SalonDatePicker({ value, onChange, unavailableDates = [], availableDates = null, onMonthChange = () => {} }) {
+export default function SalonDatePicker({ value, onChange, unavailableDates = [], availableDates = null, onMonthChange = () => {}, isLoading = false }) {
   const unavailableSet = useMemo(() => new Set(unavailableDates), [unavailableDates]);
   const availableSet = useMemo(() => (Array.isArray(availableDates) ? new Set(availableDates) : null), [availableDates]);
 
@@ -81,7 +81,7 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
         </div>
 
         <div className="mb-2 flex items-center gap-1">
-          <button type="button" onClick={goToPrevWeek} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/10 text-neutral-700 hover:bg-neutral-100 text-xs">&#10094;</button>
+          <button type="button" onClick={goToPrevWeek} disabled={isLoading} className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold transition-all ${isLoading ? "border-primary/60 bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-lg shadow-primary/60 animate-pulse cursor-not-allowed" : "border-primary/80 bg-white text-primary hover:border-primary hover:shadow-md hover:shadow-primary/30 hover:bg-primary/5"}`}>&#10094;</button>
 
           <div className="flex-1 overflow-auto">
             <div className="flex w-full justify-between gap-1 px-0.5">
@@ -102,10 +102,10 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
             </div>
           </div>
 
-          <button type="button" onClick={goToNextWeek} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/10 text-neutral-700 hover:bg-neutral-100 text-xs">&#10095;</button>
+          <button type="button" onClick={goToNextWeek} disabled={isLoading} className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold transition-all ${isLoading ? "border-primary/60 bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-lg shadow-primary/60 animate-pulse cursor-not-allowed" : "border-primary/80 bg-white text-primary hover:border-primary hover:shadow-md hover:shadow-primary/30 hover:bg-primary/5"}`}>&#10095;</button>
         </div>
 
-        <div className="mt-1 border-t pt-2 text-center">
+        <div className="mt-1 border-t border-neutral-100 pt-2 text-center">
           {(() => {
             const weekDays = Array.from({ length: 7 }).map((_, i) => weekStart.add(i, "day"));
             const weekHasAvailable = weekDays.some((d) => !isDisabled(d));

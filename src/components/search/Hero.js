@@ -163,25 +163,25 @@ export default function Hero({
         }}
       />
 
-      <div className="relative max-w-6xl mx-auto px-6 flex items-center gap-6">
+      <div className="relative max-w-6xl mx-auto px-3 sm:px-6 flex flex-col lg:flex-row items-center gap-6">
         {/* Left Content */}
         <div className="flex-1 max-w-4xl">
           {/* Search Input */}
           {showSearchInput && (
             <div ref={searchRef} className="relative mb-10">
-              <div className="flex gap-2 items-center bg-white rounded-full border border-gray-200 px-4 py-2 shadow-sm">
+              <div className="flex gap-1 sm:gap-2 items-center bg-white rounded-full border border-gray-200 px-2 sm:px-4 py-2 shadow-sm overflow-hidden">
                 {/* Search Input */}
-                <div className="relative flex-1">
-                  <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-400 flex-shrink-0" />
                   <input
                     type="text"
-                    placeholder="Search salons or services..."
+                    placeholder="Search salons..."
                     value={searchQuery}
                     onChange={handleSearchChange}
                     onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
                     className={cn(
-                      'w-full h-12 pl-8 pr-2 rounded-full border-0 bg-transparent',
-                      'text-gray-900 placeholder-gray-500',
+                      'w-full h-10 sm:h-12 pl-6 sm:pl-8 pr-1 sm:pr-2 rounded-full border-0 bg-transparent',
+                      'text-sm sm:text-base text-gray-900 placeholder-gray-500',
                       'focus:outline-none',
                       'transition-all duration-200'
                     )}
@@ -189,19 +189,19 @@ export default function Hero({
                 </div>
 
                 {/* Divider */}
-                <div className="w-px h-6 bg-gray-200"></div>
+                <div className="w-px h-5 sm:h-6 bg-gray-200 flex-shrink-0"></div>
 
                 {/* Location Input */}
-                <div className="relative w-44">
-                  <MapPin className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="relative flex-1 min-w-0 sm:w-auto">
+                  <MapPin className="absolute left-0 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-400 flex-shrink-0" />
                   <input
                     type="text"
-                    placeholder="City or postcode"
+                    placeholder="Location..."
                     value={location}
                     onChange={handleLocationChange}
                     className={cn(
-                      'w-full h-12 pl-8 pr-2 rounded-full border-0 bg-transparent',
-                      'text-gray-900 placeholder-gray-500',
+                      'w-full h-10 sm:h-12 pl-6 sm:pl-8 pr-1 sm:pr-2 rounded-full border-0 bg-transparent',
+                      'text-sm sm:text-base text-gray-900 placeholder-gray-500',
                       'focus:outline-none',
                       'transition-all duration-200'
                     )}
@@ -212,11 +212,12 @@ export default function Hero({
                 <Button
                   variant="default"
                   size="lg"
-                  className="rounded-full px-6 whitespace-nowrap ml-2"
+                  className="rounded-full px-3 sm:px-6 py-2 whitespace-nowrap ml-1 sm:ml-2 text-sm sm:text-base flex-shrink-0"
                   onClick={() => console.log('Clicked explore')}
                 >
-                  Explore Salons
-                  <span className="ml-2">→</span>
+                  <span className="hidden sm:inline">Explore Salons</span>
+                  <span className="sm:hidden">→</span>
+                  <span className="ml-2 hidden sm:inline">→</span>
                 </Button>
               </div>
 
@@ -255,7 +256,7 @@ export default function Hero({
           )}
 
           {/* Main Heading */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6 px-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6 px-2 sm:px-4">
             <div>Your <span className="text-accent">perfect</span> look,</div>
             <div>{renderTitleWithRedWord('booked in seconds')}</div>
             {/* Red accent underline */}
@@ -265,7 +266,7 @@ export default function Hero({
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg text-accent leading-relaxed mb-10 max-w-lg px-4">
+          <p className="text-base sm:text-lg text-accent leading-relaxed mb-10 max-w-lg px-2 sm:px-4">
             Browse hundreds of hair & beauty salons.
           </p>
         </div>

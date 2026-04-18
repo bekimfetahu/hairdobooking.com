@@ -22,7 +22,7 @@ export default function StepSection({
   children,
 }) {
   return (
-    <div className="rounded-xl border border-black/10 bg-white p-4 shadow-sm">
+    <div className="rounded-md border border-black/10 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {title ? <p className="text-sm font-semibold text-neutral-950">{title}</p> : null}
