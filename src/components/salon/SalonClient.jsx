@@ -10,8 +10,8 @@ import {
   fetchSalonAvailabilityByDateRange,
   createSalonAppointment,
 } from "@/services/salon/salonService";
-import SalonDatePicker from "@/components/SalonDatePicker";
-import StepSection from "@/components/StepSection";
+import SalonDatePicker from "@/components/booking/SalonDatePicker";
+import StepSection from "@/components/booking/StepSection";
 import ImageSlider from "@/components/ui/ImageSlider";
 import Select from "react-select";
 import { useSelector, useDispatch } from "react-redux";

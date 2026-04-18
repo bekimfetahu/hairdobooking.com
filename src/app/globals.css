@@ -12,6 +12,8 @@
   --ring: #111111;
   --primary: #d00000;
   --brand-black: #111111;
+  --brand-blue: #0a81cb;
+  --text-accent: #6b7280;
   --gradient-hero: linear-gradient(180deg, #ffffff 0%, #fff8f7 52%, #fff1ef 100%);
 
   --radius: 0.75rem;
@@ -52,6 +54,9 @@ summary {
 .bg-background { background-color: var(--background); }
 .text-foreground { color: var(--foreground); }
 .text-primary { color: var(--primary); }
+.text-accent { color: var(--text-accent); }
+.bg-brand-blue { background-color: var(--brand-blue); }
+.text-brand-blue { color: var(--brand-blue); }
 
 ::selection {
   background: var(--primary);

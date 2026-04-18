@@ -2,7 +2,7 @@ import PageShell from "@/components/layouts/PageShell";
 import Image from "next/image";
 import Link from "next/link";
 import BlackButton from '@/components/ui/BlackButton';
-import ImageLightbox from '@/components/ImageLightbox';
+import ImageLightbox from '@/components/content/ImageLightbox';
 import { CalendarDays, Phone, Layers, Users, Globe, CheckSquare } from "lucide-react";
 
 export default function PartnerPage() {

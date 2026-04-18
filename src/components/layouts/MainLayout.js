@@ -4,7 +4,7 @@ import React, {useEffect} from "react";
 import {useSelector, useDispatch} from "react-redux";
 import {usePathname} from 'next/navigation';
 import {loginSuccess, logout} from "@/store/slices/authSlice";
-import Navbar from "@/components/NavbarClient";
+import Navbar from "@/components/navigation/NavbarClient";
 
 export default function MainLayout({children}) {
     const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CreditCard, CalendarDays, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, ChevronDown, Menu, X } from 'lucide-react';
-import PreferredSalonModal from '@/components/PreferredSalonModal';
+import PreferredSalonModal from '@/components/modals/PreferredSalonModal';
 
 export default function NavbarStatic() {
   const pathname = usePathname();

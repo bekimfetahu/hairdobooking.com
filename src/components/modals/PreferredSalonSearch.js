@@ -513,7 +513,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                                                 <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10">
                                                     <MapPin className="h-3 w-3" />
                                                 </span>
-                                                <span>Your preferred salon</span>
+                                                <span>Go to your preferred salon</span>
                                             </button>
                                         </div>
                                     </article>

@@ -3,8 +3,8 @@
 // interactivity) should live in a nested client layout for authenticated routes.
 
 import "./globals.css";
-import NavbarStatic from '@/components/NavbarStatic';
-import StoreProvider from '@/components/StoreProvider';
+import NavbarStatic from '@/components/navigation/NavbarStatic';
+import StoreProvider from '@/components/providers/StoreProvider';
 
 export default function RootLayout({ children }) {
   return (

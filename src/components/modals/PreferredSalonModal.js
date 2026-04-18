@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { X } from "lucide-react";
-import PreferredSalonSearch from "@/components/PreferredSalonSearch";
+import PreferredSalonSearch from "@/components/modals/PreferredSalonSearch";
 
 export default function PreferredSalonModal({ open, onClose, onPrimaryUpdated }) {
     const handlePrimaryUpdated = (updatedUser) => {

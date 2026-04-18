@@ -1,6 +1,6 @@
 "use client";
 import { logout, loginSuccess } from '@/store/slices/authSlice';
-import PreferredSalonModal from '@/components/PreferredSalonModal';
+import PreferredSalonModal from '@/components/modals/PreferredSalonModal';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -33,7 +33,7 @@ const accountLinks = [
 
 const getBasePath = (href) => href.split('?')[0];
 
-export default function Navbar() {
+export default function NavbarClient() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isSalonPickerOpen, setIsSalonPickerOpen] = useState(false);
@@ -270,7 +270,7 @@ export default function Navbar() {
                                 >
                                     Sign in
                                 </Link>
-                                {/* For businesses CTA: adjusts styling when active on /partners */}
+                                {/* For businesses CTA: border black, light gray bg when active */}
                                 <Link
                                     href="/partners"
                                     className={`hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium md:inline-flex ${
@@ -392,6 +392,7 @@ export default function Navbar() {
                     </div>
                 </div>
             )}
+
             <PreferredSalonModal
                 open={isSalonPickerOpen}
                 onClose={() => setIsSalonPickerOpen(false)}
@@ -406,3 +407,4 @@ export default function Navbar() {
         </nav>
     );
 }
+
