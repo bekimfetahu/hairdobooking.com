@@ -257,7 +257,7 @@ export default function Hero({
 
           {/* Main Heading */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6 px-2 sm:px-4">
-            <div>Your <span className="text-accent">perfect</span> look,</div>
+            <div>Your <span className="text-accent">perfect</span> look</div>
             <div>{renderTitleWithRedWord('booked in seconds')}</div>
             {/* Red accent underline */}
             <span
@@ -266,7 +266,7 @@ export default function Hero({
           </h1>
 
           {/* Subtitle */}
-          <p className="text-base sm:text-lg text-accent leading-relaxed mb-10 max-w-lg px-2 sm:px-4">
+          <p className="text-base sm:text-lg text-gray-700 leading-relaxed mb-10 max-w-lg px-2 sm:px-4">
             Browse hundreds of hair & beauty salons.
           </p>
         </div>
