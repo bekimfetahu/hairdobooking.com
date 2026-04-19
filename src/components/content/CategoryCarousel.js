@@ -83,7 +83,7 @@ export default function CategoryCarousel({
               key={cat.name}
               className="flex-shrink-0"
               style={{
-                width: isMobile ? 'calc(50% - 10px)' : 'calc(16.67% - 17px)',
+                width: isMobile ? 'calc(40% - 10px)' : 'calc(16.67% - 17px)',
               }}
             >
               <ImageOverlayCard

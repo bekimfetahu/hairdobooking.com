@@ -51,7 +51,7 @@ export default function CardCarousel({
       {/* Card Image Container */}
       <div className="relative rounded-2xl overflow-hidden border border-gray-200 mb-3">
         <div
-          className="bg-gray-200 aspect-video overflow-hidden"
+          className="bg-gray-200 aspect-[3/2] md:aspect-video overflow-hidden"
           style={{ width: cardWidth }}
         >
           {card.image ? (
