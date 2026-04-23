@@ -37,7 +37,8 @@ Use reusable shells instead of repeating page structure:
 - `src/components/layouts/PageShell.js` — shared page wrapper for marketing, business, and dashboard views
 - `src/components/layouts/AuthPageShell.js` — shared two-column auth shell with a benefit panel and a form panel
 - `src/components/Navbar.js` — main interactive navigation for authenticated/interactive views
-- `src/components/NavbarStatic.js` — SSR-friendly navbar used from the root layout for marketing pages
+- `src/components/navigation/NavbarStatic.js` — SSR-friendly navbar used from the root layout for marketing pages
+- `src/components/navigation/NavbarAuthWrapper.js` — server component wrapper that fetches auth server-side and passes to `NavbarStatic` (used in root layout)
 
 ### Current route patterns
 - `/` — homepage / hero content
@@ -88,11 +89,20 @@ Avoid blue-heavy or purple-heavy styling unless there is a very specific reason.
 - That Next.js route decodes Google credentials and forwards the user data to Laravel
 - Laravel handles user lookup/creation and returns the app token
 
+### Server-side auth for SSR pages
+- Use `src/lib/auth-server.js` in server components to read auth from cookies
+- `getCurrentUserServer()` — fetch authenticated user server-side by reading token from cookies
+- `isUserAuthenticatedServer()` — check if user is authenticated server-side
+- For pages like `/salon/[slug]` that need to display user menu on SSR, use `NavbarAuthWrapper` (server component wrapper that fetches auth and passes to `NavbarStatic`)
+- This pattern ensures user menu displays immediately during SSR without client-side flash
+- Maintains backward compatibility: `NavbarStatic` still has fallback client-side fetch for client-side navigation
+
 ### Important auth conventions
 - Preserve the HttpOnly cookie pattern
 - Keep local development cookie behavior compatible with HTTP
 - Maintain the `loginSuccess` / `logout` Redux flow
 - Do not bypass Laravel for user creation or token generation
+- For SSR pages, fetch auth server-side when possible instead of waiting for client-side hydration
 
 ## Backend/Laravel architecture
 ### Laravel responsibilities

@@ -6,21 +6,31 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CreditCard, CalendarDays, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, ChevronDown, Menu, X } from 'lucide-react';
 import PreferredSalonModal from '@/components/modals/PreferredSalonModal';
 
-export default function NavbarStatic() {
+export default function NavbarStatic({ initialUser = null }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(initialUser || null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!initialUser);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isPreferredModalOpen, setIsPreferredModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const navRef = useRef(null);
   const isForBusinessPage = pathname === '/partners' || pathname.startsWith('/partners/');
   const isPricingPage = pathname === '/pricing' || pathname.startsWith('/pricing/');
 
   const getBasePath = (href) => href.split('?')[0];
 
+  // Hydration: Only fetch if initialUser wasn't provided from server
   useEffect(() => {
+    // Mark component as hydrated to enable rendering
+    setHasHydrated(true);
+
+    // If we already have user data from server, skip the fetch
+    if (initialUser) {
+      return;
+    }
+
     const restoreSession = async () => {
       try {
         const res = await fetch('/api/auth/me', {
@@ -42,7 +52,7 @@ export default function NavbarStatic() {
     };
 
     restoreSession();
-  }, []);
+  }, [initialUser]);
 
   useEffect(() => {
     const handlePreferredSalonUpdated = (event) => {

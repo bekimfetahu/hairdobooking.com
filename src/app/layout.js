@@ -3,7 +3,7 @@
 // interactivity) should live in a nested client layout for authenticated routes.
 
 import "./globals.css";
-import NavbarStatic from '@/components/navigation/NavbarStatic';
+import NavbarAuthWrapper from '@/components/navigation/NavbarAuthWrapper';
 import StoreProvider from '@/components/providers/StoreProvider';
 
 export default function RootLayout({ children }) {
@@ -12,8 +12,8 @@ export default function RootLayout({ children }) {
       <body className="antialiased bg-background text-foreground">
         <StoreProvider>
           <div className="pt-16">
-            {/* Server-only static navbar for SEO and initial load */}
-            <NavbarStatic />
+            {/* Server-side auth wrapper that passes user data to navbar */}
+            <NavbarAuthWrapper />
 
             {/* Page content */}
             <main>
