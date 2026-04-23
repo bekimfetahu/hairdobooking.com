@@ -3,16 +3,21 @@
 import { useMemo } from 'react';
 import Image from 'next/image';
 
-export default function SocialSSOButtons() {
-    const googleServerRedirectUrl = useMemo(
-        () => `${process.env.NEXT_PUBLIC_LARAVEL_URL}/client/auth/social/google/redirect`,
-        []
-    );
+export default function SocialSSOButtons({ returnUrl = null }) {
+    // Construct the base URL for redirects
+    const getRedirectUrl = (provider) => {
+        const baseUrl = `${process.env.NEXT_PUBLIC_LARAVEL_URL}/client/auth/social/${provider}/redirect`;
+        
+        // Only add redirect_to if returnUrl is provided
+        if (returnUrl) {
+            return `${baseUrl}?redirect_to=${encodeURIComponent(returnUrl)}`;
+        }
+        
+        return baseUrl;
+    };
 
-    const facebookServerRedirectUrl = useMemo(
-        () => `${process.env.NEXT_PUBLIC_LARAVEL_URL}/client/auth/social/facebook/redirect`,
-        []
-    );
+    const googleServerRedirectUrl = useMemo(() => getRedirectUrl('google'), [returnUrl]);
+    const facebookServerRedirectUrl = useMemo(() => getRedirectUrl('facebook'), [returnUrl]);
 
     return (
         <div className="grid gap-3">

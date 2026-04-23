@@ -45,8 +45,11 @@ Use reusable shells instead of repeating page structure:
 - `/pricing` — pricing page with live, API-driven pricing and calculator
 - `/partners` — business/marketing page for salons and businesses
 - `/partners/register` — business free-trial signup
-- `/login` — client login
-- `/register` — client signup
+- `/auth` — unified client authentication page (sign in and sign up tabs)
+- `/auth?tab=signin` — sign in tab
+- `/auth?tab=signup` — create account tab
+- `/login` — legacy URL, redirects to `/auth?tab=signin`
+- `/register` — legacy URL, redirects to `/auth?tab=signup`
 - `/dashboard` — client dashboard placeholder
 
 ## Design direction
@@ -96,6 +99,42 @@ Avoid blue-heavy or purple-heavy styling unless there is a very specific reason.
 - For pages like `/salon/[slug]` that need to display user menu on SSR, use `NavbarAuthWrapper` (server component wrapper that fetches auth and passes to `NavbarStatic`)
 - This pattern ensures user menu displays immediately during SSR without client-side flash
 - Maintains backward compatibility: `NavbarStatic` still has fallback client-side fetch for client-side navigation
+
+### Unified authentication with AuthPanel
+- `AuthPanel` is a reusable component that handles both sign-in and sign-up in one tabbed interface
+- Located at: `src/components/auth/AuthPanel.js`
+- Props:
+  - `initialTab` (default: 'signin') — start on 'signin' or 'signup' tab
+  - `onAuthSuccess` — callback function after successful auth (for modal usage), receives user object
+  - `returnUrl` — URL to redirect to after auth completes (optional, default: preferred salon or dashboard)
+  - `showHeader` — whether to show full tab headers and descriptions (default: true for full page, false for modal)
+- Usage in full page:
+  ```javascript
+  // src/app/(app)/auth/page.js
+  <AuthPanel initialTab="signin" showHeader={true} />
+  ```
+- Usage in modal:
+  ```javascript
+  // In a component
+  <BookingAuthModal
+    isOpen={showAuthModal}
+    onClose={() => setShowAuthModal(false)}
+    onAuthSuccess={handleAuthSuccess}
+    salonName={salon.name}
+    salonSlug={salon.slug}
+  />
+  ```
+
+### Booking authentication flow
+- When user clicks "Book Now" on `/salon/[slug]` without being authenticated:
+  1. Show `BookingAuthModal` (modal overlays the page)
+  2. User signs in or creates account inside modal
+  3. Modal state persists if user closes without signing up
+  4. On successful auth, modal closes and redirect happens
+  5. User redirected back to `/salon/[slug]` (preserves booking context)
+- Modal component: `src/components/modals/BookingAuthModal.js`
+- The booking intent (salon + service) should be stored in Redux or Context before showing modal
+- After auth succeeds, retrieve booking intent from Redux and navigate to booking confirmation
 
 ### Important auth conventions
 - Preserve the HttpOnly cookie pattern

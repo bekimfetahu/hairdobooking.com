@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { CreditCard, CalendarDays, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, ChevronDown, Menu, X } from 'lucide-react';
 import PreferredSalonModal from '@/components/modals/PreferredSalonModal';
 
 export default function NavbarStatic({ initialUser = null }) {
   const pathname = usePathname();
   const router = useRouter();
+  const reduxUser = useSelector((state) => state.auth.user);
   const [user, setUser] = useState(initialUser || null);
   const [isAuthenticated, setIsAuthenticated] = useState(!!initialUser);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -20,6 +22,14 @@ export default function NavbarStatic({ initialUser = null }) {
   const isPricingPage = pathname === '/pricing' || pathname.startsWith('/pricing/');
 
   const getBasePath = (href) => href.split('?')[0];
+
+  // Sync with Redux auth state (for social auth redirect flow)
+  useEffect(() => {
+    if (reduxUser) {
+      setUser(reduxUser);
+      setIsAuthenticated(true);
+    }
+  }, [reduxUser]);
 
   // Hydration: Only fetch if initialUser wasn't provided from server
   useEffect(() => {

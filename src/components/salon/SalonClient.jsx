@@ -14,6 +14,7 @@ import {
 import SalonDatePicker from "@/components/booking/SalonDatePicker";
 import StepSection from "@/components/booking/StepSection";
 import ImageSlider from "@/components/ui/ImageSlider";
+import BookingAuthModal from "@/components/modals/BookingAuthModal";
 import Select from "react-select";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -31,6 +32,7 @@ import {
   setIsProfessionalSectionOpen as setProfessionalOpen,
   setIsTimeSectionOpen as setTimeOpen,
   setIsCommentsSectionOpen as setCommentsOpen,
+  clearBooking,
 } from "@/store/slices/bookingSlice";
 
 const TIME_GROUPS = [
@@ -72,6 +74,7 @@ function groupTimeSlots(slots) {
 export default function SalonClient({ slug, initialSalon }) {
   const dispatch = useDispatch();
   const booking = useSelector(selectBooking(slug));
+  const isAuthenticated = useSelector((state) => !!state.auth.user);
   const {
     selectedDate,
     selectedServiceUuid,
@@ -92,12 +95,61 @@ export default function SalonClient({ slug, initialSalon }) {
     if (slug) dispatch(initBooking({ slug }));
   }, [slug, dispatch]);
 
+  // Restore booking state from localStorage if it exists (for auth redirect recovery)
+  useEffect(() => {
+    if (!slug) return;
+
+    try {
+      const savedBookingState = localStorage.getItem(`booking_${slug}`);
+      if (savedBookingState) {
+        const bookingState = JSON.parse(savedBookingState);
+        
+        // Restore all booking selections to Redux
+        if (bookingState.selectedDate) {
+          dispatch(setDate({ slug, date: bookingState.selectedDate }));
+        }
+        if (bookingState.selectedServiceUuid) {
+          dispatch(setService({ slug, uuid: bookingState.selectedServiceUuid }));
+          // Keep service section closed to show summary
+          dispatch(setServiceOpen({ slug, open: false }));
+        }
+        if (bookingState.selectedCategoryUuid) {
+          dispatch(setCategory({ slug, uuid: bookingState.selectedCategoryUuid }));
+        }
+        if (bookingState.selectedAudienceUuid) {
+          dispatch(setAudience({ slug, uuid: bookingState.selectedAudienceUuid }));
+        }
+        if (bookingState.selectedProfessionalUuid) {
+          dispatch(setProfessional({ slug, uuid: bookingState.selectedProfessionalUuid }));
+          // Keep professional section closed to show summary
+          dispatch(setProfessionalOpen({ slug, open: false }));
+        }
+        if (bookingState.selectedTime) {
+          dispatch(setTime({ slug, time: bookingState.selectedTime }));
+          // Keep time section closed to show summary
+          dispatch(setTimeOpen({ slug, open: false }));
+        }
+        if (bookingState.selectedComments) {
+          dispatch(setComments({ slug, comments: bookingState.selectedComments }));
+        }
+        if (bookingState.serviceSearch) {
+          dispatch(setSearch({ slug, query: bookingState.serviceSearch }));
+        }
+
+        console.log('✓ Restored booking state for', slug, bookingState);
+      }
+    } catch (err) {
+      console.error('Failed to restore booking state from localStorage:', err);
+    }
+  }, [slug, dispatch]);
+
   const [loading, setLoading] = useState(initialSalon ? false : true);
   const [error, setError] = useState("");
   const [salon, setSalon] = useState(initialSalon || null);
   const [professionals, setProfessionals] = useState([]);
   const [professionalsLoading, setProfessionalsLoading] = useState(false);
   const [professionalsError, setProfessionalsError] = useState("");
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [timeSlots, setTimeSlots] = useState([]);
   const [timeSlotsLoading, setTimeSlotsLoading] = useState(false);
   const [timeSlotsError, setTimeSlotsError] = useState("");
@@ -425,6 +477,25 @@ export default function SalonClient({ slug, initialSalon }) {
   }, [selectedServiceUuid]);
 
   const handleBookNow = useCallback(async () => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      // Save current booking state to localStorage before redirecting to auth
+      const bookingState = {
+        selectedDate,
+        selectedServiceUuid,
+        selectedCategoryUuid,
+        selectedAudienceUuid,
+        selectedProfessionalUuid,
+        selectedTime,
+        selectedComments,
+        serviceSearch,
+      };
+      localStorage.setItem(`booking_${slug}`, JSON.stringify(bookingState));
+      console.log('Saved booking state to localStorage for', slug, bookingState);
+      setShowAuthModal(true);
+      return;
+    }
+
     if (!selectedServiceUuid || !selectedProfessionalUuid || !selectedTime || !selectedDate) {
       return;
     }
@@ -441,14 +512,38 @@ export default function SalonClient({ slug, initialSalon }) {
         comments: selectedComments,
       });
 
-      setBookingSuccess(response?.message || "Appointment created successfully.");
+      const successMessage = response?.message || "Appointment created successfully!";
+      setBookingSuccess(successMessage);
+      console.log('✓ Booking successful:', successMessage);
+      
       dispatch(setCommentsOpen({ slug, open: false }));
+      
+      // Clear all booking state from Redux and localStorage after successful booking
+      dispatch(clearBooking({ slug }));
+      localStorage.removeItem(`booking_${slug}`);
+      console.log('Cleared booking state for', slug);
+
+      // Clear success message after 5 seconds
+      const timer = setTimeout(() => {
+        setBookingSuccess("");
+      }, 5000);
+
+      return () => clearTimeout(timer);
     } catch (error) {
-      setBookingError(error?.message || "Failed to create appointment");
+      const errorMessage = error?.message || "Failed to create appointment";
+      setBookingError(errorMessage);
+      console.error('✗ Booking failed:', errorMessage);
+
+      // Clear error message after 5 seconds
+      const timer = setTimeout(() => {
+        setBookingError("");
+      }, 5000);
+
+      return () => clearTimeout(timer);
     } finally {
       setBookingSubmitting(false);
     }
-  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, dispatch]);
+  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, isAuthenticated, dispatch]);
 
   return (
     <>
@@ -903,28 +998,32 @@ export default function SalonClient({ slug, initialSalon }) {
 
           
 
-                    {/* Date */}
-                    <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
-                      <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                        <Calendar size={18} strokeWidth={1.5} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Date</p>
-                        <p className="mt-1 text-sm font-semibold text-neutral-950">
-                          {dayjs(selectedDate).format("dddd, D MMMM YYYY")}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Time */}
+                    {/* Date + Time combined */}
                     {selectedTime && (
                       <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
-                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-                          <Clock size={18} strokeWidth={1.5} />
+                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                          <Calendar size={18} strokeWidth={1.5} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Time</p>
-                          <p className="mt-1 text-sm font-semibold text-neutral-950">{selectedTimeSlot?.label || selectedTime}</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Date & Time</p>
+                          <p className="mt-1 text-sm font-semibold text-neutral-950">
+                            {dayjs(selectedDate).format("dddd, D MMMM")} at {selectedTimeSlot?.label || selectedTime}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date only (when time not selected yet) */}
+                    {!selectedTime && selectedDate && (
+                      <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                          <Calendar size={18} strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Date</p>
+                          <p className="mt-1 text-sm font-semibold text-neutral-950">
+                            {dayjs(selectedDate).format("dddd, D MMMM YYYY")}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -985,15 +1084,31 @@ export default function SalonClient({ slug, initialSalon }) {
                           className="w-full rounded-md border border-black/10 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-black/30 focus:outline-none focus:ring-0"
                         />
 
-                        {bookingError && <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">{bookingError}</div>}
+                        {bookingSuccess && (
+                          <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700 flex items-start gap-2">
+                            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            {bookingSuccess}
+                          </div>
+                        )}
+
+                        {bookingError && (
+                          <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700 flex items-start gap-2">
+                            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                            {bookingError}
+                          </div>
+                        )}
 
                         <button
                           type="button"
                           onClick={handleBookNow}
-                          disabled={bookingSubmitting}
+                          disabled={bookingSubmitting || !!bookingSuccess}
                           className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {bookingSubmitting ? "Booking..." : "Book now"}
+                          {bookingSubmitting ? "Booking..." : bookingSuccess ? "Appointment Booked ✓" : "Book now"}
                         </button>
                       </div>
                     )}
@@ -1004,6 +1119,20 @@ export default function SalonClient({ slug, initialSalon }) {
           </section>
         </div>
       )}
+
+      {/* Authentication Modal for Booking */}
+      <BookingAuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={() => {
+          setShowAuthModal(false);
+          // After user is authenticated, they can click Book Now again
+          // The booking selections are still in Redux, so just call handleBookNow
+          setTimeout(() => handleBookNow(), 100);
+        }}
+        salonName={salon?.venue?.name || "this salon"}
+        salonSlug={slug}
+      />
     </>
   );
 }

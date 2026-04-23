@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { loginSuccess } from '@/store/slices/authSlice';
+import { fetchCurrentUser } from '@/services/auth/session';
 
 export default function SocialCallbackClient() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const dispatch = useDispatch();
     const [message, setMessage] = useState('Completing sign-in...');
 
     useEffect(() => {
@@ -29,6 +33,14 @@ export default function SocialCallbackClient() {
                     throw new Error('Failed to set token');
                 }
 
+                // Immediately fetch user and update Redux state
+                // This updates NavbarStatic and all connected components without needing a page refresh
+                const user = await fetchCurrentUser();
+                if (user) {
+                    dispatch(loginSuccess({ user }));
+                }
+
+                console.log('Social auth complete, redirecting to:', next);
                 router.replace(next);
             } catch (error) {
                 console.error(error);
@@ -37,7 +49,7 @@ export default function SocialCallbackClient() {
         }
 
         complete();
-    }, [searchParams, router]);
+    }, [searchParams, router, dispatch]);
 
     return (
         <div className="min-h-screen flex items-center justify-center">
