@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { CreditCard, CalendarDays, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, ChevronDown, Menu, X } from 'lucide-react';
 import PreferredSalonModal from '@/components/modals/PreferredSalonModal';
+import { loginSuccess, logout } from '@/store/slices/authSlice';
 
 export default function NavbarStatic({ initialUser = null }) {
   const pathname = usePathname();
   const router = useRouter();
+  const dispatch = useDispatch();
   const reduxUser = useSelector((state) => state.auth.user);
   const [user, setUser] = useState(initialUser || null);
   const [isAuthenticated, setIsAuthenticated] = useState(!!initialUser);
@@ -22,6 +24,15 @@ export default function NavbarStatic({ initialUser = null }) {
   const isPricingPage = pathname === '/pricing' || pathname.startsWith('/pricing/');
 
   const getBasePath = (href) => href.split('?')[0];
+
+  // Sync initialUser from server to Redux and local state
+  useEffect(() => {
+    if (initialUser) {
+      setUser(initialUser);
+      setIsAuthenticated(true);
+      dispatch(loginSuccess({ user: initialUser }));
+    }
+  }, [initialUser, dispatch]);
 
   // Sync with Redux auth state (for social auth redirect flow)
   useEffect(() => {
@@ -52,9 +63,11 @@ export default function NavbarStatic({ initialUser = null }) {
           const data = await res.json();
           setUser(data.user);
           setIsAuthenticated(true);
+          dispatch(loginSuccess({ user: data.user }));
         } else if (res.status === 401) {
           setUser(null);
           setIsAuthenticated(false);
+          dispatch(logout());
         }
       } catch (err) {
         console.error('Failed to restore session in navbar:', err?.message || err);
@@ -62,7 +75,7 @@ export default function NavbarStatic({ initialUser = null }) {
     };
 
     restoreSession();
-  }, [initialUser]);
+  }, [initialUser, dispatch]);
 
   useEffect(() => {
     const handlePreferredSalonUpdated = (event) => {
@@ -70,6 +83,7 @@ export default function NavbarStatic({ initialUser = null }) {
       if (updatedUser) {
         setUser(updatedUser);
         setIsAuthenticated(true);
+        dispatch(loginSuccess({ user: updatedUser }));
       }
     };
 
@@ -82,7 +96,7 @@ export default function NavbarStatic({ initialUser = null }) {
         window.removeEventListener('preferred-salon-updated', handlePreferredSalonUpdated);
       }
     };
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -135,16 +149,18 @@ export default function NavbarStatic({ initialUser = null }) {
 
       setUser(null);
       setIsAuthenticated(false);
+      dispatch(logout());
 
       if (!res.ok) {
-        router.push('/login');
+        router.push('/auth?tab=signin');
         return;
       }
 
-      router.push('/login');
+      router.push('/auth?tab=signin');
     } catch (err) {
       console.error('Failed to log out from navbar:', err?.message || err);
-      router.push('/login');
+      dispatch(logout());
+      router.push('/auth?tab=signin');
     }
   };
 

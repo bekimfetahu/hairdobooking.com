@@ -13,6 +13,8 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
       - WATCHPACK_POLLING_INTERVAL=1000
+      - LARAVEL_INTERNAL_URL=http://hairdobooking
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:80
     volumes:
       - .:/usr/src/app
       - hairdobooking_frontend_node_modules:/usr/src/app/node_modules

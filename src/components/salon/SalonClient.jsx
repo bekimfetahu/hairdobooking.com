@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import dayjs from "dayjs";
-import { Calendar, Sparkles, Banknote, User, Clock, ChevronDown, MapPin } from "lucide-react";
+import { Calendar, Sparkles, Banknote, User, Clock, ChevronDown, MapPin, Filter, X } from "lucide-react";
+import Swal from "sweetalert2";
+import { cn } from "@/lib/utils";
+import { getIcon } from "@/lib/iconMap";
 import { useSalonSlider } from "@/context/SalonSliderContext";
 import {
   fetchSalonBySlug,
@@ -15,7 +18,6 @@ import SalonDatePicker from "@/components/booking/SalonDatePicker";
 import StepSection from "@/components/booking/StepSection";
 import ImageSlider from "@/components/ui/ImageSlider";
 import BookingAuthModal from "@/components/modals/BookingAuthModal";
-import Select from "react-select";
 import { useSelector, useDispatch } from "react-redux";
 import {
   initBooking,
@@ -78,8 +80,8 @@ export default function SalonClient({ slug, initialSalon }) {
   const {
     selectedDate,
     selectedServiceUuid,
-    selectedCategoryUuid,
-    selectedAudienceUuid,
+    selectedCategoryUuids,
+    selectedAudienceUuids,
     selectedProfessionalUuid,
     selectedTime,
     selectedComments,
@@ -113,11 +115,15 @@ export default function SalonClient({ slug, initialSalon }) {
           // Keep service section closed to show summary
           dispatch(setServiceOpen({ slug, open: false }));
         }
-        if (bookingState.selectedCategoryUuid) {
-          dispatch(setCategory({ slug, uuid: bookingState.selectedCategoryUuid }));
+        if (bookingState.selectedCategoryUuids?.length) {
+          bookingState.selectedCategoryUuids.forEach((uuid) => {
+            dispatch(setCategory({ slug, uuid }));
+          });
         }
-        if (bookingState.selectedAudienceUuid) {
-          dispatch(setAudience({ slug, uuid: bookingState.selectedAudienceUuid }));
+        if (bookingState.selectedAudienceUuids?.length) {
+          bookingState.selectedAudienceUuids.forEach((uuid) => {
+            dispatch(setAudience({ slug, uuid }));
+          });
         }
         if (bookingState.selectedProfessionalUuid) {
           dispatch(setProfessional({ slug, uuid: bookingState.selectedProfessionalUuid }));
@@ -159,12 +165,42 @@ export default function SalonClient({ slug, initialSalon }) {
   const [serviceAvailableDates, setServiceAvailableDates] = useState(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [expandedServices, setExpandedServices] = useState({});
+  const [expandedFilter, setExpandedFilter] = useState(null);
   const { showImageSlider, setShowImageSlider } = useSalonSlider();
 
   // Hide slider when user clicks in services section
   const handleServiceSectionClick = useCallback(() => {
     setShowImageSlider(false);
   }, [setShowImageSlider]);
+
+  const toggleFilter = useCallback(() => {
+    setExpandedFilter(expandedFilter === 'filters' ? null : 'filters');
+  }, [expandedFilter]);
+
+  const hasFilters = selectedCategoryUuids?.length > 0 || selectedAudienceUuids?.length > 0;
+
+  const handleCategoryToggle = useCallback(
+    (categoryUuid) => {
+      dispatch(setCategory({ slug, uuid: categoryUuid }));
+    },
+    [slug, dispatch]
+  );
+
+  const handleAudienceToggle = useCallback(
+    (audienceUuid) => {
+      dispatch(setAudience({ slug, uuid: audienceUuid }));
+    },
+    [slug, dispatch]
+  );
+
+  const clearFilters = useCallback(() => {
+    selectedCategoryUuids?.forEach((uuid) => {
+      dispatch(setCategory({ slug, uuid }));
+    });
+    selectedAudienceUuids?.forEach((uuid) => {
+      dispatch(setAudience({ slug, uuid }));
+    });
+  }, [slug, selectedCategoryUuids, selectedAudienceUuids, dispatch]);
 
   useEffect(() => {
     if (!slug || initialSalon) return;
@@ -207,39 +243,77 @@ export default function SalonClient({ slug, initialSalon }) {
 
   const categoryOptions = useMemo(() => {
     const seen = new Map();
+    const counts = new Map();
     for (const s of services) {
-      if (s.category && s.category.uuid && s.category.name && !seen.has(s.category.uuid)) {
-        seen.set(s.category.uuid, s.category.name);
+      if (s.category && s.category.uuid && s.category.name) {
+        if (!seen.has(s.category.uuid)) {
+          seen.set(s.category.uuid, { name: s.category.name, icon: s.category.icon });
+        }
+        counts.set(s.category.uuid, (counts.get(s.category.uuid) || 0) + 1);
       }
     }
-    return Array.from(seen.entries()).map(([uuid, name]) => ({ uuid, name }));
+    return Array.from(seen.entries()).map(([uuid, data]) => ({ 
+      uuid, 
+      name: data.name, 
+      icon: data.icon,
+      count: counts.get(uuid) || 0 
+    }));
   }, [services]);
 
   const audienceOptions = useMemo(() => {
     const seen = new Map();
+    const counts = new Map();
     for (const s of services) {
-      if (s.audience && s.audience.uuid && s.audience.name && !seen.has(s.audience.uuid)) {
-        seen.set(s.audience.uuid, s.audience.name);
+      if (s.audience && s.audience.uuid && s.audience.name) {
+        if (!seen.has(s.audience.uuid)) {
+          seen.set(s.audience.uuid, { name: s.audience.name, icon: s.audience.icon });
+        }
+        counts.set(s.audience.uuid, (counts.get(s.audience.uuid) || 0) + 1);
       }
     }
-    return Array.from(seen.entries()).map(([uuid, name]) => ({ uuid, name }));
+    return Array.from(seen.entries()).map(([uuid, data]) => ({ 
+      uuid, 
+      name: data.name, 
+      icon: data.icon,
+      count: counts.get(uuid) || 0 
+    }));
   }, [services]);
 
   const filteredServices = useMemo(() => {
     if (!services.length) return [];
     const q = serviceSearch.trim().toLowerCase();
 
+    // Stopwords to ignore in search (common words that don't add meaning)
+    const stopwords = new Set(['and', 'or', 'the', 'a', 'an', 'is', 'to', 'in', 'of', 'for', 'with', 'by', 'at', 'on']);
+
     return services.filter((service) => {
       const name = service.display_name || service.service_name || service.name || "";
-      const matchesSearch = !q || name.toLowerCase().includes(q);
+      
+      // Split search query into words and normalize (remove special chars like - and &)
+      const normalizeText = (text) => text.toLowerCase().replace(/[-&]/g, ' ').replace(/\s+/g, ' ').trim();
+      const queryWords = normalizeText(q).split(' ').filter(w => w.length > 0 && !stopwords.has(w));
+      const serviceName = normalizeText(name);
+      
+      // Match if search is empty or ALL query words are found in service name (substring match for each word)
+      const matchesSearch = !q || queryWords.length === 0 || queryWords.every(word => serviceName.includes(word));
 
-      const matchesCategory = !selectedCategoryUuid || service.category?.uuid === selectedCategoryUuid;
+      // If no category filters selected, all services match
+      let matchesCategory = true;
+      if (selectedCategoryUuids && selectedCategoryUuids.length > 0) {
+        // Match if service's category is in any of the selected categories (OR logic)
+        matchesCategory = selectedCategoryUuids.includes(service.category?.uuid);
+      }
 
-      const matchesAudience = !selectedAudienceUuid || service.audience?.uuid === selectedAudienceUuid;
+      // If no audience filters selected, all services match
+      let matchesAudience = true;
+      if (selectedAudienceUuids && selectedAudienceUuids.length > 0) {
+        // Match if service's audience is in any of the selected audiences (OR logic)
+        matchesAudience = selectedAudienceUuids.includes(service.audience?.uuid);
+      }
 
       return matchesSearch && matchesCategory && matchesAudience;
     });
-  }, [services, serviceSearch, selectedCategoryUuid, selectedAudienceUuid]);
+  }, [services, serviceSearch, selectedCategoryUuids, selectedAudienceUuids]);
 
   const selectedService = useMemo(() => services.find((s) => s.uuid === selectedServiceUuid) || null, [services, selectedServiceUuid]);
 
@@ -483,8 +557,8 @@ export default function SalonClient({ slug, initialSalon }) {
       const bookingState = {
         selectedDate,
         selectedServiceUuid,
-        selectedCategoryUuid,
-        selectedAudienceUuid,
+        selectedCategoryUuids,
+        selectedAudienceUuids,
         selectedProfessionalUuid,
         selectedTime,
         selectedComments,
@@ -513,7 +587,6 @@ export default function SalonClient({ slug, initialSalon }) {
       });
 
       const successMessage = response?.message || "Appointment created successfully!";
-      setBookingSuccess(successMessage);
       console.log('✓ Booking successful:', successMessage);
       
       dispatch(setCommentsOpen({ slug, open: false }));
@@ -523,12 +596,23 @@ export default function SalonClient({ slug, initialSalon }) {
       localStorage.removeItem(`booking_${slug}`);
       console.log('Cleared booking state for', slug);
 
-      // Clear success message after 5 seconds
-      const timer = setTimeout(() => {
-        setBookingSuccess("");
-      }, 5000);
+      // Show SweetAlert success message - only closes by user clicking button
+      await Swal.fire({
+        icon: 'success',
+        title: 'Booking Confirmed!',
+        text: successMessage,
+        confirmButtonText: 'Close',
+        confirmButtonColor: '#000000',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          // Disable outside click to prevent accidental closure
+          Swal.getContainer().style.zIndex = '9999';
+        },
+      });
 
-      return () => clearTimeout(timer);
+      // Clear success message state
+      setBookingSuccess("");
     } catch (error) {
       const errorMessage = error?.message || "Failed to create appointment";
       setBookingError(errorMessage);
@@ -622,58 +706,134 @@ export default function SalonClient({ slug, initialSalon }) {
                   ) : null
                 }
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="text"
-                    value={serviceSearch}
-                    onChange={(e) => dispatch(setSearch({ slug, query: e.target.value }))}
-                    placeholder="Search services by name"
-                    className="h-[38px] flex-1 min-w-[160px] rounded-md border border-black/10 bg-white px-3 text-xs text-neutral-800 placeholder:text-neutral-400 focus:border-black/40 focus:outline-none focus:ring-0"
-                  />
-
-                  {categoryOptions.length > 0 && (
-                    <div className="ml-2 min-w-[160px]">
-                      <Select
-                        instanceId={`salon-category-${slug}`}
-                        options={categoryOptions.map((c) => ({ value: c.uuid, label: c.name }))}
-                        value={
-                          selectedCategoryUuid
-                            ? { value: selectedCategoryUuid, label: categoryOptions.find((c) => c.uuid === selectedCategoryUuid)?.name }
-                            : null
-                        }
-                        onChange={(opt) => dispatch(setCategory({ slug, uuid: opt ? opt.value : "" }))}
-                        isClearable
-                        placeholder="All categories"
-                        classNamePrefix="react-select"
-                        styles={{
-                          control: (base) => ({ ...base, minHeight: 32, fontSize: 12 }),
-                          placeholder: (base) => ({ ...base, fontSize: 12 }),
-                          option: (base) => ({ ...base, fontSize: 12 }),
-                        }}
+                <div className="flex flex-col gap-3">
+                  {/* Search and Filter Row - 2/3 search, 1/3 filters on desktop, stacked on mobile */}
+                  <div className="flex flex-col lg:flex-row gap-2 lg:gap-2">
+                    {/* Search Input - Full width on mobile, 2/3 on desktop */}
+                    <div className="flex-[2]">
+                      <input
+                        type="text"
+                        value={serviceSearch}
+                        onChange={(e) => dispatch(setSearch({ slug, query: e.target.value }))}
+                        placeholder="Search services by name"
+                        className="w-full h-[38px] rounded-md border border-black/10 bg-white px-3 text-xs text-neutral-800 placeholder:text-neutral-400 focus:border-black/40 focus:outline-none focus:ring-0"
                       />
                     </div>
-                  )}
 
-                  {audienceOptions.length > 0 && (
-                    <div className="ml-2 min-w-[160px]">
-                      <Select
-                        instanceId={`salon-audience-${slug}`}
-                        options={audienceOptions.map((a) => ({ value: a.uuid, label: a.name }))}
-                        value={
-                          selectedAudienceUuid
-                            ? { value: selectedAudienceUuid, label: audienceOptions.find((a) => a.uuid === selectedAudienceUuid)?.name }
-                            : null
-                        }
-                        onChange={(opt) => dispatch(setAudience({ slug, uuid: opt ? opt.value : "" }))}
-                        isClearable
-                        placeholder="All audiences"
-                        classNamePrefix="react-select"
-                        styles={{
-                          control: (base) => ({ ...base, minHeight: 32, fontSize: 12 }),
-                          placeholder: (base) => ({ ...base, fontSize: 12 }),
-                          option: (base) => ({ ...base, fontSize: 12 }),
-                        }}
-                      />
+                    {/* Filter Button and Clear - 1/3 on desktop, full width on mobile */}
+                    <div className="flex flex-1 gap-2">
+                      {(categoryOptions.length > 0 || audienceOptions.length > 0) && (
+                        <button
+                          onClick={toggleFilter}
+                          className={cn(
+                            'flex-1 flex items-center justify-center gap-2 px-2 py-1 rounded-md border transition-all text-xs font-medium',
+                            hasFilters
+                              ? 'border-blue-300 text-blue-700 bg-blue-50'
+                              : 'border-gray-300 text-gray-700 bg-white hover:border-gray-400'
+                          )}
+                        >
+                          <Filter className="w-4 h-4" />
+                          <span>
+                            Filters {hasFilters && `(${(selectedCategoryUuids?.length || 0) + (selectedAudienceUuids?.length || 0)})`}
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              'w-4 h-4 transition-transform',
+                              expandedFilter === 'filters' && 'rotate-180'
+                            )}
+                          />
+                        </button>
+                      )}
+
+                      {hasFilters && (
+                        <button
+                          onClick={clearFilters}
+                          className="inline-flex items-center justify-center rounded-md border border-red-300 bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100 transition-colors"
+                          title="Clear all filters"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expandable Filter Section */}
+                  {expandedFilter === 'filters' && (
+                    <div className="border border-gray-200 rounded-lg bg-gray-50 p-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Categories - Left Column */}
+                        {categoryOptions.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-700 mb-2">Categories</h4>
+                            <div className="space-y-2">
+                              {categoryOptions.map((category) => {
+                                const IconComponent = getIcon(category.icon);
+                                return (
+                                  <label key={category.uuid} className="flex items-center gap-2 cursor-pointer hover:bg-white/50 p-1 rounded transition-colors">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedCategoryUuids?.includes(category.uuid) || false}
+                                      onChange={() => handleCategoryToggle(category.uuid)}
+                                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    {IconComponent && (
+                                      <IconComponent className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                    )}
+                                    <span className="text-xs text-gray-700 flex-1">{category.name}</span>
+                                    <span className="text-xs text-gray-500 font-medium">({category.count})</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Audiences - Right Column */}
+                        {audienceOptions.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-700 mb-2">Audiences</h4>
+                            <div className="space-y-2">
+                              {audienceOptions.map((audience) => {
+                                const IconComponent = getIcon(audience.icon);
+                                return (
+                                  <label key={audience.uuid} className="flex items-center gap-2 cursor-pointer hover:bg-white/50 p-1 rounded transition-colors">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedAudienceUuids?.includes(audience.uuid) || false}
+                                      onChange={() => handleAudienceToggle(audience.uuid)}
+                                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    {IconComponent && (
+                                      <IconComponent className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                    )}
+                                    <span className="text-xs text-gray-700 flex-1">{audience.name}</span>
+                                    <span className="text-xs text-gray-500 font-medium">({audience.count})</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Apply and Clear Buttons */}
+                      <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200">
+                        <button
+                          onClick={() => {
+                            clearFilters();
+                            setExpandedFilter(null);
+                          }}
+                          className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          onClick={() => setExpandedFilter(null)}
+                          className="px-4 py-1.5 bg-brand-blue text-white text-xs font-medium rounded-md hover:opacity-90 transition-colors"
+                        >
+                          Apply
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

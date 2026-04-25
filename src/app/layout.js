@@ -6,9 +6,17 @@ import "./globals.css";
 import NavbarAuthWrapper from '@/components/navigation/NavbarAuthWrapper';
 import StoreProvider from '@/components/providers/StoreProvider';
 
+export const metadata = {
+  title: 'HairdoBooking',
+  description: 'Book appointments at hair salons',
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        {/* Google Maps API is loaded via @googlemaps/js-api-loader in LocationSearch component */}
+      </head>
       <body className="antialiased bg-background text-foreground">
         <StoreProvider>
           <div className="pt-16">

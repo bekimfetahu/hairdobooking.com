@@ -109,13 +109,13 @@ export default function Navbar() {
             const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
             dispatch(logout());
             if (!res.ok) {
-                router.push('/login');
+                router.push('/auth?tab=signin');
                 return;
             }
-            router.push('/login');
+            router.push('/auth?tab=signin');
         } catch (err) {
             console.error('Failed to log out:', err?.message || err);
-            router.push('/login');
+            router.push('/auth?tab=signin');
         }
     };
 

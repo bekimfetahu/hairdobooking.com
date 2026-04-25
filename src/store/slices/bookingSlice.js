@@ -23,8 +23,8 @@ import { createSlice } from "@reduxjs/toolkit";
 const defaultBooking = {
   selectedDate: null,
   selectedServiceUuid: null,
-  selectedCategoryUuid: "",
-  selectedAudienceUuid: "",
+  selectedCategoryUuids: [],
+  selectedAudienceUuids: [],
   selectedProfessionalUuid: null,
   selectedTime: null,
   selectedComments: "",
@@ -66,11 +66,25 @@ const bookingSlice = createSlice({
     },
     setSelectedCategoryUuid(state, action) {
       const { slug, uuid } = action.payload;
-      if (state.bySlug[slug]) state.bySlug[slug].selectedCategoryUuid = uuid;
+      if (state.bySlug[slug]) {
+        const uuids = state.bySlug[slug].selectedCategoryUuids || [];
+        if (uuids.includes(uuid)) {
+          state.bySlug[slug].selectedCategoryUuids = uuids.filter(u => u !== uuid);
+        } else {
+          state.bySlug[slug].selectedCategoryUuids = [...uuids, uuid];
+        }
+      }
     },
     setSelectedAudienceUuid(state, action) {
       const { slug, uuid } = action.payload;
-      if (state.bySlug[slug]) state.bySlug[slug].selectedAudienceUuid = uuid;
+      if (state.bySlug[slug]) {
+        const uuids = state.bySlug[slug].selectedAudienceUuids || [];
+        if (uuids.includes(uuid)) {
+          state.bySlug[slug].selectedAudienceUuids = uuids.filter(u => u !== uuid);
+        } else {
+          state.bySlug[slug].selectedAudienceUuids = [...uuids, uuid];
+        }
+      }
     },
     setSelectedProfessionalUuid(state, action) {
       const { slug, uuid } = action.payload;

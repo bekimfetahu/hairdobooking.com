@@ -5,21 +5,22 @@ import { searchServices, transformServiceToResult } from '@/services/search/sear
 /**
  * Custom hook for service search
  * Manages search state and calls the search service proxy
+ * Can accept initial data from SSR
  */
-export function useServiceSearch() {
-  const [results, setResults] = useState([]);
+export function useServiceSearch(initialData = []) {
+  const [results, setResults] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const search = useCallback(async ({ q, category, audience, perPage = 10, page = 1 }) => {
+  const search = useCallback(async ({ q, category, audience, lat, lon, distance, perPage = 10, page = 1 }) => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log('[useServiceSearch] Starting search:', { q, category, audience, perPage, page });
+      console.log('[useServiceSearch] Starting search:', { q, category, audience, lat, lon, distance, perPage, page });
 
       // Call the Next.js search proxy
-      const response = await searchServices({ q, category, audience, perPage, page });
+      const response = await searchServices({ q, category, audience, lat, lon, distance, perPage, page });
 
       console.log('[useServiceSearch] Got response:', response);
 

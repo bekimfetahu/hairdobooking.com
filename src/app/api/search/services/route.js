@@ -13,16 +13,28 @@ export async function GET(req) {
     const q = searchParams.get('q');
     const category = searchParams.get('category');
     const audience = searchParams.get('audience');
+    const lat = searchParams.get('lat');
+    const lon = searchParams.get('lon');
+    const distance = searchParams.get('distance');
     const perPage = searchParams.get('perPage') || 10;
     const page = searchParams.get('page') || 1;
+
+    console.log('[ServiceSearch API Route] Received params:', {
+      q, category, audience, lat, lon, distance, perPage, page
+    });
 
     // Build query parameters for Laravel
     const params = {};
     if (q) params.q = q;
     if (category) params.category = category;
     if (audience) params.audience = audience;
+    if (lat) params.lat = lat;
+    if (lon) params.lon = lon;
+    if (distance && lat && lon) params.distance = distance;
     params.perPage = Math.min(perPage, 100); // Cap at 100 results
     params.page = page;
+
+    console.log('[ServiceSearch API Route] Sending to Laravel:', params);
 
     // Call Laravel search endpoint with X-App-Token
     const response = await laravelApp.get('client/search/services', { params });

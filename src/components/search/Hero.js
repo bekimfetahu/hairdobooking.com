@@ -1,12 +1,14 @@
 'use client';
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, ChevronDown, Filter } from 'lucide-react';
+import { Search, ChevronDown, Filter } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import LocationSearch from '@/components/search/LocationSearch';
 import { cn } from '@/lib/utils';
 import { useVenueSearch } from '@/hooks/useVenueSearch';
 import { useServiceSearch } from '@/hooks/useServiceSearch';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
+import { getIcon } from '@/lib/iconMap';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -26,21 +28,29 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 /**
  * Hero - Modern hero with search input, gradient background, and hero image
  * Client component for interactivity - integrates with Elasticsearch via Next.js proxy
+ * Receives optional SSR data: initialLocation, initialVenues, initialServices
  */
 export default function Hero({
   onSearch = null,
   showSearchInput = true,
+  initialLocation = null,
+  initialVenues = [],
+  initialServices = [],
 }) {
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [location, setLocation] = React.useState('');
-  const [userLocation, setUserLocation] = React.useState(null);
+  const [selectedLocation, setSelectedLocation] = React.useState(initialLocation || null);
   const [showDropdown, setShowDropdown] = React.useState(false);
+  const [isLocationSearchFocused, setIsLocationSearchFocused] = React.useState(false);
   const [expandedFilter, setExpandedFilter] = React.useState(null);
+  const [searchDistance, setSearchDistance] = React.useState('10km'); // 5km, 10km, or 15km
+  const [isDefaultLocationLoaded, setIsDefaultLocationLoaded] = React.useState(!!initialVenues?.length);
   const searchRef = React.useRef(null);
+  const debounceTimerRef = React.useRef(null);
+  const geocoderRef = React.useRef(null);
   const router = useRouter();
   
-  const { results: venues, loading: venuesLoading, search: searchVenues } = useVenueSearch();
-  const { results: services, loading: servicesLoading, search: searchServices } = useServiceSearch();
+  const { results: venues, loading: venuesLoading, search: searchVenues } = useVenueSearch(initialVenues);
+  const { results: services, loading: servicesLoading, search: searchServices } = useServiceSearch(initialServices);
   const {
     options: filterOptions,
     selectedFilters,
@@ -50,59 +60,52 @@ export default function Hero({
     hasActiveFilters,
   } = useSearchFilters();
 
-  // Get user's geolocation on mount
-  React.useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-          });
-        },
-        () => {
-          console.debug('Geolocation permission denied');
-        }
-      );
-    }
-  }, []);
-
   // Combined search handler
   const handleSearch = React.useCallback(
     async (query) => {
-      if (query.length < 1) {
+      // Check if we should perform a search
+      const hasFilters = selectedFilters.categories?.length > 0 || selectedFilters.audiences?.length > 0;
+      const hasQuery = query.length >= 1;
+
+      // If no query and no filters, just close dropdown
+      if (!hasQuery && !hasFilters) {
         setShowDropdown(false);
         return;
       }
 
       try {
-        console.log('[Hero] Starting search with query:', query);
-        const hasFilters = selectedFilters.categories?.length > 0 || selectedFilters.audiences?.length > 0;
+        console.log('[Hero] Starting search with:', { query: query || '(empty)', hasFilters, selectedFilters });
         
         // Search venues WITHOUT filters - always search all salons
         const venuePromise = searchVenues({
           q: query,
-          lat: userLocation?.lat,
-          lon: userLocation?.lon,
-          distance: '10km',
+          lat: selectedLocation?.lat,
+          lon: selectedLocation?.lon,
+          distance: searchDistance,
           perPage: 5,
         });
 
-        // Search services - only apply filters if filters are selected
+        // Search services - include location and distance filtering
         const serviceSearchParams = {
           q: query,
+          lat: selectedLocation?.lat,
+          lon: selectedLocation?.lon,
+          distance: searchDistance,
           perPage: 5,
         };
 
         if (hasFilters) {
           if (selectedFilters.categories?.length > 0) {
-            serviceSearchParams.categories = selectedFilters.categories.join(',');
+            serviceSearchParams.category = selectedFilters.categories.join(',');
+            console.log('[Hero] Applied category filter:', serviceSearchParams.category);
           }
           if (selectedFilters.audiences?.length > 0) {
-            serviceSearchParams.audiences = selectedFilters.audiences.join(',');
+            serviceSearchParams.audience = selectedFilters.audiences.join(',');
+            console.log('[Hero] Applied audience filter:', serviceSearchParams.audience);
           }
         }
 
+        console.log('[Hero] Service search params:', serviceSearchParams);
         const servicePromise = searchServices(serviceSearchParams);
 
         // Execute searches in parallel
@@ -111,25 +114,133 @@ export default function Hero({
         setShowDropdown(true);
 
         if (onSearch) {
-          onSearch({ query, location });
+          onSearch({ query, location: selectedLocation });
         }
       } catch (err) {
         console.error('[Hero] Search failed:', err);
       }
     },
-    [userLocation, searchVenues, searchServices, onSearch, selectedFilters]
+    [selectedLocation, searchDistance, searchVenues, searchServices, onSearch, selectedFilters]
   );
 
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
+    
+    // Clear existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Set new debounce timer - wait 300ms after user stops typing
     if (value.length >= 1) {
-      handleSearch(value);
+      debounceTimerRef.current = setTimeout(() => {
+        handleSearch(value);
+      }, 300);
+    } else {
+      setShowDropdown(false);
     }
   };
 
-  const handleLocationChange = (e) => {
-    setLocation(e.target.value);
+  // Cleanup debounce timer on component unmount
+  React.useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Initialize with default London location and pre-fetch results in background
+  React.useEffect(() => {
+    if (isDefaultLocationLoaded) return; // Only run once
+
+    const initializeDefaultLocation = async () => {
+      try {
+        console.log('[Hero] Initializing default London location...');
+        
+        // If SSR data already provided, use it directly
+        if (initialLocation) {
+          console.log('[Hero] Using SSR location:', initialLocation);
+          setSelectedLocation(initialLocation);
+          setIsDefaultLocationLoaded(true);
+          return;
+        }
+
+        // Otherwise, geocode "London, UK" client-side
+        const { Geocoder } = await window.google.maps.importLibrary('geocoding');
+        geocoderRef.current = new Geocoder();
+
+        // Geocode "London, UK" to get coordinates
+        const results = await new Promise((resolve, reject) => {
+          geocoderRef.current.geocode({ address: 'London, UK' }, (results, status) => {
+            if (status === 'OK' && results.length > 0) {
+              resolve(results[0]);
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`));
+            }
+          });
+        });
+
+        const { lat, lng } = results.geometry.location;
+        const defaultLocation = {
+          lat: lat(),
+          lon: lng(),
+          address: 'London, UK',
+          placeId: results.place_id,
+          postcode: null,
+          country: 'UK',
+          isDefaultLocation: true,
+        };
+
+        console.log('[Hero] Default location set:', defaultLocation);
+        setSelectedLocation(defaultLocation);
+
+        // Fetch venues and services with empty query in background (don't show yet)
+        try {
+          console.log('[Hero] Starting background search with empty query...');
+          await Promise.all([
+            searchVenues({
+              q: '',
+              lat: defaultLocation.lat,
+              lon: defaultLocation.lon,
+              distance: searchDistance,
+              perPage: 5,
+            }),
+            searchServices({
+              q: '',
+              lat: defaultLocation.lat,
+              lon: defaultLocation.lon,
+              distance: searchDistance,
+              perPage: 5,
+            }),
+          ]);
+          console.log('[Hero] Background search completed');
+        } catch (err) {
+          console.error('[Hero] Background search failed:', err);
+        }
+
+        setIsDefaultLocationLoaded(true);
+      } catch (err) {
+        console.error('[Hero] Failed to initialize default location:', err);
+        setIsDefaultLocationLoaded(true);
+      }
+    };
+
+    if (window.google?.maps) {
+      initializeDefaultLocation();
+    }
+  }, [isDefaultLocationLoaded, searchVenues, searchServices, searchDistance]);
+
+  const handleLocationChange = (locationData) => {
+    // locationData contains: lat, lon, address, placeId, postcode, country
+    console.log('[Hero] Location changed:', locationData);
+    setSelectedLocation(locationData);
+    
+    // Re-trigger search if there's an active search query
+    if (searchQuery.length >= 1) {
+      handleSearch(searchQuery);
+    }
   };
 
   // Click outside handler
@@ -172,20 +283,22 @@ export default function Hero({
   // Render filter toggle button
   const renderFilterToggle = () => {
     const hasFilters = selectedFilters.categories?.length > 0 || selectedFilters.audiences?.length > 0;
+    const filterCount = (selectedFilters.categories?.length || 0) + (selectedFilters.audiences?.length || 0);
     return (
-      <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200">
-        <span className="text-sm font-medium text-gray-900">Search All</span>
+      <div className="flex items-center justify-end px-3 py-3 border-b border-gray-200">
         <button
           onClick={() => setExpandedFilter(expandedFilter === 'all' ? null : 'all')}
           className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-lg border transition-all',
+            'flex items-center gap-2 px-2 py-1 rounded-lg border transition-all',
             hasFilters
               ? 'border-primary text-primary bg-blue-50'
               : 'border-gray-300 text-gray-700 bg-white hover:border-gray-400'
           )}
         >
           <Filter className="w-4 h-4" />
-          <span className="text-sm font-medium">Filters</span>
+          <span className="text-sm font-medium">
+            Filters {hasFilters && `(${filterCount})`}
+          </span>
           <ChevronDown className={cn(
             'w-4 h-4 transition-transform',
             expandedFilter === 'all' && 'rotate-180'
@@ -200,48 +313,109 @@ export default function Hero({
     if (expandedFilter !== 'all') return null;
 
     return (
-      <div className="p-3 border-b border-gray-200 space-y-3">
-        {/* Categories */}
-        {filterOptions.categories?.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-gray-900 mb-2">Categories</h4>
-            <div className="space-y-2">
-              {filterOptions.categories.map((cat) => (
-                <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedFilters.categories?.includes(cat.id) || false}
-                    onChange={() => handleFilterChange('categories', cat.id)}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">{cat.name}</span>
-                  <span className="text-xs text-gray-500">({cat.count})</span>
-                </label>
-              ))}
+      <div className="p-3 border-b border-gray-200">
+        <div className="grid grid-cols-2 gap-4">
+          {/* Categories - Left Column */}
+          {filterOptions.categories?.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-900 mb-2">Categories</h4>
+              <div className="space-y-2">
+                {filterOptions.categories.map((cat) => {
+                  const IconComponent = getIcon(cat.icon);
+                  return (
+                    <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedFilters.categories?.includes(cat.id) || false}
+                        onChange={() => handleFilterChange('categories', cat.id)}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      {IconComponent && (
+                        <IconComponent className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                      )}
+                      <span className="text-sm text-gray-700">{cat.name}</span>
+                      <span className="text-xs text-gray-500">({cat.count})</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Audiences */}
-        {filterOptions.audiences?.length > 0 && (
-          <div>
-            <h4 className="text-xs font-semibold text-gray-900 mb-2">Audience</h4>
-            <div className="space-y-2">
-              {filterOptions.audiences.map((aud) => (
-                <label key={aud.id} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedFilters.audiences?.includes(aud.id) || false}
-                    onChange={() => handleFilterChange('audiences', aud.id)}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">{aud.name}</span>
-                  <span className="text-xs text-gray-500">({aud.count})</span>
-                </label>
-              ))}
+          {/* Audiences - Right Column */}
+          {filterOptions.audiences?.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-900 mb-2">Audience</h4>
+              <div className="space-y-2">
+                {filterOptions.audiences.map((aud) => {
+                  const IconComponent = getIcon(aud.icon);
+                  return (
+                    <label key={aud.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedFilters.audiences?.includes(aud.id) || false}
+                        onChange={() => handleFilterChange('audiences', aud.id)}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      {IconComponent && (
+                        <IconComponent className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                      )}
+                      <span className="text-sm text-gray-700">{aud.name}</span>
+                      <span className="text-xs text-gray-500">({aud.count})</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {/* Search Distance - Below Audiences */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
+                <div className="flex gap-4">
+                  {['5km', '10km', '15km'].map((distance) => (
+                    <label key={distance} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="search-distance"
+                        value={distance}
+                        checked={searchDistance === distance}
+                        onChange={() => setSearchDistance(distance)}
+                        className="w-4 h-4 text-blue-600 border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">{distance}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+        
+        {/* Apply and Clear Buttons */}
+        <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200">
+          <button
+            onClick={() => {
+              clearFilters();
+              setSearchDistance('10km'); // Reset to default
+              setExpandedFilter(null);
+              // Re-trigger search with cleared filters
+              handleSearch(searchQuery);
+            }}
+            className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
+          >
+            Clear
+          </button>
+          <button
+            onClick={() => {
+              setExpandedFilter(null);
+              // Re-trigger search with updated filters and distance
+              // This works for both typed searches and filtered pre-fetched data
+              handleSearch(searchQuery);
+            }}
+            className="px-4 py-1.5 bg-brand-blue text-white text-xs font-medium rounded-md hover:opacity-90 transition-colors"
+          >
+            Apply
+          </button>
+        </div>
       </div>
     );
   };
@@ -253,9 +427,9 @@ export default function Hero({
     return (
       <div className="border-b border-gray-200">
         <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600">Services</div>
-        {services.map((service) => (
+        {services.map((service, index) => (
           <button
-            key={service.id}
+            key={service.id || `service-${index}`}
             onClick={() => handleServiceSelect(service)}
             className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
           >
@@ -279,19 +453,46 @@ export default function Hero({
     return (
       <div>
         <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600">Salons</div>
-        {venues.map((venue) => {
-          const distance = userLocation && venue.location
-            ? calculateDistance(
-                userLocation.lat,
-                userLocation.lon,
-                venue.location.lat,
-                venue.location.lon
-              ).toFixed(1)
-            : null;
+        {venues.map((venue, index) => {
+          // Calculate distance if location is selected and venue has location data
+          let distance = null;
+          let distanceLabel = null;
+          
+          // Debug logging
+          if (venue.id === venues[0]?.id) {
+            console.log('[Hero] Debug distance calculation:', {
+              selectedLocation,
+              venueLocation: venue.location,
+              venue: venue
+            });
+          }
+          
+          if (selectedLocation && venue.location) {
+            try {
+              distance = calculateDistance(
+                selectedLocation.lat,
+                selectedLocation.lon,
+                venue.location.lat || venue.location.lat,
+                venue.location.lon || venue.location.lon
+              );
+              distanceLabel = distance.toFixed(1);
+              
+              if (venue.id === venues[0]?.id) {
+                console.log('[Hero] Distance calculated:', distanceLabel, 'km');
+              }
+            } catch (err) {
+              console.error('[Hero] Error calculating distance:', err, { selectedLocation, venue });
+            }
+          } else if (venue.id === venues[0]?.id) {
+            console.log('[Hero] Cannot calculate distance - missing data:', {
+              hasSelectedLocation: !!selectedLocation,
+              hasVenueLocation: !!venue.location
+            });
+          }
 
           return (
             <button
-              key={venue.id}
+              key={venue.id || `venue-${index}`}
               onClick={() => handleVenueSelect(venue)}
               className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 text-left transition-colors border-b border-gray-100 last:border-b-0"
             >
@@ -315,11 +516,17 @@ export default function Hero({
                 </p>
                 <p className="text-xs text-gray-500 truncate">{venue.address}</p>
               </div>
-              {distance && (
-                <span className="text-xs font-medium text-gray-600 flex-shrink-0">
-                  {distance} km
-                </span>
-              )}
+              {distanceLabel ? (
+                <div className="flex items-center gap-1 flex-shrink-0 px-2 py-1 bg-blue-50 rounded">
+                  <span className="text-xs font-semibold text-blue-600">
+                    {distanceLabel} km
+                  </span>
+                </div>
+              ) : selectedLocation && !venue.location ? (
+                <div className="flex-shrink-0 text-xs text-gray-400">
+                  No location data
+                </div>
+              ) : null}
             </button>
           );
         })}
@@ -359,47 +566,54 @@ export default function Hero({
           {/* Search Input */}
           {showSearchInput && (
             <div ref={searchRef} className="relative mb-10">
-              <div className="flex gap-1 sm:gap-2 items-center bg-white rounded-full border border-gray-200 px-2 sm:px-4 py-2 shadow-sm overflow-hidden">
-                {/* Search Input */}
-                <div className="relative flex-1 min-w-0">
-                  <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-400 flex-shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Search Services or Salons..."
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    onFocus={() => setShowDropdown(true)}
-                    className={cn(
-                      'w-full h-10 sm:h-12 pl-6 sm:pl-8 pr-1 sm:pr-2 rounded-full border-0 bg-transparent',
-                      'text-sm sm:text-base text-gray-900 placeholder-gray-500',
-                      'focus:outline-none',
-                      'transition-all duration-200'
-                    )}
-                  />
+              <div className="flex items-center bg-white rounded-full border border-gray-200 px-2 sm:px-4 py-0.5 shadow-sm overflow-visible">
+                {/* Search Input - 60% width */}
+                <div className="w-3/5 flex items-center gap-0">
+                  <div className="relative flex-1 min-w-0">
+                    <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-400 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Search Services or Salons..."
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onFocus={() => {
+                        setIsLocationSearchFocused(false);
+                        setShowDropdown(true);
+                      }}
+                      className={cn(
+                        'w-full h-8 sm:h-9 pl-6 sm:pl-8 pr-1 sm:pr-2 rounded-full border-0 bg-transparent',
+                        'text-sm sm:text-base text-gray-900 placeholder-gray-500',
+                        'focus:outline-none',
+                        'transition-all duration-200'
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Divider */}
-                <div className="w-px h-5 sm:h-6 bg-gray-200 flex-shrink-0"></div>
+                <div className="h-5 sm:h-6 bg-gray-200 w-px"></div>
 
-                {/* Location Input */}
-                <div className="relative flex-1 min-w-0 sm:w-auto">
-                  <MapPin className="absolute left-0 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-400 flex-shrink-0" />
-                  <input
-                    type="text"
+                {/* Location Search Input - 40% width */}
+                <div className="w-2/5 flex items-center">
+                  <LocationSearch
+                    value={selectedLocation?.address || ''}
+                    onLocationChange={handleLocationChange}
+                    onLocationFocus={() => {
+                      console.log('[Hero] Location search focused');
+                      setIsLocationSearchFocused(true);
+                      setShowDropdown(false);
+                    }}
+                    onLocationBlur={() => {
+                      console.log('[Hero] Location search blurred');
+                      setIsLocationSearchFocused(false);
+                    }}
                     placeholder="Location..."
-                    value={location}
-                    onChange={handleLocationChange}
-                    className={cn(
-                      'w-full h-10 sm:h-12 pl-6 sm:pl-8 pr-1 sm:pr-2 rounded-full border-0 bg-transparent',
-                      'text-sm sm:text-base text-gray-900 placeholder-gray-500',
-                      'focus:outline-none',
-                      'transition-all duration-200'
-                    )}
+                    className="w-full"
                   />
                 </div>
 
                 {/* Button */}
-                <Button
+                {/* <Button
                   variant="default"
                   size="lg"
                   className="rounded-full px-3 sm:px-6 py-2 whitespace-nowrap ml-1 sm:ml-2 text-sm sm:text-base flex-shrink-0"
@@ -408,20 +622,20 @@ export default function Hero({
                   <span className="hidden sm:inline">Explore</span>
                   <span className="sm:hidden">→</span>
                   <span className="ml-2 hidden sm:inline">→</span>
-                </Button>
+                </Button> */}
               </div>
 
               {/* Dropdown Results with Inline Filters */}
-              {showDropdown && (
-                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-lg z-[9999] overflow-hidden max-h-96 overflow-y-auto">
+              {showDropdown && !isLocationSearchFocused && (
+                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-lg z-[9999] max-h-96 overflow-y-auto">
                   {/* Filter Toggle */}
                   {renderFilterToggle()}
                   
                   {/* Expandable Filter Categories */}
                   {renderFilterCategories()}
 
-                  {/* Search Results */}
-                  {searchQuery.length >= 1 && !venuesLoading && !servicesLoading && (
+                  {/* Search Results - Show pre-fetched when empty, or typed results when typing */}
+                  {!venuesLoading && !servicesLoading && (
                     <>
                       {renderServicesSection()}
                       {renderVenuesSection()}
@@ -429,26 +643,19 @@ export default function Hero({
                   )}
 
                   {/* Loading State */}
-                  {searchQuery.length >= 1 && (venuesLoading || servicesLoading) && (
+                  {(venuesLoading || servicesLoading) && (
                     <div className="p-4 text-center text-sm text-gray-500">
                       <div className="flex items-center justify-center gap-2">
                         <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        Searching...
+                        {searchQuery.length >= 1 ? 'Searching...' : 'Loading results...'}
                       </div>
                     </div>
                   )}
 
                   {/* No Results Message */}
-                  {searchQuery.length >= 1 && !venuesLoading && !servicesLoading && venues.length === 0 && services.length === 0 && (
+                  {!venuesLoading && !servicesLoading && searchQuery.length >= 1 && venues.length === 0 && services.length === 0 && (
                     <div className="p-4 text-center text-sm text-gray-500">
                       No results found for "{searchQuery}"
-                    </div>
-                  )}
-
-                  {/* Empty State - Just Focused */}
-                  {searchQuery.length === 0 && !venuesLoading && !servicesLoading && (
-                    <div className="p-4 text-center text-sm text-gray-500">
-                      Start typing to search services and salons
                     </div>
                   )}
                 </div>

@@ -1,0 +1,79 @@
+/**
+ * Initial Data Fetcher for SSR
+ * Fetches venues and services for a given location on the server side
+ * Uses laravelApp service for app-to-app authentication (X-App-Token)
+ */
+
+import laravelApp from '@/services/laravelApp';
+import { transformVenueToSalon, transformServiceToResult } from '@/services/search/searchService';
+
+// Central London coordinates
+const LONDON_COORDS = {
+  lat: 51.5074,
+  lon: -0.1278,
+  address: 'London, UK',
+  country: 'UK',
+};
+
+export async function fetchInitialData(distance = '10km') {
+  try {
+    console.log('[InitialDataFetcher] Fetching venues and services for London...');
+    console.log('[InitialDataFetcher] Using app-to-app authentication (X-App-Token)');
+
+    // Fetch venues and services in parallel using laravelApp service
+    // laravelApp automatically includes X-App-Token header
+    const [venuesResponse, servicesResponse] = await Promise.all([
+      laravelApp.get('/client/search/venues', {
+        params: {
+          q: '',
+          lat: LONDON_COORDS.lat,
+          lon: LONDON_COORDS.lon,
+          distance,
+          perPage: 5,
+          page: 1,
+        },
+      }),
+      laravelApp.get('/client/search/services', {
+        params: {
+          q: '',
+          lat: LONDON_COORDS.lat,
+          lon: LONDON_COORDS.lon,
+          distance,
+          perPage: 5,
+          page: 1,
+        },
+      }),
+    ]);
+
+    const rawVenues = venuesResponse.data?.data || [];
+    const rawServices = servicesResponse.data?.data || [];
+
+    // Transform API response to component format
+    const venues = rawVenues.map(transformVenueToSalon);
+    const services = rawServices.map(transformServiceToResult);
+
+    console.log('[InitialDataFetcher] Successfully fetched and transformed:', venues.length, 'venues and', services.length, 'services');
+
+    return {
+      initialLocation: LONDON_COORDS,
+      initialVenues: venues,
+      initialServices: services,
+    };
+  } catch (error) {
+    console.error('[InitialDataFetcher] Error fetching initial data:');
+    console.error('[InitialDataFetcher] Message:', error.message);
+    if (error.response) {
+      console.error('[InitialDataFetcher] Status:', error.response.status);
+      console.error('[InitialDataFetcher] Status Text:', error.response.statusText);
+      console.error('[InitialDataFetcher] Data:', error.response.data);
+    }
+    
+    // Return fallback data instead of throwing
+    console.log('[InitialDataFetcher] Returning fallback data (location only)');
+    return {
+      initialLocation: LONDON_COORDS,
+      initialVenues: [],
+      initialServices: [],
+    };
+  }
+}

@@ -236,3 +236,122 @@ summary {
   width: 100%;
   height: 100%;
 }
+
+/* Google Places Autocomplete Styling */
+gmp-place-autocomplete {
+  display: block !important;
+  width: 100%;
+  z-index: 99999 !important;
+  position: relative;
+}
+
+/* Hide search icon from web component */
+gmp-place-autocomplete::part(icon) {
+  display: none !important;
+}
+
+/* Try to hide any SVG icons inside the component */
+gmp-place-autocomplete svg {
+  display: none !important;
+}
+
+/* Hide button elements that might contain icons */
+gmp-place-autocomplete button[aria-label*="search"],
+gmp-place-autocomplete button[aria-label*="clear"] {
+  display: none !important;
+}
+
+/* Hide default focus ring/border on web component */
+gmp-place-autocomplete:focus,
+gmp-place-autocomplete:focus-within {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove all focus styling from the input element inside the web component */
+gmp-place-autocomplete input,
+gmp-place-autocomplete input:focus,
+gmp-place-autocomplete input:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure dropdown is visible with extremely high z-index */
+.gmp-context {
+  z-index: 99999 !important;
+  position: fixed !important;
+}
+
+/* Autocomplete menu container */
+.gmp-context .gmp-autocomplete-list,
+.pac-container {
+  z-index: 99999 !important;
+  position: fixed !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  margin-top: 0.5rem;
+  background-color: #ffffff !important;
+}
+
+gmp-place-autocomplete::part(input) {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+gmp-place-autocomplete::part(input):focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+gmp-place-autocomplete::part(input):focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Additional aggressive rules to remove all focus styling */
+gmp-place-autocomplete *,
+gmp-place-autocomplete *:focus,
+gmp-place-autocomplete *:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Specifically target the input wrapper and borders */
+gmp-place-autocomplete [role="combobox"],
+gmp-place-autocomplete [role="combobox"]:focus,
+gmp-place-autocomplete [role="combobox"]:focus-visible,
+gmp-place-autocomplete input[role="combobox"],
+gmp-place-autocomplete input[role="combobox"]:focus,
+gmp-place-autocomplete input[role="combobox"]:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+.gmp-autocomplete-list-item,
+.pac-item {
+  padding: 0.75rem 1rem !important;
+  font-size: 0.875rem;
+  color: #1f2937 !important;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.gmp-autocomplete-list-item:hover,
+.gmp-autocomplete-list-item:focus,
+.pac-item:hover {
+  background-color: #f9fafb !important;
+  outline: none !important;
+}

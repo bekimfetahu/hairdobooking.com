@@ -5,9 +5,10 @@ import { searchVenues, transformVenueToSalon } from '@/services/search/searchSer
 /**
  * Custom hook for venue search
  * Manages search state and calls the search service proxy
+ * Can accept initial data from SSR
  */
-export function useVenueSearch() {
-  const [results, setResults] = useState([]);
+export function useVenueSearch(initialData = []) {
+  const [results, setResults] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 

@@ -45,6 +45,16 @@ export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 1
 
     const data = await response.json();
     console.log('[SearchService] Success:', data.data?.length || 0, 'venues found');
+    
+    // Debug: Log full venue response
+    if (data.data?.length > 0) {
+      console.log('[SearchService] First venue full data:', data.data[0]);
+      console.log('[SearchService] Location data:', {
+        address: data.data[0]?.address,
+        location: data.data[0]?.address?.location,
+      });
+    }
+    
     return data;
   } catch (error) {
     console.error('[SearchService] Caught error:', {
@@ -56,20 +66,23 @@ export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 1
 }
 
 /**
- * Search for services globally
+ * Search for services globally with optional location filtering
  */
-export async function searchServices({ q, category, audience, perPage = 10, page = 1 }) {
+export async function searchServices({ q, category, audience, lat, lon, distance, perPage = 10, page = 1 }) {
   try {
     const params = new URLSearchParams();
 
     if (q) params.append('q', q);
     if (category) params.append('category', category);
     if (audience) params.append('audience', audience);
+    if (lat) params.append('lat', lat);
+    if (lon) params.append('lon', lon);
+    if (distance && lat && lon) params.append('distance', distance);
     params.append('perPage', perPage);
     params.append('page', page);
 
     const url = `/api/search/services?${params}`;
-    console.log('[SearchService] Calling:', url);
+    console.log('[SearchService] Calling services:', url);
 
     const response = await fetch(url, {
       method: 'GET',
