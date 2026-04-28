@@ -3,9 +3,10 @@
 import React from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Filter, Search } from "lucide-react";
+import { ChevronDown, Filter, Search, X } from "lucide-react";
 import LocationSearch from "@/components/search/LocationSearch";
 import { useSearchFilters } from "@/hooks/useSearchFilters";
+import { useServiceSearch } from "@/hooks/useServiceSearch";
 import { searchVenues } from "@/services/search/searchService";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/iconMap";
@@ -74,8 +75,10 @@ export default function ServiceSearchClient({
   initialDistance = "10km",
 }) {
   const router = useRouter();
+  const initialServiceLabel = initialServiceName || initialService?.display_name || initialService?.name || "";
 
-  const [serviceQuery, setServiceQuery] = React.useState(initialServiceName || initialService?.name || "");
+  const [serviceQuery, setServiceQuery] = React.useState(initialServiceLabel);
+  const [showDropdown, setShowDropdown] = React.useState(false);
   const [selectedLocation, setSelectedLocation] = React.useState(
     Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
       ? { lat: initialLocationLat, lon: initialLocationLon, address: initialLocationLabel || "" }
@@ -92,11 +95,14 @@ export default function ServiceSearchClient({
   const [mapsReady, setMapsReady] = React.useState(false);
   const [selectedServiceUuid, setSelectedServiceUuid] = React.useState(initialServiceUuid || initialService?.uuid || "");
 
+  const searchRef = React.useRef(null);
   const debounceRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
+
+  const { results: services, loading: servicesLoading, search: searchServices } = useServiceSearch([]);
 
   const {
     options: filterOptions,
@@ -108,9 +114,7 @@ export default function ServiceSearchClient({
   const hasActiveFilters = (selectedFilters.categories?.length || 0) > 0 || (selectedFilters.audiences?.length || 0) > 0;
   const center = React.useMemo(() => computeCenter(venues), [venues]);
 
-  const serviceFilter = React.useMemo(() => {
-    return selectedServiceUuid || initialService?.uuid || "";
-  }, [initialService?.uuid, selectedServiceUuid]);
+  const serviceFilter = React.useMemo(() => selectedServiceUuid || initialService?.uuid || "", [initialService?.uuid, selectedServiceUuid]);
 
   const getMatchedService = React.useCallback((venue) => {
     const services = venue?.services || [];
@@ -128,7 +132,9 @@ export default function ServiceSearchClient({
   }, [serviceFilter]);
 
   const fetchVenues = React.useCallback(async ({ service, location = selectedLocation, distance = searchDistance }) => {
-    if (!service) {
+    const activeService = service || serviceFilter;
+
+    if (!activeService) {
       setVenues([]);
       return;
     }
@@ -138,7 +144,7 @@ export default function ServiceSearchClient({
 
     try {
       const response = await searchVenues({
-        service,
+        service: activeService,
         lat: location?.lat,
         lon: location?.lon,
         distance,
@@ -154,16 +160,18 @@ export default function ServiceSearchClient({
     } finally {
       setVenuesLoading(false);
     }
-  }, [searchDistance, selectedFilters.audiences, selectedFilters.categories, selectedLocation]);
+  }, [searchDistance, selectedFilters.audiences, selectedFilters.categories, selectedLocation, serviceFilter]);
 
   React.useEffect(() => {
-    if (!serviceFilter) return;
+    const timerId = window.setTimeout(() => {
+      void fetchVenues({
+        service: serviceFilter,
+        location: selectedLocation,
+        distance: searchDistance,
+      });
+    }, 0);
 
-    fetchVenues({
-      service: serviceFilter,
-      location: selectedLocation,
-      distance: searchDistance,
-    });
+    return () => window.clearTimeout(timerId);
   }, [fetchVenues, searchDistance, selectedLocation, serviceFilter]);
 
   React.useEffect(() => {
@@ -172,21 +180,40 @@ export default function ServiceSearchClient({
     }
 
     const trimmed = serviceQuery.trim();
-    if (!trimmed && !serviceFilter && !hasActiveFilters) {
-      setVenues([]);
+
+    if (!trimmed && !hasActiveFilters) {
       return undefined;
     }
 
-    debounceRef.current = setTimeout(() => {
-      fetchVenues({ service: serviceFilter });
-    }, 250);
+    debounceRef.current = window.setTimeout(() => {
+      void searchServices({
+        q: trimmed || undefined,
+        category: selectedFilters.categories?.length ? selectedFilters.categories.join(",") : undefined,
+        audience: selectedFilters.audiences?.length ? selectedFilters.audiences.join(",") : undefined,
+        lat: selectedLocation?.lat,
+        lon: selectedLocation?.lon,
+        distance: searchDistance,
+        perPage: 5,
+      });
+    }, 300);
 
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [fetchVenues, hasActiveFilters, serviceFilter, serviceQuery, selectedFilters.audiences, selectedFilters.categories, selectedLocation, searchDistance]);
+  }, [hasActiveFilters, searchDistance, searchServices, selectedFilters.audiences, selectedFilters.categories, selectedLocation?.lat, selectedLocation?.lon, serviceQuery]);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   React.useEffect(() => {
     if (!mapsReady || selectedLocation || !window.google?.maps) return;
@@ -286,12 +313,47 @@ export default function ServiceSearchClient({
   const handleLocationChange = (locationData) => {
     setSelectedLocation(locationData);
     setLocationLabel(locationData?.address || "");
-    fetchVenues({ service: serviceFilter, location: locationData });
+    void fetchVenues({ service: serviceFilter, location: locationData });
   };
 
   const handleServiceChange = (event) => {
-    setServiceQuery(event.target.value);
-    setSelectedServiceUuid(initialService?.uuid || initialServiceUuid || "");
+    const nextValue = event.target.value;
+    setServiceQuery(nextValue);
+    setShowDropdown(nextValue.trim().length >= 1 || hasActiveFilters);
+  };
+
+  const handleClearServiceQuery = () => {
+    setServiceQuery("");
+    setShowDropdown(false);
+  };
+
+  const handleServiceSelect = (service) => {
+    if (!service?.uuid) {
+      return;
+    }
+
+    const nextLabel = service.display_name || service.name || "";
+    setServiceQuery(nextLabel);
+    setSelectedServiceUuid(service.uuid);
+    setShowDropdown(false);
+
+    void fetchVenues({
+      service: service.uuid,
+      location: selectedLocation,
+      distance: searchDistance,
+    });
+  };
+
+  const formatServiceMeta = (service) => {
+    if (!service) {
+      return "";
+    }
+
+    if (service.audience) {
+      return `${service.category || ""}${service.category ? " -> " : ""}${service.audience}`;
+    }
+
+    return service.category || "";
   };
 
   const renderFilters = () => {
@@ -314,7 +376,7 @@ export default function ServiceSearchClient({
                         onChange={() => toggleFilter("categories", category.id)}
                       />
                       {Icon && <Icon className="h-4 w-4 text-gray-600" />}
-                      <span className="text-sm text-gray-700">{category.name} ({category.count})</span>
+                      <span className="text-sm text-gray-700">{category.name}</span>
                     </label>
                   );
                 })}
@@ -336,7 +398,7 @@ export default function ServiceSearchClient({
                         onChange={() => toggleFilter("audiences", audience.id)}
                       />
                       {Icon && <Icon className="h-4 w-4 text-gray-600" />}
-                      <span className="text-sm text-gray-700">{audience.name} ({audience.count})</span>
+                      <span className="text-sm text-gray-700">{audience.name}</span>
                     </label>
                   );
                 })}
@@ -352,7 +414,7 @@ export default function ServiceSearchClient({
                         checked={searchDistance === distance}
                         onChange={() => {
                           setSearchDistance(distance);
-                          fetchVenues({ service: serviceFilter, distance });
+                          void fetchVenues({ service: serviceFilter, distance });
                         }}
                       />
                       <span className="text-sm text-gray-700">{distance}</span>
@@ -370,7 +432,7 @@ export default function ServiceSearchClient({
             onClick={() => {
               clearFilters();
               setSearchDistance("10km");
-              fetchVenues({ service: serviceFilter, distance: "10km" });
+              void fetchVenues({ service: serviceFilter, distance: "10km" });
               setExpandedFilter(null);
             }}
             className="rounded-md bg-gray-200 px-4 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300"
@@ -380,11 +442,7 @@ export default function ServiceSearchClient({
           <button
             type="button"
             onClick={async () => {
-              await fetchVenues({
-                service: serviceFilter,
-                location: selectedLocation,
-                distance: searchDistance,
-              });
+              await fetchVenues({ service: serviceFilter, location: selectedLocation, distance: searchDistance });
               setExpandedFilter(null);
             }}
             className="px-4 py-1.5 bg-brand-blue text-white text-xs font-medium rounded-md hover:opacity-90 transition-colors"
@@ -412,8 +470,73 @@ export default function ServiceSearchClient({
     router.push(`/salon/${venue.venue.slug}/service/${matchedService.uuid}?${params.toString()}`);
   };
 
+  const renderServicesDropdown = () => {
+    if (!showDropdown) {
+      return null;
+    }
+
+    return (
+      <div className="absolute top-full mt-2 w-full rounded-md border border-gray-200 bg-white shadow-lg z-[9999] max-h-96 overflow-y-auto">
+        <div className="flex items-center justify-end px-3 py-3 border-b border-gray-200">
+          <button
+            type="button"
+            onClick={() => setExpandedFilter(expandedFilter === "filters" ? null : "filters")}
+            className={cn(
+              'flex items-center gap-2 px-2 py-1 rounded-lg border transition-all',
+              hasActiveFilters
+                ? 'border-primary text-primary bg-blue-50'
+                : 'border-gray-300 text-gray-700 bg-white hover:border-gray-400'
+            )}
+          >
+            <Filter className="w-4 h-4" />
+            <span className="text-sm font-medium">Filters {hasActiveFilters && `(${(selectedFilters.categories?.length || 0) + (selectedFilters.audiences?.length || 0)})`}</span>
+            <ChevronDown className={cn('w-4 h-4 transition-transform', expandedFilter === 'filters' && 'rotate-180')} />
+          </button>
+        </div>
+
+        {renderFilters() && <div className="border-b border-gray-200">{renderFilters()}</div>}
+
+        {!servicesLoading && services.length > 0 && (
+          <div className="border-b border-gray-200">
+            <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600">Services</div>
+            {services.map((service, index) => (
+              <button
+                key={service.id || `service-${index}`}
+                type="button"
+                onClick={() => handleServiceSelect(service)}
+                className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+              >
+                <p className="text-sm font-semibold text-gray-900">{service.display_name || service.name}</p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-500">{formatServiceMeta(service)}</p>
+                  {service.venueCount > 0 && <p className="text-xs text-gray-500">{service.venueCount} locations</p>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {servicesLoading && (
+          <div className="p-4 text-center text-sm text-gray-500">
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Searching services...
+            </div>
+          </div>
+        )}
+
+        {!servicesLoading && serviceQuery.trim().length >= 1 && services.length === 0 && (
+          <div className="p-4 text-center text-sm text-gray-500">
+            No services found for &quot;{serviceQuery}&quot;
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <section className="relative overflow-visible pt-5 pb-0 md:pt-8 md:pb-0">
+      <p>ahosijfls</p>
       <div
         className="absolute inset-0"
         style={{
@@ -428,7 +551,7 @@ export default function ServiceSearchClient({
         onLoad={() => setMapsReady(true)}
       />
 
-      <div className="relative mb-2">
+      <div ref={searchRef} className="relative mb-2">
         <div className="flex items-center bg-white rounded-full border border-gray-200 px-2 sm:px-4 py-0.5 shadow-sm overflow-visible">
           <div className="w-3/5 flex items-center gap-0">
             <div className="relative flex-1 min-w-0">
@@ -436,14 +559,25 @@ export default function ServiceSearchClient({
               <input
                 value={serviceQuery}
                 onChange={handleServiceChange}
-                placeholder="Search Services or Salons..."
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Search Services..."
                 className={cn(
-                  'w-full h-8 sm:h-9 pl-6 sm:pl-8 pr-1 sm:pr-2 rounded-full border-0 bg-transparent',
+                  'w-full h-8 sm:h-9 pl-6 sm:pl-8 pr-8 sm:pr-9 rounded-full border-0 bg-transparent',
                   'text-sm sm:text-base text-gray-900 placeholder-gray-500',
                   'focus:outline-none',
                   'transition-all duration-200'
                 )}
               />
+              {serviceQuery.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearServiceQuery}
+                  aria-label="Clear service search"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -462,40 +596,16 @@ export default function ServiceSearchClient({
           </div>
         </div>
 
+        {renderServicesDropdown()}
+
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
         <section className="rounded-md border border-black/10 bg-white p-4 shadow-sm ring-1 ring-black/5">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Services search</p>
-              <div className="mt-1 flex flex-wrap items-center gap-3">
-                <h3 className="text-xl font-semibold text-neutral-950">{venues.length} venue{venues.length === 1 ? "" : "s"} found</h3>
-                {venuesLoading && <p className="text-sm text-neutral-500">Updating...</p>}
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end">
-              <button
-                type="button"
-                onClick={() => setExpandedFilter(expandedFilter === "filters" ? null : "filters")}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg border transition-all',
-                  hasActiveFilters
-                    ? 'border-primary text-primary bg-blue-50'
-                    : 'border-gray-300 text-gray-700 bg-white hover:border-gray-400'
-                )}
-              >
-                <Filter className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  Filters {hasActiveFilters && `(${(selectedFilters.categories?.length || 0) + (selectedFilters.audiences?.length || 0)})`}
-                </span>
-                <ChevronDown className={cn('w-4 h-4 transition-transform', expandedFilter === 'filters' && 'rotate-180')} />
-              </button>
-            </div>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <h3 className="text-xl font-semibold text-neutral-950">{venues.length} venue{venues.length === 1 ? "" : "s"} found</h3>
+            {venuesLoading && <p className="text-sm text-neutral-500">Updating...</p>}
           </div>
-
-          {renderFilters() && <div className="mb-4">{renderFilters()}</div>}
 
           {venuesError && (
             <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

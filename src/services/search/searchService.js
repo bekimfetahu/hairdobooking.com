@@ -162,7 +162,7 @@ export function transformVenueToSalon(venue) {
     slug: venue.venue.slug,
     address: venue.address.formatted,
     image: venue.primary_image?.url || null,
-    services: venue.services?.map(s => s.name) || [],
+    services: venue.services?.map(s => s.display_name || s.name) || [],
     location: venue.address.location,
     uuid: venue.venue.uuid,
   };
@@ -175,10 +175,12 @@ export function transformServiceToResult(service) {
   return {
     id: service.uuid,
     uuid: service.uuid,
-    name: service.name,
-    category: service.category,
-    price: service.price,
-    duration: service.duration_minutes,
-    venueCount: service.venue_count || 0,
+    name: service.display_name || service.name || service.service_name,
+    category: service.category?.name || service.category_name || service.category,
+    audience: service.audience || service.audience_name || null,
+    audiences: Array.isArray(service.audiences) ? service.audiences : [],
+    price: service.price ?? service.price_avg ?? null,
+    duration: service.duration_minutes ?? service.duration_avg ?? service.duration ?? null,
+    venueCount: service.venue_count || service.venueCount || 0,
   };
 }

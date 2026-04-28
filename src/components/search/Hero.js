@@ -234,7 +234,7 @@ export default function Hero({
     if (window.google?.maps) {
       initializeDefaultLocation();
     }
-  }, [isDefaultLocationLoaded, searchVenues, searchServices, searchDistance]);
+  }, [isDefaultLocationLoaded, initialLocation, searchVenues, searchServices, searchDistance]);
 
   const handleLocationChange = (locationData) => {
     // locationData contains: lat, lon, address, placeId, postcode, country
@@ -264,9 +264,13 @@ export default function Hero({
   // Re-search when filters change
   React.useEffect(() => {
     if (searchQuery.length >= 1) {
-      handleSearch(searchQuery);
+      const timerId = window.setTimeout(() => {
+        void handleSearch(searchQuery);
+      }, 0);
+
+      return () => window.clearTimeout(timerId);
     }
-  }, [selectedFilters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleSearch, searchQuery, selectedFilters]);
 
   const handleFilterChange = (filterType, filterId) => {
     toggleFilter(filterType, filterId);
@@ -275,7 +279,7 @@ export default function Hero({
   const handleServiceSelect = (service) => {
     setShowDropdown(false);
     const params = new URLSearchParams();
-    if (service?.name) params.set('name', service.name);
+    if (service?.display_name || service?.name) params.set('name', service.display_name || service.name);
     if (selectedLocation?.address) params.set('loc', selectedLocation.address);
     if (selectedLocation?.lat !== undefined && selectedLocation?.lat !== null) params.set('lat', String(selectedLocation.lat));
     if (selectedLocation?.lon !== undefined && selectedLocation?.lon !== null) params.set('lon', String(selectedLocation.lon));
@@ -341,7 +345,7 @@ export default function Hero({
                       {IconComponent && (
                         <IconComponent className="w-4 h-4 text-gray-600 flex-shrink-0" />
                       )}
-                      <span className="text-sm text-gray-700">{cat.name} ({cat.count})</span>
+                      <span className="text-sm text-gray-700">{cat.name}</span>
                     </label>
                   );
                 })}
@@ -367,7 +371,7 @@ export default function Hero({
                       {IconComponent && (
                         <IconComponent className="w-4 h-4 text-gray-600 flex-shrink-0" />
                       )}
-                      <span className="text-sm text-gray-700">{aud.name} ({aud.count})</span>
+                      <span className="text-sm text-gray-700">{aud.name}</span>
                     </label>
                   );
                 })}
@@ -445,7 +449,7 @@ export default function Hero({
             onClick={() => handleServiceSelect(service)}
             className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
           >
-            <p className="text-sm font-semibold text-gray-900">{service.name}</p>
+            <p className="text-sm font-semibold text-gray-900">{service.display_name || service.name}</p>
             <div className="flex items-center justify-between mt-1">
               <p className="text-xs text-gray-500">{service.category}</p>
               {service.venueCount > 0 && (
@@ -667,7 +671,7 @@ export default function Hero({
                   {/* No Results Message */}
                   {!venuesLoading && !servicesLoading && searchQuery.length >= 1 && venues.length === 0 && services.length === 0 && (
                     <div className="p-4 text-center text-sm text-gray-500">
-                      No results found for "{searchQuery}"
+                      No results found for &quot;{searchQuery}&quot;
                     </div>
                   )}
                 </div>
