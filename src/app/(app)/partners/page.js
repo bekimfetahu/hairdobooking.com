@@ -37,7 +37,7 @@ export default function PartnerPage() {
                             <p className="mt-3 text-sm text-neutral-500">No credit card required • Setup in minutes</p>
                         </div>
                           <div className="flex items-center justify-center">
-                            <div className="rounded-2xl border border-black/5 bg-neutral-50 p-4 w-full">
+                            <div className="rounded-md border border-black/5 bg-neutral-50 p-4 w-full">
                                 <ImageLightbox src="/images/appointments.png" alt="Scheduler showing professionals and external bookings" imgClass="rounded" />
                             </div>
                         </div>
@@ -47,7 +47,7 @@ export default function PartnerPage() {
                 </section>
 
                 {/* SCHEDULER SHOWCASE */}
-                <section id="scheduler" className="mt-10 rounded-[1rem] border border-black/10 bg-white p-8 shadow-sm">
+                    <section id="scheduler" className="mt-10 rounded-md border border-black/10 bg-white p-8 shadow-sm">
                     <div className="grid gap-6 lg:grid-cols-2 lg:items-center">
                         <div>
                             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Product showcase</p>
@@ -62,7 +62,7 @@ export default function PartnerPage() {
                         </div>
 
                         <div className="flex items-center justify-center">
-                            <div className="rounded-2xl border border-black/5 bg-neutral-50 p-4 w-full">
+                            <div className="rounded-md border border-black/5 bg-neutral-50 p-4 w-full">
                                 <ImageLightbox src="/images/appointments.png" alt="Scheduler showing professionals and external bookings" imgClass="rounded" />
                             </div>
                         </div>
@@ -70,14 +70,14 @@ export default function PartnerPage() {
                 </section>
 
                 {/* CLARITY */}
-                <section id="clarity" className="mt-12 rounded-[1rem] border border-black/10 bg-white p-8 shadow-sm">
+                <section id="clarity" className="mt-12 rounded-md border border-black/10 bg-white p-8 shadow-sm">
                     <h2 className="text-2xl font-semibold text-neutral-950">Keep using what already works</h2>
                     <p className="mt-3 text-neutral-600">Using marketplaces, Instagram, or taking bookings by phone? HairdoBooking brings everything together into one simple dashboard — so you stay organised without changing how you work.</p>
                 </section>
 
                 {/* PROBLEM */}
                 <section id="problem" className="mt-12">
-                    <div className="rounded-[1rem] border border-black/10 bg-white p-8">
+                    <div className="rounded-md border border-black/10 bg-white p-8">
                         <h3 className="text-xl font-semibold text-neutral-950">Your bookings are scattered</h3>
                         <ul className="mt-4 grid gap-2 sm:grid-cols-2 text-neutral-700">
                             <li>• Multiple booking sources (marketplaces, social, phone)</li>
@@ -89,7 +89,7 @@ export default function PartnerPage() {
                 </section>
 
                 {/* SOLUTION */}
-                <section id="solution" className="mt-12 rounded-[1rem] border border-black/10 bg-neutral-50 p-8">
+                <section id="solution" className="mt-12 rounded-md border border-black/10 bg-neutral-50 p-8">
                     <div className="grid gap-6 lg:grid-cols-2 lg:items-center">
                         <div>
                             <h3 className="text-2xl font-semibold text-neutral-950">One central hub for your entire salon</h3>
@@ -116,31 +116,31 @@ export default function PartnerPage() {
                     </div>
 
                     <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                        <article className="rounded-md border border-black/10 bg-white p-6 text-center shadow-sm">
                             <CalendarDays className="mx-auto h-6 w-6 text-black" />
                             <h5 className="mt-4 font-semibold">Everything in One Calendar</h5>
                             <p className="mt-2 text-sm text-neutral-600">All bookings — from anywhere — in one clear schedule.</p>
                         </article>
 
-                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                        <article className="rounded-md border border-black/10 bg-white p-6 text-center shadow-sm">
                             <Globe className="mx-auto h-6 w-6 text-black" />
                             <h5 className="mt-4 font-semibold">Keep Using Marketplaces</h5>
                             <p className="mt-2 text-sm text-neutral-600">No need to change how you attract clients. We organise your bookings, not replace your channels.</p>
                         </article>
 
-                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                        <article className="rounded-md border border-black/10 bg-white p-6 text-center shadow-sm">
                             <CheckSquare className="mx-auto h-6 w-6 text-black" />
                             <h5 className="mt-4 font-semibold">Avoid Double Bookings</h5>
                             <p className="mt-2 text-sm text-neutral-600">One reliable calendar keeps your schedule accurate.</p>
                         </article>
 
-                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                        <article className="rounded-md border border-black/10 bg-white p-6 text-center shadow-sm">
                             <Users className="mx-auto h-6 w-6 text-black" />
                             <h5 className="mt-4 font-semibold">Client Management</h5>
                             <p className="mt-2 text-sm text-neutral-600">Track clients, history, and appointments independently from third-party platforms.</p>
                         </article>
 
-                        <article className="rounded-[1rem] border border-black/10 bg-white p-6 text-center shadow-sm">
+                        <article className="rounded-md border border-black/10 bg-white p-6 text-center shadow-sm">
                             <Layers className="mx-auto h-6 w-6 text-black" />
                             <h5 className="mt-4 font-semibold">Less Admin</h5>
                             <p className="mt-2 text-sm text-neutral-600">Spend less time managing bookings and more time with clients.</p>
@@ -149,7 +149,7 @@ export default function PartnerPage() {
                 </section>
 
                 {/* MARKETPLACE */}
-                <section id="marketplace" className="mt-12 rounded-[1rem] border border-black/10 bg-white p-8 shadow-sm">
+                <section id="marketplace" className="mt-12 rounded-md border border-black/10 bg-white p-8 shadow-sm">
                     <h3 className="text-2xl font-semibold text-neutral-950">Bring in new clients — without losing your own</h3>
                     <p className="mt-3 text-neutral-600">HairdoBooking includes a marketplace designed to help new clients discover your salon — without pushing your existing clients toward competitors.</p>
 
@@ -161,7 +161,7 @@ export default function PartnerPage() {
                 </section>
 
                 {/* FAIRNESS / RATINGS */}
-                <section id="fairness" className="mt-8 rounded-[1rem] border border-black/5 bg-neutral-50 p-6">
+                <section id="fairness" className="mt-8 rounded-md border border-black/5 bg-neutral-50 p-6">
                     <h4 className="text-lg font-semibold text-neutral-900">A fairer experience for salon professionals</h4>
                     <p className="mt-2 text-neutral-600">Public rating systems can often be inconsistent. HairdoBooking focuses on helping you build strong client relationships and a reliable business — instead of relying heavily on anonymous scores that don’t always reflect your work.</p>
                 </section>
@@ -178,25 +178,25 @@ export default function PartnerPage() {
                 </section>
 
                 {/* PRODUCT VISUALS */}
-                <section id="visuals" className="mt-12 rounded-[1rem] border border-black/10 bg-white p-8 shadow-sm">
+                <section id="visuals" className="mt-12 rounded-md border border-black/10 bg-white p-8 shadow-sm">
                     <h3 className="text-2xl font-semibold text-neutral-950">Product visuals</h3>
                     <p className="mt-2 text-neutral-600">Screenshots: calendar, dashboard and booking interface.</p>
 
                     <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                        <div className="rounded overflow-hidden bg-neutral-50">
+                        <div className="rounded-md overflow-hidden bg-neutral-50">
                             <Image src="/images/screenshot-calendar.png" alt="Calendar" width={400} height={260} className="w-full h-auto" />
                         </div>
-                        <div className="rounded overflow-hidden bg-neutral-50">
+                        <div className="rounded-md overflow-hidden bg-neutral-50">
                             <Image src="/images/screenshot-dashboard.png" alt="Dashboard" width={400} height={260} className="w-full h-auto" />
                         </div>
-                        <div className="rounded overflow-hidden bg-neutral-50">
+                        <div className="rounded-md overflow-hidden bg-neutral-50">
                             <Image src="/images/screenshot-booking.png" alt="Booking interface" width={400} height={260} className="w-full h-auto" />
                         </div>
                     </div>
                 </section>
 
                 {/* COMPARISON */}
-                <section id="comparison" className="mt-12 rounded-[1rem] border border-black/10 bg-white p-8 shadow-sm">
+                <section id="comparison" className="mt-12 rounded-md border border-black/10 bg-white p-8 shadow-sm">
                     <div className="grid gap-6 lg:grid-cols-2">
                         <div>
                             <h4 className="font-semibold text-neutral-900">Without HairdoBooking</h4>
@@ -221,7 +221,7 @@ export default function PartnerPage() {
                 </section>
 
                 {/* FINAL CTA */}
-                <section id="final-cta" className="mt-12 rounded-[1.25rem] border border-black/10 bg-white p-8 text-center shadow-xl">
+                <section id="final-cta" className="mt-12 rounded-md border border-black/10 bg-white p-8 text-center shadow-xl">
                     <h3 className="text-2xl font-semibold text-neutral-950">Take control of your salon bookings</h3>
                     <p className="mt-3 text-sm text-neutral-600">Stop juggling platforms. Start managing everything in one place.</p>
 
@@ -239,12 +239,12 @@ export default function PartnerPage() {
                 <section id="faq" className="mt-12 mb-12">
                     <h3 className="text-2xl font-semibold text-neutral-950">Frequently asked questions</h3>
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <div className="rounded-[1rem] border border-black/10 bg-white p-6">
+                        <div className="rounded-md border border-black/10 bg-white p-6">
                             <p className="font-semibold">Do I need to stop using marketplaces?</p>
                             <p className="mt-2 text-neutral-600">No — you can continue using them as usual. HairdoBooking centralises bookings so you don't have to change how you attract clients.</p>
                         </div>
 
-                        <div className="rounded-[1rem] border border-black/10 bg-white p-6">
+                        <div className="rounded-md border border-black/10 bg-white p-6">
                             <p className="font-semibold">Is setup complicated?</p>
                             <p className="mt-2 text-neutral-600">No — setup is quick and simple. Add your services, team and availability and you're ready to go.</p>
                         </div>

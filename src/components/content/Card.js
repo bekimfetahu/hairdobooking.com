@@ -21,9 +21,9 @@ export default function Card({
   variant = 'simple',
   className = '',
   children,
-  rounded = '2xl',
+  rounded = 'md',
   border = true,
-  shadow = false,
+  shadow = true,
   hover = true,
   onClick = null,
   ...props
@@ -34,9 +34,9 @@ export default function Card({
     rounded === '2xl' && 'rounded-2xl',
     rounded === 'lg' && 'rounded-lg',
     rounded === 'md' && 'rounded-md',
-    border && 'border border-gray-200',
+    border && 'border border-black/10',
     shadow && 'shadow-sm',
-    hover && 'hover:shadow-md hover:border-gray-300',
+    hover && 'hover:border-black/20 hover:shadow-md',
     onClick && 'cursor-pointer'
   );
 

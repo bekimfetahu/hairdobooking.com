@@ -1,6 +1,5 @@
 'use client';
 import React, { useEffect, useState, useRef } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 import { X, MapPin } from 'lucide-react';
 import { extractLocationFromPlace } from '@/lib/locationHelper';
 
@@ -16,6 +15,7 @@ export default function LocationSearch({
   onLocationChange = null,
   onLocationFocus = null,
   onLocationBlur = null,
+  mapsReady = false,
 }) {
   const [displayText, setDisplayText] = useState(value);
   const [isClient, setIsClient] = useState(false);
@@ -24,7 +24,6 @@ export default function LocationSearch({
   const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
-  const loaderRef = useRef(null);
   const autocompleteServiceRef = useRef(null);
   const placesServiceRef = useRef(null);
   const sessionTokenRef = useRef(null);
@@ -43,19 +42,13 @@ export default function LocationSearch({
 
   // Initialize Google Places API
   useEffect(() => {
+    if (!mapsReady) {
+      return;
+    }
+
     async function initPlaces() {
       try {
-        if (!loaderRef.current) {
-          loaderRef.current = new Loader({
-            apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY,
-            version: 'weekly',
-            libraries: ['places'],
-            loading: 'async',
-          });
-        }
-
-        await loaderRef.current.load();
-        console.log('Google Maps API loaded');
+        if (!window.google?.maps) return;
 
         // Initialize services
         if (window.google && window.google.maps && window.google.maps.places) {
@@ -72,7 +65,7 @@ export default function LocationSearch({
     }
 
     initPlaces();
-  }, []);
+  }, [mapsReady]);
 
   // Handle input change with autocomplete
   const handleInputChange = async (e) => {

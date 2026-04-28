@@ -149,7 +149,7 @@ export default function PreferredSalonSearch({ initialSearch = '' }) {
 
           {/* Dropdown Results */}
           {showDropdown && filteredSalons.length > 0 && (
-            <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-lg z-[9999] overflow-hidden">
+            <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] overflow-hidden">
               {filteredSalons.map((salon) => (
                 <button
                   key={salon.id}
@@ -174,7 +174,7 @@ export default function PreferredSalonSearch({ initialSearch = '' }) {
 
           {/* No Results Message */}
           {showDropdown && searchQuery.length >= 2 && filteredSalons.length === 0 && (
-            <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-lg z-50 p-4 text-center text-sm text-gray-500">
+            <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-50 p-4 text-center text-sm text-gray-500">
               No salons found for "{searchQuery}"
             </div>
           )}

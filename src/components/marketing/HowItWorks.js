@@ -17,7 +17,7 @@ export default function HowItWorks() {
                     {steps.map((s) => {
                         const Icon = s.icon;
                         return (
-                            <div key={s.title} className="rounded-2xl border border-black/10 bg-white p-6 text-center shadow-sm">
+                            <div key={s.title} className="rounded-md border border-black/10 bg-white p-6 text-center shadow-sm">
                                 <Icon className="mx-auto h-6 w-6 text-black" />
                                 <h3 className="mt-4 font-semibold">{s.title}</h3>
                                 <p className="mt-2 text-sm text-neutral-600">{s.text}</p>

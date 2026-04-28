@@ -25,7 +25,7 @@ export default function FeaturedSalons() {
 
                 <div className="mt-8 -mx-6 sm:-mx-8">
                     <div className="mx-auto max-w-full px-0">
-                        <div className="shadow-lg rounded-2xl overflow-hidden bg-white">
+                        <div className="shadow-lg rounded-md overflow-hidden bg-white">
                             {/* Server-visible preview: beneficial for SEO and crawlers */}
                             <div className="hidden sm:block w-full bg-neutral-50 p-6">
                                 <div className="mx-auto max-w-6xl flex items-center justify-center">

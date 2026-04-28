@@ -1,10 +1,32 @@
 /**
- * Search Service
- * Calls the Next.js proxy to Elasticsearch venue search
- * Pattern: Browser → /api/search/venues → Laravel /api/client/search/venues → Elasticsearch
+ * Search Service - DUAL BACKEND ARCHITECTURE
+ * 
+ * This service handles two separate search backends:
+ * 
+ * 1. ELASTICSEARCH VENUES (searchVenues)
+ *    Chain: Browser → /api/search/venues → Laravel /api/client/search/venues → Elasticsearch
+ *    Model: VenueSearch (Elasticsearch)
+ *    Index: {prefix}venues (e.g., dev_venues, qa_venues, prod_venues)
+ *    Features: Geo-distance, full-text, fast distributed search
+ * 
+ * 2. MYSQL SERVICES (searchServices)
+ *    Chain: Browser → /api/search/services → Laravel /api/client/search/services → MySQL
+ *    Model: GlobalService (MySQL)
+ *    Tables: global_services, services, categories, audiences, venues, addresses
+ *    Features: Real-time, relational filtering, Haversine distance in SQL
+ * 
+ * Both backends support:
+ * - Keyword search (q parameter)
+ * - Category filtering (comma-separated numeric IDs)
+ * - Audience filtering (comma-separated numeric IDs)
+ * - Location-based filtering (lat, lon, distance)
+ * 
+ * Choose your backend based on data characteristics:
+ * - Use Elasticsearch for high-volume, fast-changing venue data
+ * - Use MySQL for smaller datasets with complex relational queries
  */
 
-export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 10, page = 1, category, audience }) {
+export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 10, page = 1, category, audience, service, professional }) {
   try {
     const params = new URLSearchParams();
 
@@ -14,11 +36,13 @@ export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 1
     if (distance && lat && lon) params.append('distance', distance);
     if (category) params.append('category', category);
     if (audience) params.append('audience', audience);
+    if (service) params.append('service', service);
+    if (professional) params.append('professional', professional);
     params.append('perPage', perPage);
     params.append('page', page);
 
     const url = `/api/search/venues?${params}`;
-    console.log('[SearchService] Calling:', url);
+    console.log('[SearchService] ELASTICSEARCH Venue Search:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -67,6 +91,15 @@ export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 1
 
 /**
  * Search for services globally with optional location filtering
+ * 
+ * BACKEND: MySQL (via Laravel ServiceSearchController)
+ * Chain: Browser → /api/search/services → Laravel /api/client/search/services → MySQL
+ * 
+ * Filters:
+ * - q: Service name text search
+ * - category: Comma-separated numeric category IDs (OR logic)
+ * - audience: Comma-separated numeric audience IDs
+ * - lat/lon/distance: Haversine-based location filtering in SQL
  */
 export async function searchServices({ q, category, audience, lat, lon, distance, perPage = 10, page = 1 }) {
   try {
@@ -82,7 +115,7 @@ export async function searchServices({ q, category, audience, lat, lon, distance
     params.append('page', page);
 
     const url = `/api/search/services?${params}`;
-    console.log('[SearchService] Calling services:', url);
+    console.log('[SearchService] MYSQL Service Search:', url);
 
     const response = await fetch(url, {
       method: 'GET',

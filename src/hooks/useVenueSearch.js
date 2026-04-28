@@ -4,8 +4,18 @@ import { searchVenues, transformVenueToSalon } from '@/services/search/searchSer
 
 /**
  * Custom hook for venue search
- * Manages search state and calls the search service proxy
- * Can accept initial data from SSR
+ * 
+ * BACKEND: Elasticsearch (via Laravel VenueSearchController)
+ * - Manages search state for venue results
+ * - Calls Next.js API proxy: /api/search/venues
+ * - Proxy forwards to: GET /api/client/search/venues (Laravel)
+ * - Supports: geo-distance filtering, full-text search
+ * 
+ * COMPARISON:
+ * - Venues: Elasticsearch (this hook)
+ * - Services: MySQL (useServiceSearch hook)
+ * 
+ * Can accept initial data from SSR (initialData parameter)
  */
 export function useVenueSearch(initialData = []) {
   const [results, setResults] = useState(initialData);
@@ -17,9 +27,9 @@ export function useVenueSearch(initialData = []) {
       setLoading(true);
       setError(null);
 
-      console.log('[useVenueSearch] Starting search:', { q, lat, lon, distance, perPage, page, category, audience });
+      console.log('[useVenueSearch] Starting ELASTICSEARCH search:', { q, lat, lon, distance, perPage, page, category, audience });
 
-      // Call the Next.js search proxy (which calls Laravel Elasticsearch)
+      // ELASTICSEARCH: Call Next.js search proxy → Laravel VenueSearchController
       const response = await searchVenues({ q, lat, lon, distance, perPage, page, category, audience });
 
       console.log('[useVenueSearch] Got response:', response);

@@ -73,7 +73,7 @@ function groupTimeSlots(slots) {
   return grouped;
 }
 
-export default function SalonClient({ slug, initialSalon }) {
+export default function SalonClient({ slug, initialSalon, initialServiceUuid = null }) {
   const dispatch = useDispatch();
   const booking = useSelector(selectBooking(slug));
   const isAuthenticated = useSelector((state) => !!state.auth.user);
@@ -96,6 +96,22 @@ export default function SalonClient({ slug, initialSalon }) {
   useEffect(() => {
     if (slug) dispatch(initBooking({ slug }));
   }, [slug, dispatch]);
+
+  useEffect(() => {
+    if (!slug || !initialServiceUuid) return;
+
+    const shouldApplyService = selectedServiceUuid !== initialServiceUuid;
+    if (!shouldApplyService) return;
+
+    dispatch(setService({ slug, uuid: initialServiceUuid }));
+    dispatch(setProfessional({ slug, uuid: null }));
+    dispatch(setTime({ slug, time: null }));
+    dispatch(setComments({ slug, comments: "" }));
+    dispatch(setServiceOpen({ slug, open: false }));
+    dispatch(setProfessionalOpen({ slug, open: true }));
+    dispatch(setTimeOpen({ slug, open: false }));
+    dispatch(setCommentsOpen({ slug, open: false }));
+  }, [slug, initialServiceUuid, selectedServiceUuid, dispatch]);
 
   // Restore booking state from localStorage if it exists (for auth redirect recovery)
   useEffect(() => {
@@ -632,11 +648,11 @@ export default function SalonClient({ slug, initialSalon }) {
   return (
     <>
       {loading && (
-        <div className="rounded-3xl border border-black/10 bg-white p-6 text-sm text-neutral-600">Loading salon...</div>
+        <div className="rounded-md border border-black/10 bg-white p-6 text-sm text-neutral-600">Loading salon...</div>
       )}
 
       {error && !loading && (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">{error}</div>
+        <div className="rounded-md border border-red-200 bg-red-50 p-6 text-sm text-red-700">{error}</div>
       )}
 
       {!loading && !error && (

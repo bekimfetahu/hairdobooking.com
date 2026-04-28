@@ -46,10 +46,10 @@ export default function CardCarousel({
     <button
       key={card.id || idx}
       onClick={() => onCardClick?.(card)}
-      className="flex-shrink-0 group text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E62E2E] rounded-2xl"
+      className="flex-shrink-0 group text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E62E2E] rounded-md"
     >
       {/* Card Image Container */}
-      <div className="relative rounded-2xl overflow-hidden border border-gray-200 mb-3">
+      <div className="relative rounded-md overflow-hidden border border-black/10 mb-3 bg-white shadow-sm">
         <div
           className="bg-gray-200 aspect-[3/2] md:aspect-video overflow-hidden"
           style={{ width: cardWidth }}

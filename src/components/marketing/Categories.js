@@ -20,7 +20,7 @@ export default function Categories() {
 
                 <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
                     {categories.map((c) => (
-                        <Link key={c.label} href={c.href} className="flex items-center justify-center rounded-2xl border border-black/10 px-3 py-4 text-sm font-medium hover:border-black">
+                        <Link key={c.label} href={c.href} className="flex items-center justify-center rounded-md border border-black/10 px-3 py-4 text-sm font-medium hover:border-black">
                             {c.label}
                         </Link>
                     ))}

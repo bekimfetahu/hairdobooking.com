@@ -4,8 +4,18 @@ import { searchServices, transformServiceToResult } from '@/services/search/sear
 
 /**
  * Custom hook for service search
- * Manages search state and calls the search service proxy
- * Can accept initial data from SSR
+ * 
+ * BACKEND: MySQL (via Laravel ServiceSearchController)
+ * - Manages search state for service results
+ * - Calls Next.js API proxy: /api/search/services
+ * - Proxy forwards to: GET /api/client/search/services (Laravel)
+ * - Supports: category/audience filtering, location-based Haversine filtering
+ * 
+ * COMPARISON:
+ * - Services: MySQL (this hook)
+ * - Venues: Elasticsearch (useVenueSearch hook)
+ * 
+ * Can accept initial data from SSR (initialData parameter)
  */
 export function useServiceSearch(initialData = []) {
   const [results, setResults] = useState(initialData);
@@ -17,9 +27,9 @@ export function useServiceSearch(initialData = []) {
       setLoading(true);
       setError(null);
 
-      console.log('[useServiceSearch] Starting search:', { q, category, audience, lat, lon, distance, perPage, page });
+      console.log('[useServiceSearch] Starting MYSQL search:', { q, category, audience, lat, lon, distance, perPage, page });
 
-      // Call the Next.js search proxy
+      // MYSQL: Call Next.js search proxy → Laravel ServiceSearchController
       const response = await searchServices({ q, category, audience, lat, lon, distance, perPage, page });
 
       console.log('[useServiceSearch] Got response:', response);

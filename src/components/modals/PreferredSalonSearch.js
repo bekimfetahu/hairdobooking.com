@@ -441,14 +441,14 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
             />
 
             <div className="grid h-full gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)]">
-                <section className="flex h-full flex-col rounded-3xl bg-white p-4 shadow-sm ring-1 ring-black/5 lg:overflow-hidden">
+                <section className="flex h-full flex-col rounded-md bg-white p-4 shadow-sm ring-1 ring-black/5 lg:overflow-hidden">
                     <form onSubmit={onSubmit} className="w-full">
                         <input
                             aria-label="Search"
                             placeholder="Salon Name, Address, Postcode"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm"
+                            className="w-full rounded-md border border-black/10 px-3 py-2 text-sm"
                         />
                     </form>
 
@@ -467,7 +467,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
 
                                 return (
                                     <article
-                                        className="flex flex-col gap-1 rounded-2xl bg-emerald-50 px-3.5 py-3 text-sm ring-1 ring-emerald-500"
+                                        className="flex flex-col gap-1 rounded-md bg-emerald-50 px-3.5 py-3 text-sm ring-1 ring-emerald-500"
                                         onClick={() => {
                                             if (preferredSalon.uuid) {
                                                 setSelectedSalonId(preferredSalon.uuid);
@@ -529,15 +529,15 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                         </div>
                     )}
 
-                    <div className="mt-3 flex-1 space-y-2 overflow-y-auto rounded-2xl bg-neutral-50 p-3">
+                    <div className="mt-3 flex-1 space-y-2 overflow-y-auto rounded-md bg-neutral-50 p-3">
                         {error && (
-                            <div className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+                            <div className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
                                 {error}
                             </div>
                         )}
 
                         {!error && !loading && salons.length === 0 && (
-                            <div className="rounded-2xl border border-dashed border-black/10 bg-white px-4 py-6 text-center text-sm text-neutral-500">
+                            <div className="rounded-md border border-dashed border-black/10 bg-white px-4 py-6 text-center text-sm text-neutral-500">
                                 No salons found. Try another name or postcode.
                             </div>
                         )}
@@ -555,7 +555,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                                 <article
                                     key={salon.uuid}
                                     data-salon-id={salon.uuid}
-                                    className={`flex flex-col gap-1 rounded-2xl px-3.5 py-3 text-sm ring-1 transition-colors ${
+                                    className={`flex flex-col gap-1 rounded-md px-3.5 py-3 text-sm ring-1 transition-colors ${
                                         isSelected
                                             ? "bg-primary/5 ring-primary/40"
                                             : "bg-white ring-black/5 hover:ring-black/20"
@@ -630,7 +630,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
                     </div>
                 </section>
 
-                <section className="relative flex h-full flex-col overflow-hidden rounded-3xl bg-neutral-900/95 p-3 text-white shadow-sm ring-1 ring-black/10">
+                <section className="relative flex h-full flex-col overflow-hidden rounded-md bg-neutral-900/95 p-3 text-white shadow-sm ring-1 ring-black/10">
                     <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white">
@@ -644,11 +644,11 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
 
                     <div
                         ref={mapRef}
-                        className="flex-1 w-full rounded-2xl bg-neutral-800 min-h-[260px] md:min-h-[360px] lg:min-h-[420px]"
+                        className="flex-1 w-full rounded-md bg-neutral-800 min-h-[260px] md:min-h-[360px] lg:min-h-[420px]"
                     />
 
                     {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
-                        <div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-xl bg-black/70 px-3 py-2 text-[11px] text-neutral-200">
+                        <div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-md bg-black/70 px-3 py-2 text-[11px] text-neutral-200">
                             Google Maps API key is not configured. Set NEXT_PUBLIC_GOOGLE_MAPS_KEY in your env to enable the live map.
                         </div>
                     )}

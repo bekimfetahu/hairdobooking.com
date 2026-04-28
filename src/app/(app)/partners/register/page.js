@@ -87,7 +87,7 @@ export default function RegisterPage() {
                 <div className="relative z-10">
                 <div className="grid gap-10 lg:grid-cols-2 items-stretch">
                     {/* Left: form card */}
-                    <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-black/10 shadow-xl p-8 md:p-10 h-full flex flex-col">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-md border border-black/10 shadow-xl p-8 md:p-10 h-full flex flex-col">
                         {/* <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 mb-6">
                             <span className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
                                 Free trial for salons owners
@@ -193,8 +193,8 @@ export default function RegisterPage() {
 
                     {/* Right: hero-style image */}
                     <div className="relative hidden lg:flex h-full items-stretch">
-                        <div className="absolute inset-0 rounded-[1rem]" aria-hidden="true" />
-                        <div className="relative rounded-[1rem] border border-white/70 bg-white/70 shadow-2xl shadow-black/20 overflow-hidden flex-1">
+                        <div className="absolute inset-0 rounded-md" aria-hidden="true" />
+                        <div className="relative rounded-md border border-white/70 bg-white/70 shadow-2xl shadow-black/20 overflow-hidden flex-1">
                             <img
                                 src="/images/reservations.png"
                                 alt="Hairdresser using tablet to book an appointment"

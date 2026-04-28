@@ -2,7 +2,6 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown, Filter } from 'lucide-react';
-import Button from '@/components/ui/Button';
 import LocationSearch from '@/components/search/LocationSearch';
 import { cn } from '@/lib/utils';
 import { useVenueSearch } from '@/hooks/useVenueSearch';
@@ -56,19 +55,24 @@ export default function Hero({
     selectedFilters,
     toggleFilter,
     clearFilters,
-    getFilterQueryParams,
     hasActiveFilters,
   } = useSearchFilters();
 
   // Combined search handler
   const handleSearch = React.useCallback(
-    async (query) => {
+    async (query, searchOptions = {}) => {
+      const {
+        location = selectedLocation,
+        distance = searchDistance,
+        force = false,
+      } = searchOptions;
+
       // Check if we should perform a search
       const hasFilters = selectedFilters.categories?.length > 0 || selectedFilters.audiences?.length > 0;
       const hasQuery = query.length >= 1;
 
       // If no query and no filters, just close dropdown
-      if (!hasQuery && !hasFilters) {
+      if (!force && !hasQuery && !hasFilters) {
         setShowDropdown(false);
         return;
       }
@@ -79,18 +83,18 @@ export default function Hero({
         // Search venues WITHOUT filters - always search all salons
         const venuePromise = searchVenues({
           q: query,
-          lat: selectedLocation?.lat,
-          lon: selectedLocation?.lon,
-          distance: searchDistance,
+          lat: location?.lat,
+          lon: location?.lon,
+          distance,
           perPage: 5,
         });
 
         // Search services - include location and distance filtering
         const serviceSearchParams = {
           q: query,
-          lat: selectedLocation?.lat,
-          lon: selectedLocation?.lon,
-          distance: searchDistance,
+          lat: location?.lat,
+          lon: location?.lon,
+          distance,
           perPage: 5,
         };
 
@@ -114,7 +118,7 @@ export default function Hero({
         setShowDropdown(true);
 
         if (onSearch) {
-          onSearch({ query, location: selectedLocation });
+          onSearch({ query, location });
         }
       } catch (err) {
         console.error('[Hero] Search failed:', err);
@@ -237,10 +241,12 @@ export default function Hero({
     console.log('[Hero] Location changed:', locationData);
     setSelectedLocation(locationData);
     
-    // Re-trigger search if there's an active search query
-    if (searchQuery.length >= 1) {
-      handleSearch(searchQuery);
-    }
+    // Re-trigger search for the new location even when the query is empty.
+    handleSearch(searchQuery, {
+      location: locationData,
+      distance: searchDistance,
+      force: true,
+    });
   };
 
   // Click outside handler
@@ -266,13 +272,15 @@ export default function Hero({
     toggleFilter(filterType, filterId);
   };
 
-  const handleClearAllFilters = () => {
-    clearFilters();
-  };
-
   const handleServiceSelect = (service) => {
     setShowDropdown(false);
-    router.push(`/search/service/${service.uuid}`);
+    const params = new URLSearchParams();
+    if (service?.name) params.set('name', service.name);
+    if (selectedLocation?.address) params.set('loc', selectedLocation.address);
+    if (selectedLocation?.lat !== undefined && selectedLocation?.lat !== null) params.set('lat', String(selectedLocation.lat));
+    if (selectedLocation?.lon !== undefined && selectedLocation?.lon !== null) params.set('lon', String(selectedLocation.lon));
+    if (searchDistance) params.set('distance', searchDistance);
+    router.push(`/search/service/${service.uuid}?${params.toString()}`);
   };
 
   const handleVenueSelect = (venue) => {
@@ -333,8 +341,7 @@ export default function Hero({
                       {IconComponent && (
                         <IconComponent className="w-4 h-4 text-gray-600 flex-shrink-0" />
                       )}
-                      <span className="text-sm text-gray-700">{cat.name}</span>
-                      <span className="text-xs text-gray-500">({cat.count})</span>
+                      <span className="text-sm text-gray-700">{cat.name} ({cat.count})</span>
                     </label>
                   );
                 })}
@@ -360,8 +367,7 @@ export default function Hero({
                       {IconComponent && (
                         <IconComponent className="w-4 h-4 text-gray-600 flex-shrink-0" />
                       )}
-                      <span className="text-sm text-gray-700">{aud.name}</span>
-                      <span className="text-xs text-gray-500">({aud.count})</span>
+                      <span className="text-sm text-gray-700">{aud.name} ({aud.count})</span>
                     </label>
                   );
                 })}
@@ -378,7 +384,14 @@ export default function Hero({
                         name="search-distance"
                         value={distance}
                         checked={searchDistance === distance}
-                        onChange={() => setSearchDistance(distance)}
+                        onChange={() => {
+                          setSearchDistance(distance);
+                          handleSearch(searchQuery, {
+                            location: selectedLocation,
+                            distance,
+                            force: true,
+                          });
+                        }}
                         className="w-4 h-4 text-blue-600 border-gray-300"
                       />
                       <span className="text-sm text-gray-700">{distance}</span>
@@ -407,9 +420,8 @@ export default function Hero({
           <button
             onClick={() => {
               setExpandedFilter(null);
-              // Re-trigger search with updated filters and distance
-              // This works for both typed searches and filtered pre-fetched data
-              handleSearch(searchQuery);
+              // Apply should only close the filter panel and keep the search results open.
+              handleSearch(searchQuery, { force: true });
             }}
             className="px-4 py-1.5 bg-brand-blue text-white text-xs font-medium rounded-md hover:opacity-90 transition-colors"
           >
@@ -627,7 +639,7 @@ export default function Hero({
 
               {/* Dropdown Results with Inline Filters */}
               {showDropdown && !isLocationSearchFocused && (
-                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-lg z-[9999] max-h-96 overflow-y-auto">
+                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
                   {/* Filter Toggle */}
                   {renderFilterToggle()}
                   

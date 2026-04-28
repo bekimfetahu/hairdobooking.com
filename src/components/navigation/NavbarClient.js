@@ -207,7 +207,7 @@ export default function NavbarClient() {
                                     </button>
 
                                     {isDropdownOpen && (
-                                        <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-xl">
+                                        <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-md border border-black/10 bg-white shadow-xl">
                                             <div className="border-b border-black/5 px-4 py-4">
                                                 <p className="text-xs uppercase tracking-[0.2em] text-primary">Signed in</p>
                                                 <p className="mt-1 text-sm font-semibold text-neutral-900">{displayName}</p>
@@ -217,7 +217,7 @@ export default function NavbarClient() {
                                                 {primaryVenueSlug && (
                                                     <Link
                                                         href={`/salon/${primaryVenueSlug}`}
-                                                        className={`mb-2 flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-normal transition-colors ${
+                                                        className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal transition-colors ${
                                                             pathname === `/salon/${primaryVenueSlug}` || pathname.startsWith(`/salon/${primaryVenueSlug}/`)
                                                                 ? 'text-black'
                                                                 : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
@@ -234,7 +234,7 @@ export default function NavbarClient() {
                                                         <Link
                                                             key={link.href}
                                                             href={link.href}
-                                                            className={`mb-2 flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-normal transition-colors ${
+                                                            className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal transition-colors ${
                                                                 isActive ? 'text-black' : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
                                                             }`}
                                                         >
@@ -247,7 +247,7 @@ export default function NavbarClient() {
                                                     <button
                                                         type="button"
                                                         onClick={handleLogout}
-                                                        className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm text-neutral-700 transition-colors duration-150 ease-out hover:shadow-sm hover:bg-neutral-50 hover:text-black"
+                                                        className="mt-1 flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-neutral-700 transition-colors duration-150 ease-out hover:shadow-sm hover:bg-neutral-50 hover:text-black"
                                                     >
                                                         <LogOut className="h-4 w-4 shrink-0 text-black" />
                                                         Logout
@@ -306,7 +306,7 @@ export default function NavbarClient() {
                         <div className="mt-4 space-y-3 border-t border-black/10 pt-4">
                             {isAuthenticated ? (
                                 <>
-                                    <div className="rounded-3xl bg-neutral-50 px-4 py-4">
+                                    <div className="rounded-md bg-neutral-50 px-4 py-4">
                                         <p className="text-xs uppercase tracking-[0.2em] text-primary">Account</p>
                                         <p className="mt-1 text-base font-semibold text-neutral-900">{displayName}</p>
                                         <p className="text-sm text-neutral-500">Quick access to your dashboard</p>
@@ -319,7 +319,7 @@ export default function NavbarClient() {
                                             setIsDropdownOpen(false);
                                             setIsSalonPickerOpen(true);
                                         }}
-                                        className="flex w-full items-center justify-between rounded-3xl border border-black/10 bg-white px-4 py-4 text-left transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black hover:bg-neutral-50"
+                                        className="flex w-full items-center justify-between rounded-md border border-black/10 bg-white px-4 py-4 text-left transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black hover:bg-neutral-50"
                                     >
                                         <span className="block max-w-[200px] truncate text-sm font-semibold text-primary">{primaryVenueLabel}</span>
                                         <MapPin className="h-5 w-5 text-black" />
@@ -329,7 +329,7 @@ export default function NavbarClient() {
                                         <button
                                             type="button"
                                             onClick={handleNavigatePreferredSalon}
-                                            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                                            className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
                                         >
                                             <MapPin className="h-4 w-4 shrink-0 text-black" />
                                             <span className="truncate">My preferred salon</span>
@@ -341,7 +341,7 @@ export default function NavbarClient() {
                                                 <Link
                                                     key={link.href}
                                                     href={link.href}
-                                                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-normal transition-colors ${
+                                                    className={`flex items-center gap-3 rounded-md px-4 py-3 text-sm font-normal transition-colors ${
                                                         isActive ? 'text-black' : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
                                                     }`}
                                                 >
@@ -356,7 +356,7 @@ export default function NavbarClient() {
                                         <button
                                             type="button"
                                             onClick={handleLogout}
-                                              className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-normal text-neutral-700 transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:bg-neutral-50 hover:text-black"
+                                              className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-sm font-normal text-neutral-700 transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:bg-neutral-50 hover:text-black"
                                         >
                                             <LogOut className="h-4 w-4 shrink-0 text-black" />
                                             Logout

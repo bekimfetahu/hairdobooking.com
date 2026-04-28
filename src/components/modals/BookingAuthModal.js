@@ -44,7 +44,7 @@ export default function BookingAuthModal({
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
         <div
-          className="relative w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden"
+          className="relative w-full max-w-md rounded-md bg-white shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}

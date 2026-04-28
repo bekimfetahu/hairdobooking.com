@@ -38,7 +38,7 @@ export default function PricingPage() {
         >
             <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
                 <div className="grid gap-4 md:grid-cols-1 lg:col-span-1">
-                    <article className="max-w-md rounded-[1.5rem] border border-black bg-white p-6 shadow-lg shadow-black/10">
+                    <article className="max-w-md rounded-md border border-black bg-white p-6 shadow-lg shadow-black/10">
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Starter</p>
                         <p className="mt-2 text-sm leading-7 text-neutral-600">
                             For solo pros and small salons getting started. Pricing below is for 1 active staff member 
@@ -93,9 +93,9 @@ export default function PricingPage() {
                     </article>
                 </div>
 
-                <aside className="rounded-[1.5rem] border border-black/10 bg-white p-6 shadow-sm">
+                <aside className="rounded-md border border-black/10 bg-white p-6 shadow-sm">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-neutral-50 text-black">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-neutral-50 text-black">
                             <CalendarClock className="h-5 w-5" />
                         </div>
                         <div>
@@ -109,7 +109,7 @@ export default function PricingPage() {
                             Choose how many professional staff seats you need and whether you want to pay Monthly or Yearly. Prices come directly from the backend pricing rules.
                         </p>
 
-                        <div className="space-y-4 rounded-2xl border border-black/10 bg-neutral-50 p-4">
+                        <div className="space-y-4 rounded-md border border-black/10 bg-neutral-50 p-4">
                             <div className="flex items-center justify-between text-sm">
                                 <label className="flex items-center gap-2 font-medium text-neutral-900">
                                     <Users2 className="h-4 w-4 text-black" />
@@ -155,7 +155,7 @@ export default function PricingPage() {
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-black/10 bg-white p-4">
+                        <div className="rounded-md border border-black/10 bg-white p-4">
                             <PricingQuote
                                 variant="calculator"
                                 numberOfUsers={numberOfUsers}

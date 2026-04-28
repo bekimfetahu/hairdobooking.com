@@ -46,7 +46,7 @@ export default function PreferredSalonModal({ open, onClose, onPrimaryUpdated })
                 }
             }}
         >
-            <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-2xl">
+            <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-md bg-white shadow-2xl">
                 <div className="border-b border-black/10 px-5 py-5 sm:px-6">
                     <div className="flex items-start justify-between gap-4">
                         <div>
