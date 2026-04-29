@@ -494,7 +494,7 @@ export default function ServiceSearchClient({
           </button>
         </div>
 
-        {renderFilters() && <div className="border-b border-gray-200">{renderFilters()}</div>}
+        {(() => { const filtersEl = renderFilters(); return filtersEl ? <div className="border-b border-gray-200">{filtersEl}</div> : null; })()}
 
         {!servicesLoading && services.length > 0 && (
           <div className="border-b border-gray-200">
@@ -536,7 +536,6 @@ export default function ServiceSearchClient({
 
   return (
     <section className="relative overflow-visible pt-5 pb-0 md:pt-8 md:pb-0">
-      <p>ahosijfls</p>
       <div
         className="absolute inset-0"
         style={{
