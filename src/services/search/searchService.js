@@ -42,7 +42,6 @@ export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 1
     params.append('page', page);
 
     const url = `/api/search/venues?${params}`;
-    console.log('[SearchService] ELASTICSEARCH Venue Search:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -51,40 +50,16 @@ export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 1
       },
     });
 
-    console.log('[SearchService] Response status:', response.status, response.statusText);
-
     if (!response.ok) {
       const errorData = await response.json();
       const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-      
-      console.error('[SearchService] Error details:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData,
-        message: errorMessage,
-      });
       
       throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    console.log('[SearchService] Success:', data.data?.length || 0, 'venues found');
-    
-    // Debug: Log full venue response
-    if (data.data?.length > 0) {
-      console.log('[SearchService] First venue full data:', data.data[0]);
-      console.log('[SearchService] Location data:', {
-        address: data.data[0]?.address,
-        location: data.data[0]?.address?.location,
-      });
-    }
-    
     return data;
   } catch (error) {
-    console.error('[SearchService] Caught error:', {
-      message: error.message,
-      stack: error.stack,
-    });
     throw error;
   }
 }
@@ -92,14 +67,14 @@ export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 1
 /**
  * Search for services globally with optional location filtering
  * 
- * BACKEND: MySQL (via Laravel ServiceSearchController)
- * Chain: Browser → /api/search/services → Laravel /api/client/search/services → MySQL
+ * BACKEND: Elasticsearch (via Laravel ServiceSearchController)
+ * Chain: Browser → /api/search/services → Laravel /api/client/search/services → ES services_search index
+ * Results are grouped by name server-side (one result per canonical service name).
  * 
  * Filters:
  * - q: Service name text search
  * - category: Comma-separated numeric category IDs (OR logic)
  * - audience: Comma-separated numeric audience IDs
- * - lat/lon/distance: Haversine-based location filtering in SQL
  */
 export async function searchServices({ q, category, audience, lat, lon, distance, perPage = 10, page = 1 }) {
   try {
@@ -115,7 +90,6 @@ export async function searchServices({ q, category, audience, lat, lon, distance
     params.append('page', page);
 
     const url = `/api/search/services?${params}`;
-    console.log('[SearchService] MYSQL Service Search:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -124,30 +98,16 @@ export async function searchServices({ q, category, audience, lat, lon, distance
       },
     });
 
-    console.log('[SearchService] Response status:', response.status, response.statusText);
-
     if (!response.ok) {
       const errorData = await response.json();
       const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-      
-      console.error('[SearchService] Error details:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData,
-        message: errorMessage,
-      });
       
       throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    console.log('[SearchService] Success:', data.data?.length || 0, 'services found');
     return data;
   } catch (error) {
-    console.error('[SearchService] Caught error:', {
-      message: error.message,
-      stack: error.stack,
-    });
     throw error;
   }
 }
@@ -169,17 +129,27 @@ export function transformVenueToSalon(venue) {
 }
 
 /**
- * Transform service search result to service card format
+ * Transform service search result to service card format.
+ * Backend groups services by name but includes UUID for canonical matching.
+ * When multiple categories exist (e.g., "Hair Cut" in Hair + Barbering),
+ * uuid is the primary service UUID and uuids is an array of all variants.
  */
 export function transformServiceToResult(service) {
+  const categories = Array.isArray(service.categories)
+    ? service.categories
+    : service.category
+      ? [service.category]
+      : [];
+
   return {
-    id: service.uuid,
-    uuid: service.uuid,
-    name: service.display_name || service.name || service.service_name,
-    category: service.category?.name || service.category_name || service.category,
-    audience: service.audience || service.audience_name || null,
+    name: service.name,
+    display_name: service.name,
+    uuid: service.uuid, // Primary global_service_uuid for filtering venues
+    uuids: service.uuids || [service.uuid], // All variant UUIDs if service has multiple categories
+    categories,
+    category: categories[0] || null, // first for single-category compat
     audiences: Array.isArray(service.audiences) ? service.audiences : [],
-    price: service.price ?? service.price_avg ?? null,
+    price: service.price ?? service.price_min ?? service.price_avg ?? null,
     duration: service.duration_minutes ?? service.duration_avg ?? service.duration ?? null,
     venueCount: service.venue_count || service.venueCount || 0,
   };

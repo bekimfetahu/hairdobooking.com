@@ -211,6 +211,9 @@ export default function LocationSearch({
         console.log('Current location:', { latitude, longitude });
 
         try {
+          if (!window.google?.maps?.Geocoder) {
+            throw new Error('Google Maps not loaded');
+          }
           const geocoder = new google.maps.Geocoder();
           const result = await geocoder.geocode({ location: { lat: latitude, lng: longitude } });
           

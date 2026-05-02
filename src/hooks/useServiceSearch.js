@@ -5,15 +5,15 @@ import { searchServices, transformServiceToResult } from '@/services/search/sear
 /**
  * Custom hook for service search
  * 
- * BACKEND: MySQL (via Laravel ServiceSearchController)
- * - Manages search state for service results
+ * BACKEND: Elasticsearch (via Laravel ServiceSearchController)
+ * - Manages search state for service results grouped by service name
  * - Calls Next.js API proxy: /api/search/services
- * - Proxy forwards to: GET /api/client/search/services (Laravel)
- * - Supports: category/audience filtering, location-based Haversine filtering
+ * - Proxy forwards to: GET /api/client/search/services (ES services_search index)
+ * - Supports: category/audience filtering
  * 
  * COMPARISON:
- * - Services: MySQL (this hook)
- * - Venues: Elasticsearch (useVenueSearch hook)
+ * - Services: Elasticsearch, grouped by name (this hook → homepage dropdown)
+ * - Venues: Elasticsearch, with geo-distance (useVenueSearch hook)
  * 
  * Can accept initial data from SSR (initialData parameter)
  */
@@ -27,24 +27,15 @@ export function useServiceSearch(initialData = []) {
       setLoading(true);
       setError(null);
 
-      console.log('[useServiceSearch] Starting MYSQL search:', { q, category, audience, lat, lon, distance, perPage, page });
-
       // MYSQL: Call Next.js search proxy → Laravel ServiceSearchController
       const response = await searchServices({ q, category, audience, lat, lon, distance, perPage, page });
-
-      console.log('[useServiceSearch] Got response:', response);
 
       // Transform API response to service format
       const services = response.data.map(transformServiceToResult);
       setResults(services);
 
-      console.log('[useServiceSearch] Transformed to services:', services.length);
       return services;
     } catch (err) {
-      console.error('[useServiceSearch] Error caught:', {
-        message: err.message,
-        stack: err.stack,
-      });
       setError(err.message);
       setResults([]);
       throw err;

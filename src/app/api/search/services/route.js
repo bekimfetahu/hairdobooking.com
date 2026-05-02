@@ -1,7 +1,7 @@
 /**
  * Service Search Proxy (/api/search/services)
  * Proxies service search requests to Laravel backend.
- * Routes to: /api/client/search/services (to be created)
+ * Routes to: GET /api/client/search/services (Elasticsearch, grouped by name)
  */
 import { NextResponse } from 'next/server';
 import laravelApp from '@/services/laravelApp';
@@ -19,10 +19,6 @@ export async function GET(req) {
     const perPage = searchParams.get('perPage') || 10;
     const page = searchParams.get('page') || 1;
 
-    console.log('[ServiceSearch API Route] Received params:', {
-      q, category, audience, lat, lon, distance, perPage, page
-    });
-
     // Build query parameters for Laravel
     const params = {};
     if (q) params.q = q;
@@ -34,8 +30,6 @@ export async function GET(req) {
     params.perPage = Math.min(perPage, 100); // Cap at 100 results
     params.page = page;
 
-    console.log('[ServiceSearch API Route] Sending to Laravel:', params);
-
     // Call Laravel search endpoint with X-App-Token
     const response = await laravelApp.get('client/search/services', { params });
 
@@ -46,17 +40,6 @@ export async function GET(req) {
       },
     });
   } catch (error) {
-    // Detailed error logging for debugging
-    console.error('[Search Services Error]', {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      laravel_response: error.response?.data,
-      request_url: error.config?.url,
-      request_params: error.config?.params,
-      error_code: error.code,
-      full_error: error.toString(),
-    });
 
     if (error.response) {
       const statusCode = error.response.status;
@@ -66,7 +49,6 @@ export async function GET(req) {
         { 
           error: errorMessage,
           status: statusCode,
-          details: process.env.NODE_ENV === 'development' ? error.response.data : undefined,
         },
         { status: statusCode }
       );
@@ -74,7 +56,6 @@ export async function GET(req) {
 
     // Handle request/network errors
     if (error.code === 'ECONNREFUSED') {
-      console.error('[Connection Error] Cannot reach Laravel backend');
       return NextResponse.json(
         { error: 'Cannot connect to backend service' },
         { status: 503 }

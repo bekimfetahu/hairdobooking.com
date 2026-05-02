@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import Script from 'next/script';
 import { Search, ChevronDown, Filter } from 'lucide-react';
 import LocationSearch from '@/components/search/LocationSearch';
 import { cn } from '@/lib/utils';
@@ -43,6 +44,7 @@ export default function Hero({
   const [expandedFilter, setExpandedFilter] = React.useState(null);
   const [searchDistance, setSearchDistance] = React.useState('10km'); // 5km, 10km, or 15km
   const [isDefaultLocationLoaded, setIsDefaultLocationLoaded] = React.useState(!!initialVenues?.length);
+  const [mapsReady, setMapsReady] = React.useState(false);
   const searchRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
@@ -78,8 +80,6 @@ export default function Hero({
       }
 
       try {
-        console.log('[Hero] Starting search with:', { query: query || '(empty)', hasFilters, selectedFilters });
-        
         // Search venues WITHOUT filters - always search all salons
         const venuePromise = searchVenues({
           q: query,
@@ -101,15 +101,11 @@ export default function Hero({
         if (hasFilters) {
           if (selectedFilters.categories?.length > 0) {
             serviceSearchParams.category = selectedFilters.categories.join(',');
-            console.log('[Hero] Applied category filter:', serviceSearchParams.category);
           }
           if (selectedFilters.audiences?.length > 0) {
             serviceSearchParams.audience = selectedFilters.audiences.join(',');
-            console.log('[Hero] Applied audience filter:', serviceSearchParams.audience);
           }
         }
-
-        console.log('[Hero] Service search params:', serviceSearchParams);
         const servicePromise = searchServices(serviceSearchParams);
 
         // Execute searches in parallel
@@ -121,7 +117,7 @@ export default function Hero({
           onSearch({ query, location });
         }
       } catch (err) {
-        console.error('[Hero] Search failed:', err);
+        // Search error - continue silently
       }
     },
     [selectedLocation, searchDistance, searchVenues, searchServices, onSearch, selectedFilters]
@@ -221,12 +217,12 @@ export default function Hero({
           ]);
           console.log('[Hero] Background search completed');
         } catch (err) {
-          console.error('[Hero] Background search failed:', err);
+          // Background search error - continue
         }
 
         setIsDefaultLocationLoaded(true);
       } catch (err) {
-        console.error('[Hero] Failed to initialize default location:', err);
+        // Default location initialization error
         setIsDefaultLocationLoaded(true);
       }
     };
@@ -238,7 +234,6 @@ export default function Hero({
 
   const handleLocationChange = (locationData) => {
     // locationData contains: lat, lon, address, placeId, postcode, country
-    console.log('[Hero] Location changed:', locationData);
     setSelectedLocation(locationData);
     
     // Re-trigger search for the new location even when the query is empty.
@@ -279,12 +274,27 @@ export default function Hero({
   const handleServiceSelect = (service) => {
     setShowDropdown(false);
     const params = new URLSearchParams();
-    if (service?.display_name || service?.name) params.set('name', service.display_name || service.name);
+    // Pass the search query if present
+    if (searchQuery) params.set('q', searchQuery);
+    // Pass the selected service name
+    if (service?.name) params.set('name', service.name);
+    // Pass service UUID ONLY if there's a single UUID
+    // If multiple UUIDs exist for same name (e.g., "Hair Cut" in Hair + Barbering),
+    // don't filter by UUID so all variants are shown
+    if (service?.uuid && (!service?.uuids || service.uuids.length === 1)) {
+      params.set('service_uuid', service.uuid);
+    }
+    // Pass location details
     if (selectedLocation?.address) params.set('loc', selectedLocation.address);
     if (selectedLocation?.lat !== undefined && selectedLocation?.lat !== null) params.set('lat', String(selectedLocation.lat));
     if (selectedLocation?.lon !== undefined && selectedLocation?.lon !== null) params.set('lon', String(selectedLocation.lon));
+    // Pass search distance
     if (searchDistance) params.set('distance', searchDistance);
-    router.push(`/search/service/${service.uuid}?${params.toString()}`);
+    // Pass all selected filters, using canonical keys
+    if (selectedFilters.categories?.length) params.set('categories', selectedFilters.categories.join(','));
+    if (selectedFilters.audiences?.length) params.set('audiences', selectedFilters.audiences.join(','));
+    // If more filters are added in the future, add them here
+    router.push(`/search/service?${params.toString()}`);
   };
 
   const handleVenueSelect = (venue) => {
@@ -381,7 +391,7 @@ export default function Hero({
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
                 <div className="flex gap-4">
-                  {['5km', '10km', '15km'].map((distance) => (
+                  {['5km', '10km', '15km', '30km'].map((distance) => (
                     <label key={distance} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -445,15 +455,19 @@ export default function Hero({
         <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600">Services</div>
         {services.map((service, index) => (
           <button
-            key={service.id || `service-${index}`}
+            key={service.name || `service-${index}`}
             onClick={() => handleServiceSelect(service)}
             className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
           >
-            <p className="text-sm font-semibold text-gray-900">{service.display_name || service.name}</p>
+            <p className="text-sm font-semibold text-gray-900">{service.name}</p>
             <div className="flex items-center justify-between mt-1">
-              <p className="text-xs text-gray-500">{service.category}</p>
+              <p className="text-xs text-gray-500">
+                {Array.isArray(service.categories) && service.categories.length > 0
+                  ? service.categories.join(', ')
+                  : service.category || ''}
+              </p>
               {service.venueCount > 0 && (
-                <p className="text-xs text-gray-500">{service.venueCount} locations</p>
+                <p className="text-xs text-gray-500">{service.venueCount} {service.venueCount === 1 ? 'location' : 'locations'}</p>
               )}
             </div>
           </button>
@@ -568,6 +582,11 @@ export default function Hero({
 
   return (
     <section className="relative overflow-visible pt-5 pb-0 md:pt-8 md:pb-0">
+      <Script
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
+        strategy="lazyOnload"
+        onLoad={() => setMapsReady(true)}
+      />
       {/* Background gradient */}
       <div
         className="absolute inset-0"
@@ -613,6 +632,7 @@ export default function Hero({
                 <div className="w-2/5 flex items-center">
                   <LocationSearch
                     value={selectedLocation?.address || ''}
+                    mapsReady={mapsReady}
                     onLocationChange={handleLocationChange}
                     onLocationFocus={() => {
                       console.log('[Hero] Location search focused');
@@ -633,7 +653,7 @@ export default function Hero({
                   variant="default"
                   size="lg"
                   className="rounded-full px-3 sm:px-6 py-2 whitespace-nowrap ml-1 sm:ml-2 text-sm sm:text-base flex-shrink-0"
-                  onClick={() => console.log('Clicked explore')}
+                  onClick={() => {}}
                 >
                   <span className="hidden sm:inline">Explore</span>
                   <span className="sm:hidden">→</span>
