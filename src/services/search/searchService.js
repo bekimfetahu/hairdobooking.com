@@ -135,11 +135,15 @@ export function transformVenueToSalon(venue) {
  * uuid is the primary service UUID and uuids is an array of all variants.
  */
 export function transformServiceToResult(service) {
-  const categories = Array.isArray(service.categories)
-    ? service.categories
-    : service.category
-      ? [service.category]
-      : [];
+  // Support both formats: array (categories) or single string (category, category_name)
+  let categories = [];
+  if (Array.isArray(service.categories)) {
+    categories = service.categories;
+  } else if (service.category) {
+    categories = [service.category];
+  } else if (service.category_name) {
+    categories = [service.category_name];
+  }
 
   return {
     name: service.name,

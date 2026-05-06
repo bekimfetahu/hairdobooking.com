@@ -328,6 +328,11 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
       }
 
       return matchesSearch && matchesCategory && matchesAudience;
+    }).sort((a, b) => {
+      // Sort by order field (ascending), with 0 or undefined treated as last
+      const orderA = a.order ?? Number.MAX_VALUE;
+      const orderB = b.order ?? Number.MAX_VALUE;
+      return orderA - orderB;
     });
   }, [services, serviceSearch, selectedCategoryUuids, selectedAudienceUuids]);
 

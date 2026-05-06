@@ -17,12 +17,12 @@ const LONDON_COORDS = {
 
 export async function fetchInitialData(distance = '10km') {
   try {
-    console.log('[InitialDataFetcher] Fetching venues and services for London...');
+    console.log('[InitialDataFetcher] Fetching venues and featured services for London...');
     console.log('[InitialDataFetcher] Using app-to-app authentication (X-App-Token)');
 
-    // Fetch venues and services in parallel using laravelApp service
+    // Fetch venues and featured services in parallel using laravelApp service
     // laravelApp automatically includes X-App-Token header
-    const [venuesResponse, servicesResponse] = await Promise.all([
+    const [venuesResponse, featuredServicesResponse] = await Promise.all([
       laravelApp.get('/client/search/venues', {
         params: {
           q: '',
@@ -33,20 +33,11 @@ export async function fetchInitialData(distance = '10km') {
           page: 1,
         },
       }),
-      laravelApp.get('/client/search/services', {
-        params: {
-          q: '',
-          lat: LONDON_COORDS.lat,
-          lon: LONDON_COORDS.lon,
-          distance,
-          perPage: 5,
-          page: 1,
-        },
-      }),
+      laravelApp.get('/client/search/featured-services'),
     ]);
 
     const rawVenues = venuesResponse.data?.data || [];
-    const rawServices = servicesResponse.data?.data || [];
+    const rawServices = featuredServicesResponse.data?.data || [];
 
     // Transform API response to component format
     const venues = rawVenues.map(transformVenueToSalon);
