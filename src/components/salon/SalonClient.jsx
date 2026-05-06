@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import dayjs from "dayjs";
 import { Calendar, Sparkles, Banknote, User, Clock, ChevronDown, MapPin, Filter, X } from "lucide-react";
 import Swal from "sweetalert2";
@@ -183,11 +183,32 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
   const [expandedServices, setExpandedServices] = useState({});
   const [expandedFilter, setExpandedFilter] = useState(null);
   const { showImageSlider, setShowImageSlider } = useSalonSlider();
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const searchInputRef = useRef(null);
 
-  // Hide slider when user clicks in services section
-  const handleServiceSectionClick = useCallback(() => {
-    setShowImageSlider(false);
-  }, [setShowImageSlider]);
+  // Hide slider on first scroll down and focus on search input
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // If scrolling down and gallery is visible, hide it and focus search input
+      if (currentScrollY > lastScrollY && showImageSlider) {
+        setShowImageSlider(false);
+        // Focus on search input with a small delay to ensure it's rendered
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 50);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollY, showImageSlider, setShowImageSlider]);
 
   const toggleFilter = useCallback(() => {
     setExpandedFilter(expandedFilter === 'filters' ? null : 'filters');
@@ -683,7 +704,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
           {/* Booking layout */}
           <section className="grid gap-6 lg:flex lg:items-start">
             {/* Left column: booking steps (visually left on large screens) */}
-            <div className="space-y-4 lg:order-1 lg:w-[58%]" onClick={handleServiceSectionClick}>
+            <div className="space-y-4 lg:order-1 lg:w-[58%]">
               {/* Step 1: Select a service (collapsible) */}
               <StepSection
                 stepNumber={1}
@@ -733,6 +754,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                     {/* Search Input - Full width on mobile, 2/3 on desktop */}
                     <div className="flex-[2]">
                       <input
+                        ref={searchInputRef}
                         type="text"
                         value={serviceSearch}
                         onChange={(e) => dispatch(setSearch({ slug, query: e.target.value }))}
