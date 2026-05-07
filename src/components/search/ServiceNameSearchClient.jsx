@@ -31,7 +31,6 @@ function calcDistance(lat1, lon1, lat2, lon2) {
 
 export default function ServiceNameSearchClient({
   serviceName,
-  serviceUuid = null,
   initialVenues = [],
   initialLocationLabel = "",
   initialLocationLat = null,
@@ -55,7 +54,6 @@ export default function ServiceNameSearchClient({
   // Service search input state
   const [serviceQuery, setServiceQuery] = React.useState(serviceName);
   const [activeServiceName, setActiveServiceName] = React.useState(serviceName);
-  const [activeServiceUuidState, setActiveServiceUuid] = React.useState(serviceUuid);
   const [showServiceDropdown, setShowServiceDropdown] = React.useState(false);
   // Tracks which service groups are expanded: Set of "venueUuid::groupKey"
   const [expandedGroups, setExpandedGroups] = React.useState(new Set());
@@ -74,11 +72,8 @@ export default function ServiceNameSearchClient({
    * - display_name: variant display name (e.g., "Hair Cut Long Hair")
    * - global_service_uuid: UUID of canonical service
    */
-  function getMatchedServices(venue, serviceName, serviceUuid) {
+  function getMatchedServices(venue, serviceName) {
     const all = venue?.services || [];
-    if (serviceUuid) {
-      return all.filter((s) => s.global_service_uuid === serviceUuid);
-    }
     if (serviceName) {
       const lower = serviceName.toLowerCase();
       // Match against 'name' (canonical name from service_canonical_name)
@@ -117,11 +112,10 @@ export default function ServiceNameSearchClient({
     setShowServiceDropdown(false);
     setServiceQuery(service.name);
     setActiveServiceName(service.name);
-    setActiveServiceUuid(service.uuid || null);
+    setActiveServiceName(service.name);
     // Update URL silently — no navigation, results update client-side
     const params = new URLSearchParams();
-    params.set("name", service.name);
-    if (service.uuid) params.set("service_uuid", service.uuid);
+    params.set("service", service.name);
     if (selectedLocation?.address) params.set("loc", selectedLocation.address);
     if (selectedLocation?.lat != null) params.set("lat", String(selectedLocation.lat));
     if (selectedLocation?.lon != null) params.set("lon", String(selectedLocation.lon));
@@ -130,7 +124,7 @@ export default function ServiceNameSearchClient({
     if (selectedFilters.audiences?.length) params.set("audiences", selectedFilters.audiences.join(","));
     router.replace(`/search/service?${params.toString()}`, { scroll: false });
     // Fetch venues for the newly selected service
-    void fetchVenues({ activeServiceUuid: service.uuid, activeService: service.name });
+    void fetchVenues({ activeService: service.name });
   };
 
   // Close service dropdown on outside click
@@ -177,11 +171,9 @@ export default function ServiceNameSearchClient({
       location = selectedLocation,
       distance = searchDistance,
       filters = selectedFilters,
-      activeServiceUuid,
       activeService,
     } = {}) => {
       // Assign defaults if not provided
-      if (typeof activeServiceUuid === 'undefined') activeServiceUuid = activeServiceUuidState;
       if (typeof activeService === 'undefined') activeService = activeServiceName;
       setLoading(true);
       try {
@@ -193,10 +185,8 @@ export default function ServiceNameSearchClient({
           audience: filters.audiences?.length ? filters.audiences.join(",") : undefined,
           perPage: 48,
         };
-        if (activeServiceUuid) {
-          params.service = activeServiceUuid;
-        } else if (activeService) {
-          params.q = activeService;
+        if (activeService) {
+          params.service = activeService;
         }
         const response = await searchVenues(params);
         setVenues(response?.data || []);
@@ -207,7 +197,7 @@ export default function ServiceNameSearchClient({
         setLoading(false);
       }
     },
-    [activeServiceName, activeServiceUuidState, selectedLocation, searchDistance, selectedFilters]
+    [activeServiceName, selectedLocation, searchDistance, selectedFilters]
   );
 
   const handleLocationChange = (locationData) => {
@@ -469,7 +459,7 @@ export default function ServiceNameSearchClient({
       ) : (
         <div className="space-y-4">
           {venues.map((venue, vi) => {
-            const matched = getMatchedServices(venue, activeServiceName, activeServiceUuidState).filter((s) => {
+            const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
               if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
               if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
               return true;

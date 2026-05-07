@@ -7,6 +7,7 @@ import LocationSearch from '@/components/search/LocationSearch';
 import { cn } from '@/lib/utils';
 import { useVenueSearch } from '@/hooks/useVenueSearch';
 import { useServiceSearch } from '@/hooks/useServiceSearch';
+import { useFeaturedServices } from '@/hooks/useFeaturedServices';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { getIcon } from '@/lib/iconMap';
 
@@ -52,6 +53,7 @@ export default function Hero({
   
   const { results: venues, loading: venuesLoading, search: searchVenues } = useVenueSearch(initialVenues);
   const { results: services, loading: servicesLoading, search: searchServices } = useServiceSearch(initialServices);
+  const { results: featuredServices, loading: featuredLoading, search: searchFeatured } = useFeaturedServices(initialServices);
   const {
     options: filterOptions,
     selectedFilters,
@@ -196,7 +198,7 @@ export default function Hero({
         console.log('[Hero] Default location set:', defaultLocation);
         setSelectedLocation(defaultLocation);
 
-        // Fetch venues and services with empty query in background (don't show yet)
+        // Fetch venues and featured services with empty query in background (don't show yet)
         try {
           console.log('[Hero] Starting background search with empty query...');
           await Promise.all([
@@ -207,12 +209,10 @@ export default function Hero({
               distance: searchDistance,
               perPage: 5,
             }),
-            searchServices({
-              q: '',
+            searchFeatured({
               lat: defaultLocation.lat,
               lon: defaultLocation.lon,
               distance: searchDistance,
-              perPage: 5,
             }),
           ]);
           console.log('[Hero] Background search completed');
@@ -230,18 +230,29 @@ export default function Hero({
     if (window.google?.maps) {
       initializeDefaultLocation();
     }
-  }, [isDefaultLocationLoaded, initialLocation, searchVenues, searchServices, searchDistance]);
+  }, [isDefaultLocationLoaded, initialLocation, searchVenues, searchFeatured, searchDistance]);
 
   const handleLocationChange = (locationData) => {
     // locationData contains: lat, lon, address, placeId, postcode, country
     setSelectedLocation(locationData);
     
-    // Re-trigger search for the new location even when the query is empty.
-    handleSearch(searchQuery, {
-      location: locationData,
-      distance: searchDistance,
-      force: true,
-    });
+    // If no search query, fetch featured services for new location
+    // Otherwise, re-trigger regular search for the new location
+    if (!searchQuery.trim()) {
+      searchFeatured({
+        lat: locationData.lat,
+        lon: locationData.lon,
+        distance: searchDistance,
+      }).catch(() => {
+        // Error fetching featured - continue silently
+      });
+    } else {
+      handleSearch(searchQuery, {
+        location: locationData,
+        distance: searchDistance,
+        force: true,
+      });
+    }
   };
 
   // Click outside handler
@@ -276,14 +287,9 @@ export default function Hero({
     const params = new URLSearchParams();
     // Pass the search query if present
     if (searchQuery) params.set('q', searchQuery);
-    // Pass the selected service name
-    if (service?.name) params.set('name', service.name);
-    // Pass service UUID ONLY if there's a single UUID
-    // If multiple UUIDs exist for same name (e.g., "Hair Cut" in Hair + Barbering),
-    // don't filter by UUID so all variants are shown
-    if (service?.uuid && (!service?.uuids || service.uuids.length === 1)) {
-      params.set('service_uuid', service.uuid);
-    }
+    // Pass the selected service NAME (canonical name, not UUID)
+    // Backend will find all global services with this name and their UUIDs
+    if (service?.name) params.set('service', service.name);
     // Pass location details
     if (selectedLocation?.address) params.set('loc', selectedLocation.address);
     if (selectedLocation?.lat !== undefined && selectedLocation?.lat !== null) params.set('lat', String(selectedLocation.lat));
@@ -400,11 +406,25 @@ export default function Hero({
                         checked={searchDistance === distance}
                         onChange={() => {
                           setSearchDistance(distance);
-                          handleSearch(searchQuery, {
-                            location: selectedLocation,
-                            distance,
-                            force: true,
-                          });
+                          // If no search query, fetch featured services with new distance
+                          // Otherwise, re-search with new distance
+                          if (!searchQuery.trim()) {
+                            // Fetch featured services with new distance
+                            searchFeatured({
+                              lat: selectedLocation?.lat,
+                              lon: selectedLocation?.lon,
+                              distance,
+                            }).catch(() => {
+                              // Error fetching featured - continue silently
+                            });
+                          } else {
+                            // Re-search with new distance
+                            handleSearch(searchQuery, {
+                              location: selectedLocation,
+                              distance,
+                              force: true,
+                            });
+                          }
                         }}
                         className="w-4 h-4 text-blue-600 border-gray-300"
                       />
@@ -448,12 +468,17 @@ export default function Hero({
 
   // Render services section
   const renderServicesSection = () => {
-    if (services.length === 0) return null;
+    // Show featured services if no search query, otherwise show search results
+    const servicesToShow = !searchQuery.trim() ? featuredServices : services;
+    
+    if (servicesToShow.length === 0) return null;
 
     return (
       <div className="border-b border-gray-200">
-        <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600">Services</div>
-        {services.map((service, index) => (
+        <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600">
+          {!searchQuery.trim() ? 'Featured Services' : 'Services'}
+        </div>
+        {servicesToShow.map((service, index) => (
           <button
             key={service.name || `service-${index}`}
             onClick={() => handleServiceSelect(service)}

@@ -4,18 +4,17 @@ import ServiceNameSearchClient from "@/components/search/ServiceNameSearchClient
 import laravelApp from "@/services/laravelApp";
 
 /**
- * /search/service?name=Hair+Cut&loc=London&lat=51.5&lon=-0.13&distance=10km&categories=1,2&audiences=3
+ * /search/service?service=Hair+Cut&loc=London&lat=51.5&lon=-0.13&distance=10km&categories=1,2&audiences=3
  *
- * SSR: fetches venues from ES via `q={name}` so all venues offering the
- * searched service name (across any category/audience) are returned.
+ * SSR: fetches venues from ES via service name parameter
+ * Backend resolves all global service UUIDs with that name and finds venues offering any variant
  * The client component then shows per-venue the specific matched services.
  */
 export default async function ServiceNameSearchPage({ searchParams }) {
   const query = (await searchParams) || {};
-  const name = query.name || "";
-  const serviceUuid = query.service_uuid || null;
+  const serviceName = query.service || null;
 
-  if (!name && !serviceUuid) {
+  if (!serviceName) {
     notFound();
   }
 
@@ -29,10 +28,9 @@ export default async function ServiceNameSearchPage({ searchParams }) {
   let initialVenues = [];
 
   try {
-    // Prefer filtering by service_uuid if present
+    // Pass service name to backend, which will resolve all UUIDs with that name
     const params = { perPage: 20, page: 1 };
-    if (serviceUuid) params.service = serviceUuid;
-    else if (name) params.q = name;
+    if (serviceName) params.service = serviceName;
     if (lat) params.lat = lat;
     if (lon) params.lon = lon;
     if (lat && lon) params.distance = distance;
@@ -48,12 +46,11 @@ export default async function ServiceNameSearchPage({ searchParams }) {
   return (
     <PageShell
       variant="marketing"
-      title={`${name} near you`}
+      title={`${serviceName} near you`}
       contentClassName="mt-6"
     >
       <ServiceNameSearchClient
-        serviceName={name}
-        serviceUuid={serviceUuid}
+        serviceName={serviceName}
         initialVenues={initialVenues}
         initialLocationLabel={loc}
         initialLocationLat={lat}

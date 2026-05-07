@@ -26,6 +26,49 @@
  * - Use MySQL for smaller datasets with complex relational queries
  */
 
+/**
+ * Fetch featured services (curated list of 8 services)
+ * Supports optional location-based distance filtering
+ * 
+ * BACKEND: Laravel /api/client/search/featured-services
+ * Chain: Browser → /api/search/featured-services → Laravel → Elasticsearch
+ * 
+ * Query Parameters:
+ * - lat (float): Latitude for distance-based filtering
+ * - lon (float): Longitude for distance-based filtering
+ * - distance (string): Distance radius like "10km", "30km"
+ */
+export async function searchFeaturedServices({ lat, lon, distance } = {}) {
+  try {
+    const params = new URLSearchParams();
+
+    if (lat) params.append('lat', lat);
+    if (lon) params.append('lon', lon);
+    if (distance && lat && lon) params.append('distance', distance);
+
+    const url = `/api/search/featured-services${params.toString() ? '?' + params.toString() : ''}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
 export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 10, page = 1, category, audience, service, professional }) {
   try {
     const params = new URLSearchParams();

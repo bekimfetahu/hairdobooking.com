@@ -33,7 +33,13 @@ export async function fetchInitialData(distance = '10km') {
           page: 1,
         },
       }),
-      laravelApp.get('/client/search/featured-services'),
+      laravelApp.get('/client/search/featured-services', {
+        params: {
+          lat: LONDON_COORDS.lat,
+          lon: LONDON_COORDS.lon,
+          distance,
+        },
+      }),
     ]);
 
     const rawVenues = venuesResponse.data?.data || [];
