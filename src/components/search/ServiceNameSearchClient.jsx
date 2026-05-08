@@ -50,6 +50,9 @@ export default function ServiceNameSearchClient({
       ? { lat: initialLocationLat, lon: initialLocationLon, address: initialLocationLabel }
       : null
   );
+  const [isDefaultLocationLoaded, setIsDefaultLocationLoaded] = React.useState(
+    Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
+  );
 
   // Service search input state
   const [serviceQuery, setServiceQuery] = React.useState(serviceName);
@@ -59,6 +62,7 @@ export default function ServiceNameSearchClient({
   const [expandedGroups, setExpandedGroups] = React.useState(new Set());
   const serviceSearchRef = React.useRef(null);
   const serviceDebounceRef = React.useRef(null);
+  const geocoderRef = React.useRef(null);
 
   const { options: filterOptions, selectedFilters, toggleFilter, clearFilters } = useSearchFilters();
   const { results: serviceResults, loading: serviceSearchLoading, search: searchServices } = useServiceSearch();
@@ -147,6 +151,61 @@ export default function ServiceNameSearchClient({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Initialize location: if no lat/lon, geocode location label or default to "London, UK"
+  React.useEffect(() => {
+    if (isDefaultLocationLoaded) return; // Only run once
+
+    const initializeLocation = async () => {
+      try {
+        // If we already have lat/lon, we're done
+        if (Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)) {
+          setIsDefaultLocationLoaded(true);
+          return;
+        }
+
+        // If Google Maps or importLibrary not ready yet, wait and try again
+        if (!window.google?.maps || !window.google.maps.importLibrary) {
+          setTimeout(initializeLocation, 100);
+          return;
+        }
+
+        // Determine what to geocode: use location label if provided, otherwise default to "London, UK"
+        const addressToGeocode = initialLocationLabel || "London, UK";
+
+        const { Geocoder } = await window.google.maps.importLibrary("geocoding");
+        geocoderRef.current = new Geocoder();
+
+        // Geocode the address
+        const results = await new Promise((resolve, reject) => {
+          geocoderRef.current.geocode({ address: addressToGeocode }, (results, status) => {
+            if (status === "OK" && results.length > 0) {
+              resolve(results[0]);
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`));
+            }
+          });
+        });
+
+        const { lat, lng } = results.geometry.location;
+        const defaultLocation = {
+          lat: lat(),
+          lon: lng(),
+          address: addressToGeocode,
+          placeId: results.place_id,
+        };
+
+        setSelectedLocation(defaultLocation);
+        setIsDefaultLocationLoaded(true);
+      } catch (err) {
+        // Geocoding error - mark as loaded anyway to avoid infinite loop
+        console.error("[ServiceNameSearchClient] Location initialization error:", err);
+        setIsDefaultLocationLoaded(true);
+      }
+    };
+
+    initializeLocation();
+  }, [isDefaultLocationLoaded, initialLocationLabel, initialLocationLat, initialLocationLon]);
+
   // Seed filters from URL params once filter options are available
   const seededRef = React.useRef(false);
   React.useEffect(() => {
@@ -192,7 +251,7 @@ export default function ServiceNameSearchClient({
       category: categoryParam,
       audience: audienceParam,
     });
-  }, [serviceName, selectedLocation, searchDistance, searchServices]);
+  }, [serviceName, selectedLocation, searchDistance, searchServices, initialCategories, initialAudiences]);
 
   const hasActiveFilters =
     (selectedFilters.categories?.length || 0) > 0 ||
@@ -274,8 +333,24 @@ export default function ServiceNameSearchClient({
                   onChange={handleServiceQueryChange}
                   onFocus={() => setShowServiceDropdown(true)}
                   placeholder="Search Services or Salons..."
-                  className="w-full h-8 sm:h-9 pl-6 sm:pl-8 pr-1 sm:pr-2 rounded-full border-0 bg-transparent text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:outline-none transition-all duration-200"
+                  className="w-full h-8 sm:h-9 pl-6 sm:pl-8 pr-6 sm:pr-8 rounded-full border-0 bg-transparent text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:outline-none transition-all duration-200"
                 />
+                {serviceQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setServiceQuery('');
+                      setVenues([]);
+                      setShowServiceDropdown(false);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+                    aria-label="Clear search"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
 

@@ -4,19 +4,17 @@ import ServiceNameSearchClient from "@/components/search/ServiceNameSearchClient
 import laravelApp from "@/services/laravelApp";
 
 /**
- * /search/service?service=Hair+Cut&loc=London&lat=51.5&lon=-0.13&distance=10km&categories=1,2&audiences=3
- *
- * SSR: fetches venues from ES via service name parameter
- * Backend resolves all global service UUIDs with that name and finds venues offering any variant
- * The client component then shows per-venue the specific matched services.
+ * /search/service
+ * - With service param: shows venues offering that service
+ * - Without service param: shows service discovery/browsing interface
+ * 
+ * Examples:
+ * - /search/service?service=Hair+Cut&loc=London&lat=51.5&lon=-0.13&distance=10km (from home search)
+ * - /search/service (from Browse Services button - no parameters)
  */
 export default async function ServiceNameSearchPage({ searchParams }) {
   const query = (await searchParams) || {};
   const serviceName = query.service || null;
-
-  if (!serviceName) {
-    notFound();
-  }
 
   const lat = query.lat ? Number(query.lat) : null;
   const lon = query.lon ? Number(query.lon) : null;
@@ -26,32 +24,50 @@ export default async function ServiceNameSearchPage({ searchParams }) {
   const audiences = query.audiences || null;
 
   let initialVenues = [];
+  let initialFeaturedServices = [];
 
-  try {
-    // Pass service name to backend, which will resolve all UUIDs with that name
-    const params = { perPage: 20, page: 1 };
-    if (serviceName) params.service = serviceName;
-    if (lat) params.lat = lat;
-    if (lon) params.lon = lon;
-    if (lat && lon) params.distance = distance;
-    if (categories) params.category = categories;
-    if (audiences) params.audience = audiences;
+  // Only fetch venues if a service is provided
+  if (serviceName) {
+    try {
+      // Pass service name to backend, which will resolve all UUIDs with that name
+      const params = { perPage: 20, page: 1 };
+      if (serviceName) params.service = serviceName;
+      if (lat) params.lat = lat;
+      if (lon) params.lon = lon;
+      if (lat && lon) params.distance = distance;
+      if (categories) params.category = categories;
+      if (audiences) params.audience = audiences;
 
-    const response = await laravelApp.get("/client/search/venues", { params });
-    initialVenues = response.data?.data || [];
-  } catch {
-    // Page still renders; client will retry
+      const response = await laravelApp.get("/client/search/venues", { params });
+      initialVenues = response.data?.data || [];
+    } catch {
+      // Page still renders; client will retry
+    }
+  } else {
+    // Browse mode: fetch featured services on server (like home page)
+    try {
+      const params = {};
+      if (lat) params.lat = lat;
+      if (lon) params.lon = lon;
+      if (lat && lon) params.distance = distance;
+
+      const response = await laravelApp.get("/client/search/featured-services", { params });
+      initialFeaturedServices = response.data?.data || [];
+    } catch {
+      // Page still renders; client will retry
+    }
   }
 
   return (
     <PageShell
       variant="marketing"
-      title={`${serviceName} near you`}
+      title={serviceName ? `${serviceName} near you` : "Browse Services"}
       contentClassName="mt-6"
     >
       <ServiceNameSearchClient
         serviceName={serviceName}
         initialVenues={initialVenues}
+        initialFeaturedServices={initialFeaturedServices}
         initialLocationLabel={loc}
         initialLocationLat={lat}
         initialLocationLon={lon}

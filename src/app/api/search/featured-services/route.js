@@ -37,10 +37,16 @@ export async function GET(request) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { message: await response.text() };
+      }
+      
       return new Response(
         JSON.stringify({
-          error: errorData.message || 'Featured services endpoint error',
+          error: errorData.message || errorData.error || 'Featured services endpoint error',
           details: errorData,
         }),
         { status: response.status, headers: { 'Content-Type': 'application/json' } }
@@ -53,7 +59,7 @@ export async function GET(request) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('[Featured Services API] Error:', error);
+    console.error('[Featured Services API] Exception:', error.message);
     return new Response(
       JSON.stringify({
         error: 'Failed to fetch featured services',
