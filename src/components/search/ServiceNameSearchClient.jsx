@@ -100,7 +100,16 @@ export default function ServiceNameSearchClient({
     clearTimeout(serviceDebounceRef.current);
     if (val.trim().length >= 1) {
       serviceDebounceRef.current = setTimeout(() => {
-        void searchServices({ q: val.trim(), perPage: 8 });
+        // Search services with location AND filter parameters
+        void searchServices({ 
+          q: val.trim(), 
+          perPage: 8,
+          lat: selectedLocation?.lat,
+          lon: selectedLocation?.lon,
+          distance: searchDistance,
+          category: selectedFilters.categories?.length ? selectedFilters.categories.join(',') : undefined,
+          audience: selectedFilters.audiences?.length ? selectedFilters.audiences.join(',') : undefined,
+        });
         setShowServiceDropdown(true);
       }, 300);
     } else {
@@ -161,6 +170,29 @@ export default function ServiceNameSearchClient({
 
     seededRef.current = true;
   }, [filterOptions, initialCategories, initialAudiences, selectedFilters, toggleFilter]);
+
+  // Pre-fetch services for the initial serviceName when component mounts
+  const serviceFetchedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (serviceFetchedRef.current) return;
+    if (!serviceName) return;
+    
+    serviceFetchedRef.current = true;
+    // Fetch services matching the initial service name with location AND all filter parameters
+    // Use initialCategories/initialAudiences directly since selectedFilters might not be seeded yet
+    const categoryParam = initialCategories ? initialCategories : undefined;
+    const audienceParam = initialAudiences ? initialAudiences : undefined;
+    
+    void searchServices({ 
+      q: serviceName, 
+      perPage: 8,
+      lat: selectedLocation?.lat,
+      lon: selectedLocation?.lon,
+      distance: searchDistance,
+      category: categoryParam,
+      audience: audienceParam,
+    });
+  }, [serviceName, selectedLocation, searchDistance, searchServices]);
 
   const hasActiveFilters =
     (selectedFilters.categories?.length || 0) > 0 ||
