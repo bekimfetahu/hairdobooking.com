@@ -11,6 +11,41 @@ import { useFeaturedServices } from '@/hooks/useFeaturedServices';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { getIcon } from '@/lib/iconMap';
 
+// Custom scrollbar styling for glass-like appearance
+const scrollbarStyle = `
+  .glass-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .glass-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .glass-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(to right, 
+      rgba(107, 114, 128, 0.5) 0%,
+      rgba(156, 163, 175, 0.15) 25%,
+      rgba(209, 213, 219, 0.08) 50%,
+      rgba(156, 163, 175, 0.15) 75%,
+      rgba(107, 114, 128, 0.5) 100%
+    );
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  
+  .glass-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to right, 
+      rgba(107, 114, 128, 0.7) 0%,
+      rgba(156, 163, 175, 0.25) 25%,
+      rgba(209, 213, 219, 0.15) 50%,
+      rgba(156, 163, 175, 0.25) 75%,
+      rgba(107, 114, 128, 0.7) 100%
+    );
+    background-clip: padding-box;
+  }
+`;
+
 /**
  * Calculate distance between two coordinates using Haversine formula
  */
@@ -474,17 +509,17 @@ export default function Hero({
     if (servicesToShow.length === 0) return null;
 
     return (
-      <div className="border-b border-gray-200">
-        <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600">
+      <div>
+        <div className="sticky top-0 px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-200">
           {!searchQuery.trim() ? 'Featured Services' : 'Services'}
         </div>
         {servicesToShow.map((service, index) => (
           <button
             key={service.name || `service-${index}`}
             onClick={() => handleServiceSelect(service)}
-            className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+            className="w-full h-16 px-4 flex flex-col justify-center text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
           >
-            <p className="text-sm font-semibold text-gray-900">{service.name}</p>
+            <p className="text-sm font-semibold text-gray-900 truncate">{service.name}</p>
             <div className="flex items-center justify-between mt-1">
               <p className="text-xs text-gray-500">
                 {Array.isArray(service.categories) && service.categories.length > 0
@@ -507,7 +542,7 @@ export default function Hero({
 
     return (
       <div>
-        <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600">Salons</div>
+        <div className="sticky top-0 px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-200">Nearby Salons</div>
         {venues.map((venue, index) => {
           // Calculate distance if location is selected and venue has location data
           let distance = null;
@@ -549,7 +584,7 @@ export default function Hero({
             <button
               key={venue.id || `venue-${index}`}
               onClick={() => handleVenueSelect(venue)}
-              className="flex items-center gap-3 w-full px-4 py-3 hover:bg-gray-50 text-left transition-colors border-b border-gray-100 last:border-b-0"
+              className="flex items-center gap-3 w-full h-16 px-4 hover:bg-gray-50 text-left transition-colors border-b border-gray-100 last:border-b-0"
             >
               <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {venue.image ? (
@@ -607,6 +642,7 @@ export default function Hero({
 
   return (
     <section className="relative overflow-visible pt-5 pb-0 md:pt-8 md:pb-0">
+      <style>{scrollbarStyle}</style>
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
         strategy="lazyOnload"
@@ -686,21 +722,26 @@ export default function Hero({
                 </Button> */}
               </div>
 
-              {/* Dropdown Results with Inline Filters */}
+              {/* Dropdown Results - 2 Column Layout: Services Left, Venues Right */}
               {showDropdown && !isLocationSearchFocused && (
-                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
-                  {/* Filter Toggle */}
+                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999]">
+                  {/* Filter Toggle & Categories */}
                   {renderFilterToggle()}
-                  
-                  {/* Expandable Filter Categories */}
                   {renderFilterCategories()}
 
-                  {/* Search Results - Show pre-fetched when empty, or typed results when typing */}
+                  {/* 2-Column Layout */}
                   {!venuesLoading && !servicesLoading && (
-                    <>
-                      {renderServicesSection()}
-                      {renderVenuesSection()}
-                    </>
+                    <div className="flex max-h-96">
+                      {/* Left Column: Services */}
+                      <div className="flex-1 border-r border-gray-200 overflow-y-auto glass-scroll">
+                        {renderServicesSection()}
+                      </div>
+
+                      {/* Right Column: Venues */}
+                      <div className="flex-1 overflow-y-auto glass-scroll">
+                        {renderVenuesSection()}
+                      </div>
+                    </div>
                   )}
 
                   {/* Loading State */}
