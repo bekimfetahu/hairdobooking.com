@@ -27,6 +27,8 @@ export async function GET(request) {
     const laravelBaseUrl = process.env.LARAVEL_INTERNAL_URL || process.env.NEXT_PUBLIC_LARAVEL_URL;
     const url = `${laravelBaseUrl}/api/client/search/featured-services?${laravelParams}`;
 
+    console.log('[Featured Services API] Fetching from Laravel:', url);
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -36,30 +38,40 @@ export async function GET(request) {
       },
     });
 
+    console.log('[Featured Services API] Laravel response status:', response.status);
+
     if (!response.ok) {
       let errorData;
+      let errorText = '';
       try {
         errorData = await response.json();
+        errorText = JSON.stringify(errorData);
       } catch (e) {
-        errorData = { message: await response.text() };
+        errorText = await response.text();
+        errorData = { message: errorText };
       }
       
+      console.error('[Featured Services API] Laravel error:', response.status, errorText);
+
       return new Response(
         JSON.stringify({
           error: errorData.message || errorData.error || 'Featured services endpoint error',
           details: errorData,
+          status: response.status,
         }),
         { status: response.status, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     const data = await response.json();
+    console.log('[Featured Services API] Success:', data?.data?.length ?? 0, 'services');
+
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('[Featured Services API] Exception:', error.message);
+    console.error('[Featured Services API] Exception:', error.message, error.stack);
     return new Response(
       JSON.stringify({
         error: 'Failed to fetch featured services',

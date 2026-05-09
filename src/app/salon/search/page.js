@@ -1,5 +1,5 @@
 import PageShell from "@/components/layouts/PageShell";
-import SalonSearchClient from "@/components/search/SalonSearchClient";
+import ServiceNameSearchClient from "@/components/search/ServiceNameSearchClient";
 import laravelApp from "@/services/laravelApp";
 
 /**

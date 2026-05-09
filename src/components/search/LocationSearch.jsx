@@ -46,23 +46,28 @@ export default function LocationSearch({
       return;
     }
 
-    async function initPlaces() {
+    const initPlaces = async () => {
       try {
-        if (!window.google?.maps) return;
-
-        // Initialize services
-        if (window.google && window.google.maps && window.google.maps.places) {
-          autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
-          placesServiceRef.current = new google.maps.places.PlacesService(
-            document.createElement('div')
-          );
-          sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
-          console.log('Places services initialized');
+        if (!window.google?.maps || !window.google.maps.importLibrary) {
+          console.warn('[LocationSearch] Google Maps importLibrary not available, retrying...');
+          setTimeout(initPlaces, 100);
+          return;
         }
+
+        // Import places library dynamically using the same pattern as other components
+        const { AutocompleteService, PlacesService, AutocompleteSessionToken } = 
+          await window.google.maps.importLibrary('places');
+
+        autocompleteServiceRef.current = new AutocompleteService();
+        placesServiceRef.current = new PlacesService(
+          document.createElement('div')
+        );
+        sessionTokenRef.current = new AutocompleteSessionToken();
+        console.log('[LocationSearch] Places services initialized successfully');
       } catch (error) {
-        console.error('Failed to initialize Google Places:', error);
+        console.error('[LocationSearch] Failed to initialize Google Places:', error);
       }
-    }
+    };
 
     initPlaces();
   }, [mapsReady]);
@@ -81,23 +86,28 @@ export default function LocationSearch({
     }
 
     if (!autocompleteServiceRef.current) {
-      console.warn('Autocomplete service not ready');
+      console.warn('[LocationSearch] Autocomplete service not ready, mapsReady:', mapsReady);
       return;
     }
 
     try {
       setIsLoading(true);
+      console.log('[LocationSearch] Fetching predictions for:', text);
       const predictions = await autocompleteServiceRef.current.getPlacePredictions({
         input: text,
         sessionToken: sessionTokenRef.current,
       });
 
+      console.log('[LocationSearch] Got predictions:', predictions);
       if (predictions.predictions) {
         setSuggestions(predictions.predictions);
         setShowDropdown(true);
+      } else {
+        console.warn('[LocationSearch] No predictions in response');
+        setSuggestions([]);
       }
     } catch (error) {
-      console.error('Error fetching autocomplete predictions:', error);
+      console.error('[LocationSearch] Error fetching autocomplete predictions:', error);
       setSuggestions([]);
     } finally {
       setIsLoading(false);
@@ -270,12 +280,12 @@ export default function LocationSearch({
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`} suppressHydrationWarning>
-      <div className="flex gap-1 sm:gap-2 items-center px-3 sm:px-4 py-2 overflow-visible" suppressHydrationWarning>
+      <div className="flex gap-1 sm:gap-2 items-center px-3 sm:px-4 py-2 overflow-hidden" suppressHydrationWarning>
         {/* Location Icon */}
         <MapPin className="w-4 sm:w-5 h-4 sm:h-5 text-gray-400 pointer-events-none flex-shrink-0" />
 
         {/* Custom Input - uses fixed positioning for dropdown */}
-        <div className="w-full relative z-50">
+        <div className="w-full relative z-10">
           <input
             ref={inputRef}
             type="text"
@@ -284,12 +294,27 @@ export default function LocationSearch({
             onChange={handleInputChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            className="w-full h-8 sm:h-9 border-0 bg-transparent text-sm sm:text-base text-gray-900 placeholder-gray-500 transition-colors duration-200 focus:outline-none"
+            className="w-full h-8 sm:h-9 border-0 bg-transparent text-sm sm:text-base text-gray-900 placeholder-gray-500 transition-colors duration-200 focus:outline-none truncate"
           />
+        </div>
 
-          {/* Dropdown with suggestions */}
-          {showDropdown && isClient && (
-            <div className="absolute top-full mt-1 w-[calc(100%+50px)] bg-white border border-gray-200 rounded-md shadow-md z-[99999] overflow-hidden">
+        {/* Clear Button - Only render on client to avoid hydration mismatch */}
+        {isClient && displayText && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="w-4 sm:w-5 h-4 sm:h-5 text-gray-400 hover:text-gray-600 flex items-center justify-center flex-shrink-0"
+            title="Clear location"
+            aria-label="Clear location"
+          >
+            <X className="w-4 sm:w-5 h-4 sm:h-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown with suggestions - positioned relative to container to escape overflow-hidden */}
+      {showDropdown && isClient && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-md z-40 overflow-hidden">
               {/* Current Location Option */}
               <button
                 type="button"
@@ -332,23 +357,8 @@ export default function LocationSearch({
                   No suggestions found
                 </div>
               )}
-            </div>
-          )}
         </div>
-
-        {/* Clear Button - Only render on client to avoid hydration mismatch */}
-        {isClient && displayText && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="w-4 sm:w-5 h-4 sm:h-5 text-gray-400 hover:text-gray-600 flex items-center justify-center flex-shrink-0"
-            title="Clear location"
-            aria-label="Clear location"
-          >
-            <X className="w-4 sm:w-5 h-4 sm:h-5" />
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 }

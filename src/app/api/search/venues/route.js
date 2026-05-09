@@ -52,6 +52,7 @@ export async function GET(req) {
       laravel_response: error.response?.data,
       request_url: error.config?.url,
       request_params: error.config?.params,
+      query_params_obj: { q, lat, lon, distance, service, category, audience, professional, perPage, page },
       error_code: error.code,
       full_error: error.toString(),
     });
@@ -65,6 +66,7 @@ export async function GET(req) {
           error: errorMessage,
           status: statusCode,
           details: process.env.NODE_ENV === 'development' ? error.response.data : undefined,
+          debug: process.env.NODE_ENV === 'development' ? { service, requested_params: { q, lat, lon, distance, service, category, audience, professional } } : undefined,
         },
         { status: statusCode }
       );

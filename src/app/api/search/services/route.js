@@ -40,6 +40,18 @@ export async function GET(req) {
       },
     });
   } catch (error) {
+    // Detailed error logging for debugging
+    console.error('[Search Services Error]', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      laravel_response: error.response?.data,
+      request_url: error.config?.url,
+      request_params: error.config?.params,
+      query_params_obj: { q, category, audience, lat, lon, distance, perPage, page },
+      error_code: error.code,
+      full_error: error.toString(),
+    });
 
     if (error.response) {
       const statusCode = error.response.status;
@@ -49,6 +61,8 @@ export async function GET(req) {
         { 
           error: errorMessage,
           status: statusCode,
+          details: process.env.NODE_ENV === 'development' ? error.response.data : undefined,
+          debug: process.env.NODE_ENV === 'development' ? { requested_params: { q, category, audience, lat, lon, distance } } : undefined,
         },
         { status: statusCode }
       );

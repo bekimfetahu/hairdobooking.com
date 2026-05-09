@@ -29,9 +29,144 @@ function calcDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/**
+ * VenueMap Component - Displays all venues on a Google Map
+ * Simplified version based on PreferredSalonSearch pattern
+ */
+function VenueMap({ venues, selectedLocation, serviceName, searchDistance }) {
+  const mapRef = React.useRef(null);
+  const mapInstanceRef = React.useRef(null);
+  const markersRef = React.useRef([]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.google?.maps || !mapRef.current) return;
+
+    // Calculate center from selected location or first venue
+    let center = { lat: 51.5074, lng: -0.1278 }; // London default
+    if (selectedLocation) {
+      center = { lat: selectedLocation.lat, lng: selectedLocation.lon };
+    } else if (venues.length > 0 && venues[0]?.address?.location) {
+      const loc = venues[0].address.location;
+      center = { lat: loc.lat, lng: loc.lon };
+    }
+
+    // Initialize map if needed (use direct constructor like PreferredSalonSearch)
+    if (!mapInstanceRef.current) {
+      try {
+        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+          zoom: 12,
+          center,
+          mapTypeControl: false,
+          fullscreenControl: false,
+          streetViewControl: false,
+        });
+      } catch (err) {
+        console.error('[VenueMap] Map constructor error:', err);
+        return;
+      }
+    } else {
+      mapInstanceRef.current.setCenter(center);
+    }
+
+    try {
+
+        // Clear existing markers
+        markersRef.current.forEach(({ marker }) => marker?.setMap(null));
+        markersRef.current = [];
+
+        // Add markers for each venue
+        const bounds = new window.google.maps.LatLngBounds();
+        
+        venues.forEach((venue, index) => {
+          const venueLocation = venue.address?.location;
+          if (!venueLocation) return;
+
+          const position = { lat: venueLocation.lat, lng: venueLocation.lon };
+          
+          const marker = new window.google.maps.Marker({
+            position,
+            map: mapInstanceRef.current,
+            title: venue.venue?.name || "Venue",
+            label: {
+              text: String(index + 1),
+              color: "#fff",
+              fontWeight: "bold",
+            },
+          });
+
+          const infoContent = `
+            <div style="padding: 8px; max-width: 250px;">
+              <p style="font-weight: 600; margin: 0 0 4px 0; font-size: 14px;">${venue.venue?.name || "Venue"}</p>
+              <p style="margin: 0 0 4px 0; font-size: 12px; color: #666;">${venue.address?.formatted || ""}</p>
+            </div>
+          `;
+
+          const infoWindow = new window.google.maps.InfoWindow({
+            content: infoContent,
+          });
+
+          marker.addListener("click", () => {
+            // Close all other info windows
+            markersRef.current.forEach(entry => {
+              if (entry.infoWindow) entry.infoWindow.close();
+            });
+            infoWindow.open(mapInstanceRef.current, marker);
+          });
+
+          markersRef.current.push({
+            marker,
+            infoWindow,
+            uuid: venue.venue?.uuid,
+          });
+
+          bounds.extend(position);
+        });
+
+        // Fit bounds with proper sequence: trigger resize first, then fit bounds
+        // This ensures the map has correct dimensions before calculating bounds
+        if (venues.length > 0) {
+          // Trigger initial resize to let map recalculate dimensions
+          window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
+          
+          // Small delay to let resize settle, then fit bounds
+          setTimeout(() => {
+            if (mapInstanceRef.current && venues.length > 0) {
+              try {
+                // Add padding to fitBounds to show full search area (100px on all sides)
+                // This prevents over-zooming when venues are clustered
+                mapInstanceRef.current.fitBounds(bounds, 100);
+                
+                // Optionally set a maximum zoom to avoid over-zooming on single venue
+                // Max zoom of 15 ensures we see the surrounding area
+                if (mapInstanceRef.current.getZoom() > 15) {
+                  mapInstanceRef.current.setZoom(15);
+                }
+                
+                // Trigger another resize after fitBounds to ensure proper rendering
+                window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
+              } catch (err) {
+                console.error('[VenueMap] fitBounds error:', err);
+              }
+            }
+          }, 100);
+        }
+    } catch (err) {
+      console.error('[VenueMap] Map error:', err);
+    }
+
+    return () => {
+      markersRef.current.forEach(({ marker }) => marker?.setMap(null));
+    };
+  }, [venues, selectedLocation]);
+
+  return <div ref={mapRef} className="w-full h-full min-h-screen" />;
+}
+
 export default function ServiceNameSearchClient({
-  serviceName,
+  serviceName = "",
   initialVenues = [],
+  initialFeaturedServices = [],
   initialLocationLabel = "",
   initialLocationLat = null,
   initialLocationLon = null,
@@ -42,6 +177,9 @@ export default function ServiceNameSearchClient({
   const router = useRouter();
   const [venues, setVenues] = React.useState(initialVenues);
   const [loading, setLoading] = React.useState(false);
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [hasMore, setHasMore] = React.useState(true);
   const [mapsReady, setMapsReady] = React.useState(false);
   const [expandedFilter, setExpandedFilter] = React.useState(null);
   const [searchDistance, setSearchDistance] = React.useState(initialDistance);
@@ -54,15 +192,21 @@ export default function ServiceNameSearchClient({
     Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
   );
 
+  // Featured services state
+  const [featuredServices, setFeaturedServices] = React.useState(initialFeaturedServices);
+  const [initialLoadFromFeatured, setInitialLoadFromFeatured] = React.useState(!serviceName && initialFeaturedServices.length > 0);
+  const [featuredLoading, setFeaturedLoading] = React.useState(!serviceName && initialFeaturedServices.length === 0);
+
   // Service search input state
-  const [serviceQuery, setServiceQuery] = React.useState(serviceName);
-  const [activeServiceName, setActiveServiceName] = React.useState(serviceName);
+  const [serviceQuery, setServiceQuery] = React.useState(serviceName || "");
+  const [activeServiceName, setActiveServiceName] = React.useState(serviceName || "");
   const [showServiceDropdown, setShowServiceDropdown] = React.useState(false);
   // Tracks which service groups are expanded: Set of "venueUuid::groupKey"
   const [expandedGroups, setExpandedGroups] = React.useState(new Set());
   const serviceSearchRef = React.useRef(null);
   const serviceDebounceRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
+  const loadMoreRef = React.useRef(null);
 
   const { options: filterOptions, selectedFilters, toggleFilter, clearFilters } = useSearchFilters();
   const { results: serviceResults, loading: serviceSearchLoading, search: searchServices } = useServiceSearch();
@@ -121,21 +265,77 @@ export default function ServiceNameSearchClient({
     }
   };
 
+  // Define fetchVenues here so handleServiceSelect can call it
+  const fetchVenues = React.useCallback(
+    async ({
+      location = selectedLocation,
+      distance = searchDistance,
+      filters = selectedFilters,
+      activeService,
+      page = 1,
+      append = false,
+    } = {}) => {
+      // Assign defaults if not provided
+      if (typeof activeService === 'undefined') activeService = activeServiceName;
+      const isInitialLoad = page === 1;
+      
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+      
+      try {
+        const params = {
+          lat: location?.lat,
+          lon: location?.lon,
+          distance,
+          category: filters.categories?.length ? filters.categories.join(",") : undefined,
+          audience: filters.audiences?.length ? filters.audiences.join(",") : undefined,
+          perPage: 4,
+          page,
+        };
+        if (activeService) {
+          params.service = activeService;
+        }
+        const response = await searchVenues(params);
+        const newVenues = response?.data || [];
+        
+        if (append) {
+          setVenues(prev => [...prev, ...newVenues]);
+        } else {
+          setVenues(newVenues);
+          setCurrentPage(1);
+        }
+        
+        // Check if there are more results
+        const totalResults = response?.total || 0;
+        const loadedSoFar = append ? venues.length + newVenues.length : newVenues.length;
+        setHasMore(loadedSoFar < totalResults);
+        
+        if (append) {
+          setCurrentPage(page);
+        }
+      } catch (err) {
+        if (!append) {
+          setVenues([]);
+        }
+        console.error('[ServiceNameSearchClient] fetchVenues error:', err);
+      } finally {
+        if (isInitialLoad) {
+          setLoading(false);
+        } else {
+          setIsLoadingMore(false);
+        }
+      }
+    },
+    [activeServiceName, selectedLocation, searchDistance, selectedFilters, venues.length]
+  );
+
   const handleServiceSelect = (service) => {
     setShowServiceDropdown(false);
     setServiceQuery(service.name);
     setActiveServiceName(service.name);
-    setActiveServiceName(service.name);
-    // Update URL silently — no navigation, results update client-side
-    const params = new URLSearchParams();
-    params.set("service", service.name);
-    if (selectedLocation?.address) params.set("loc", selectedLocation.address);
-    if (selectedLocation?.lat != null) params.set("lat", String(selectedLocation.lat));
-    if (selectedLocation?.lon != null) params.set("lon", String(selectedLocation.lon));
-    params.set("distance", searchDistance);
-    if (selectedFilters.categories?.length) params.set("categories", selectedFilters.categories.join(","));
-    if (selectedFilters.audiences?.length) params.set("audiences", selectedFilters.audiences.join(","));
-    router.replace(`/search/service?${params.toString()}`, { scroll: false });
     // Fetch venues for the newly selected service
     void fetchVenues({ activeService: service.name });
   };
@@ -151,6 +351,35 @@ export default function ServiceNameSearchClient({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Infinite scroll observer
+  React.useEffect(() => {
+    if (!hasMore || isLoadingMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore && !loading) {
+          void fetchVenues({
+            page: currentPage + 1,
+            append: true,
+          });
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    // Store ref in local variable to avoid stale closure in cleanup
+    const currentLoadMoreRef = loadMoreRef.current;
+    if (currentLoadMoreRef) {
+      observer.observe(currentLoadMoreRef);
+    }
+
+    return () => {
+      if (currentLoadMoreRef) {
+        observer.unobserve(currentLoadMoreRef);
+      }
+    };
+  }, [hasMore, isLoadingMore, loading, currentPage, fetchVenues]);
+
   // Initialize location: if no lat/lon, geocode location label or default to "London, UK"
   React.useEffect(() => {
     if (isDefaultLocationLoaded) return; // Only run once
@@ -163,8 +392,8 @@ export default function ServiceNameSearchClient({
           return;
         }
 
-        // If Google Maps or importLibrary not ready yet, wait and try again
-        if (!window.google?.maps || !window.google.maps.importLibrary) {
+        // If Google Maps not ready yet, wait and try again
+        if (!window.google?.maps) {
           setTimeout(initializeLocation, 100);
           return;
         }
@@ -172,8 +401,7 @@ export default function ServiceNameSearchClient({
         // Determine what to geocode: use location label if provided, otherwise default to "London, UK"
         const addressToGeocode = initialLocationLabel || "London, UK";
 
-        const { Geocoder } = await window.google.maps.importLibrary("geocoding");
-        geocoderRef.current = new Geocoder();
+        geocoderRef.current = new window.google.maps.Geocoder();
 
         // Geocode the address
         const results = await new Promise((resolve, reject) => {
@@ -230,6 +458,65 @@ export default function ServiceNameSearchClient({
     seededRef.current = true;
   }, [filterOptions, initialCategories, initialAudiences, selectedFilters, toggleFilter]);
 
+  // Client-side fallback: fetch featured services if not provided from SSR
+  const featuredFetchedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (featuredFetchedRef.current) return;
+    if (serviceName) return; // Only fetch in browse mode
+    if (featuredServices.length > 0) { // Already have them from SSR
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFeaturedLoading(false);
+      featuredFetchedRef.current = true;
+      return;
+    }
+
+    const fetchFeaturedServices = async () => {
+      try {
+        // Build URL with query parameters (location optional for featured services)
+        const params = new URLSearchParams();
+        // Pass location if available, otherwise no params (fallback to all services)
+        if (selectedLocation?.lat && selectedLocation?.lon) {
+          params.set('lat', String(selectedLocation.lat));
+          params.set('lon', String(selectedLocation.lon));
+          params.set('distance', searchDistance);
+        }
+
+        const url = `/api/search/featured-services${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('[ServiceNameSearchClient] Fetching featured services from:', url);
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+          let errorMessage = `HTTP ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch {
+            // If body isn't JSON, use the status message
+          }
+          throw new Error(`Failed to fetch featured services: ${errorMessage}`);
+        }
+
+        const data = await response.json();
+        const services = data?.data || [];
+        
+        setFeaturedServices(services);
+        setInitialLoadFromFeatured(services.length > 0);
+        setFeaturedLoading(false);
+      } catch (err) {
+        console.error('[ServiceNameSearchClient] Failed to fetch featured services:', err.message);
+        setFeaturedLoading(false);
+      }
+    };
+
+    featuredFetchedRef.current = true;
+    void fetchFeaturedServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceName, featuredServices]);
+
   // Pre-fetch services for the initial serviceName when component mounts
   const serviceFetchedRef = React.useRef(false);
   React.useEffect(() => {
@@ -253,43 +540,45 @@ export default function ServiceNameSearchClient({
     });
   }, [serviceName, selectedLocation, searchDistance, searchServices, initialCategories, initialAudiences]);
 
+  // Auto-select first featured service on page load (Browse mode)
+  const featuredInitializedRef = React.useRef(false);
+  const autoFetchVenuesRef = React.useRef(false);
+  React.useEffect(() => {
+    if (featuredInitializedRef.current) return;
+    if (!initialLoadFromFeatured) return;
+    if (!isDefaultLocationLoaded) return; // Wait for location to be loaded
+    if (featuredServices.length === 0) return;
+
+    featuredInitializedRef.current = true;
+    autoFetchVenuesRef.current = true; // Mark as fetched to prevent double-fetch in the autoFetch effect
+    const firstFeatured = featuredServices[0];
+    
+    // Set service state - React 18 batches these updates automatically
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveServiceName(firstFeatured.name);
+    setServiceQuery(firstFeatured.name);
+    
+    // Immediately fetch venues for the first featured service
+    void fetchVenues({ activeService: firstFeatured.name });
+  }, [initialLoadFromFeatured, isDefaultLocationLoaded, featuredServices, selectedLocation?.address, selectedLocation?.lat, selectedLocation?.lon, searchDistance, router, fetchVenues]);
+
+  // Fetch venues when activeServiceName changes (including auto-selected featured service)
+  React.useEffect(() => {
+    if (!activeServiceName) return;
+    if (!isDefaultLocationLoaded) return;
+    
+    // Skip on initial render to avoid double-fetch
+    if (!autoFetchVenuesRef.current) {
+      autoFetchVenuesRef.current = true;
+      return;
+    }
+    
+    void fetchVenues({ activeService: activeServiceName });
+  }, [activeServiceName, isDefaultLocationLoaded, fetchVenues]);
+
   const hasActiveFilters =
     (selectedFilters.categories?.length || 0) > 0 ||
     (selectedFilters.audiences?.length || 0) > 0;
-
-  const fetchVenues = React.useCallback(
-    async ({
-      location = selectedLocation,
-      distance = searchDistance,
-      filters = selectedFilters,
-      activeService,
-    } = {}) => {
-      // Assign defaults if not provided
-      if (typeof activeService === 'undefined') activeService = activeServiceName;
-      setLoading(true);
-      try {
-        const params = {
-          lat: location?.lat,
-          lon: location?.lon,
-          distance,
-          category: filters.categories?.length ? filters.categories.join(",") : undefined,
-          audience: filters.audiences?.length ? filters.audiences.join(",") : undefined,
-          perPage: 48,
-        };
-        if (activeService) {
-          params.service = activeService;
-        }
-        const response = await searchVenues(params);
-        setVenues(response?.data || []);
-      } catch (err) {
-        setVenues([]);
-        console.error('[ServiceNameSearchClient] fetchVenues error:', err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [activeServiceName, selectedLocation, searchDistance, selectedFilters]
-  );
 
   const handleLocationChange = (locationData) => {
     setSelectedLocation(locationData);
@@ -312,17 +601,18 @@ export default function ServiceNameSearchClient({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 pb-16">
+    <div className="w-full min-h-screen bg-gray-50">
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
         strategy="lazyOnload"
         onLoad={() => setMapsReady(true)}
       />
 
-      {/* Hero-style pill search bar — centered */}
-      <div className="max-w-2xl mx-auto mb-8">
-        <div ref={serviceSearchRef} className="relative">
-          <div className="flex items-center bg-white rounded-full border border-gray-200 px-2 sm:px-4 py-0.5 shadow-sm overflow-visible">
+      {/* Full-width search bar */}
+      <div className="w-full bg-white border-b border-gray-200 px-4 py-4 sticky top-16 z-30">
+        <div className="max-w-2xl mx-auto">
+          <div ref={serviceSearchRef} className="relative">
+            <div className="flex items-center bg-white rounded-full border border-gray-200 px-2 sm:px-4 py-0.5 shadow-sm overflow-visible">
             {/* Service search — 60% */}
             <div className="w-3/5 flex items-center">
               <div className="relative flex-1 min-w-0">
@@ -332,7 +622,7 @@ export default function ServiceNameSearchClient({
                   value={serviceQuery}
                   onChange={handleServiceQueryChange}
                   onFocus={() => setShowServiceDropdown(true)}
-                  placeholder="Search Services or Salons..."
+                  placeholder="Search Services..."
                   className="w-full h-8 sm:h-9 pl-6 sm:pl-8 pr-6 sm:pr-8 rounded-full border-0 bg-transparent text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:outline-none transition-all duration-200"
                 />
                 {serviceQuery && (
@@ -340,8 +630,8 @@ export default function ServiceNameSearchClient({
                     type="button"
                     onClick={() => {
                       setServiceQuery('');
-                      setVenues([]);
                       setShowServiceDropdown(false);
+                      // Don't clear venues immediately - let them show in disabled state while loading
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
                     aria-label="Clear search"
@@ -525,198 +815,218 @@ export default function ServiceNameSearchClient({
                     </button>
                   ))}
                 </>
-              ) : serviceQuery.trim().length >= 1 ? (
+              ) : serviceQuery.trim().length >= 1 && !featuredServices.some(s => s.name.toLowerCase() === serviceQuery.trim().toLowerCase()) ? (
                 <div className="p-4 text-center text-sm text-gray-500">No services found for &quot;{serviceQuery}&quot;</div>
+              ) : featuredServices.length > 0 ? (
+                // Show featured services when: query matches featured service OR query is empty
+                <>
+                  <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-100">Featured Services</div>
+                  {featuredServices.map((service, i) => (
+                    <button
+                      key={service.uuid || service.name || i}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleServiceSelect(service)}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <p className="text-sm font-semibold text-gray-900">{service.name}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-xs text-gray-500">
+                          {Array.isArray(service.categories) && service.categories.length > 0
+                            ? service.categories.join(", ")
+                            : service.category || ""}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </>
               ) : null}
             </div>
           )}
         </div>
       </div>
+      </div>
 
-      {/* Result count (only venues with at least one matched service) */}
-      {!loading && venues.length > 0 && (() => {
-        const venuesWithMatch = venues.filter(venue => {
-          const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
-            if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
-            if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
-            return true;
-          });
-          return matched.length > 0;
-        });
-        if (venuesWithMatch.length === 0) return null;
-        return (
-          <p className="text-sm text-gray-500 mb-4">
-            {venuesWithMatch.length} {venuesWithMatch.length === 1 ? "venue" : "venues"} offer &quot;{activeServiceName}&quot;
-            {hasActiveFilters && " with selected filters"}
-          </p>
-        );
-      })()}
-
-      {/* Venue cards */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20 text-gray-500">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent mr-3" />
-          Searching venues...
-        </div>
-      ) : venues.length === 0 ? (
-        <div className="py-20 text-center text-gray-500">
-          No venues found offering &quot;{activeServiceName}&quot;
-          {hasActiveFilters && " with the selected filters"}.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {venues.map((venue, vi) => {
-            const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
-              if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
-              if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
-              return true;
-            });
-            if (matched.length === 0) return null;
-
-            const address =
-              venue.address?.formatted ||
-              [venue.address?.line1, venue.address?.line2, venue.address?.postcode]
-                .filter(Boolean)
-                .join(", ");
-
-            let distanceKm = null;
-            const vLat = venue.address?.location?.lat;
-            const vLon = venue.address?.location?.lon;
-            if (selectedLocation?.lat && vLat && vLon) {
-              distanceKm = calcDistance(
-                selectedLocation.lat,
-                selectedLocation.lon,
-                vLat,
-                vLon
-              ).toFixed(1);
-            }
-
-            return (
-              <div
-                key={venue.venue?.uuid || vi}
-                className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
-              >
-                {/* Venue header */}
-                <div className="flex items-center gap-4 px-4 py-4 border-b border-gray-100">
-                  <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-                    {venue.primary_image?.url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={venue.primary_image.url}
-                        alt={venue.venue?.name || ""}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.target.style.display = "none"; }}
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 rounded-lg" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
-                    <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
-                      <MapPin className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">{address}</span>
-                      {distanceKm && (
-                        <span className="flex-shrink-0 ml-2 font-medium text-gray-700">
-                          {distanceKm} km
-                        </span>
-                      )}
-                    </div>
-                  </div>
+      {/* Featured Services Pills — Show in browse mode (loading or loaded) — Stay visible when featured service is selected */}
+      {initialLoadFromFeatured && (
+        <>
+          {featuredLoading ? (
+            // Loading state
+            <div className="px-4 py-6 border-b border-gray-200 bg-white">
+              <div className="max-w-7xl mx-auto">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Popular Searches</h3>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="h-8 bg-gray-200 rounded-full animate-pulse"
+                      style={{ width: `${80 + i * 20}px` }}
+                    />
+                  ))}
                 </div>
+              </div>
+            </div>
+          ) : featuredServices.length > 0 ? (
+            // Loaded state with pills
+            <div className="px-4 py-6 border-b border-gray-200 bg-white">
+              <div className="max-w-7xl mx-auto">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Popular Searches</h3>
+                <div className="flex flex-wrap gap-2">
+                  {featuredServices.map((service) => (
+                    <button
+                      key={service.uuid || service.name}
+                      type="button"
+                      onClick={() => {
+                        setServiceQuery(service.name);
+                        setActiveServiceName(service.name);
+                        setShowServiceDropdown(false);
+                        
+                        // Fetch venues with all active filters
+                        void fetchVenues({ activeService: service.name });
+                      }}
+                      className={cn(
+                        "px-4 py-2 rounded-full text-sm font-medium transition-all border",
+                        activeServiceName === service.name
+                          ? "bg-black text-white border-black"
+                          : "border-gray-300 text-gray-700 bg-white hover:border-gray-400 hover:bg-gray-50"
+                      )}
+                    >
+                      {service.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </>
+      )}
 
-                {/* All matched services collapsed into one group per venue */}
-                <div className="divide-y divide-gray-100">
-                  {groupMatchedServices(matched).map((group) => {
-                    const venueUuid = venue.venue?.uuid || "";
-                    const groupId = `${venueUuid}::${group.key}`;
-                    const isExpanded = expandedGroups.has(groupId);
+      {/* 2-Column Layout: Venues List (left) + Map (right) — Only show when service is selected */}
+      {activeServiceName && (
+        <div className="flex flex-1 overflow-hidden h-[calc(100vh-200px)]">
+          {/* Left: Venues List - scrollable */}
+          <div className="flex-1 overflow-y-auto px-4 py-6">
+          <div className="max-w-2xl mx-auto">
+            {/* Loading indicator when refreshing results */}
+            {loading && venues.length > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                <div className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-blue-700">Searching for new results...</span>
+              </div>
+            )}
 
-                    if (group.items.length === 1) {
-                      const service = group.items[0];
-                      const meta = [service.category, service.audience].filter(Boolean).join(" · ");
-                      return (
-                        <button
-                          key={group.key}
-                          type="button"
-                          onClick={() => handleServiceClick(venue, service)}
-                          className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {service.display_name || service.name}
-                            </p>
-                            {meta && (
-                              <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end flex-shrink-0 gap-0.5 text-right">
-                            {service.price != null && (
-                              <span className="text-sm font-semibold text-gray-900">
-                                {formatMoney(service.price)}
-                              </span>
-                            )}
-                            {service.duration_minutes != null && (
-                              <span className="text-xs text-gray-500">
-                                {service.duration_minutes} min
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    }
+            {/* Result count (only venues with at least one matched service) */}
+            {!loading && venues.length > 0 && (() => {
+              const venuesWithMatch = venues.filter(venue => {
+                const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
+                  if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
+                  if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
+                  return true;
+                });
+                return matched.length > 0;
+              });
+              if (venuesWithMatch.length === 0) return null;
+              return (
+                <p className="text-sm text-gray-500 mb-4">
+                  {venuesWithMatch.length} {venuesWithMatch.length === 1 ? "venue" : "venues"} offer &quot;{activeServiceName}&quot;
+                  {hasActiveFilters && " with selected filters"}
+                </p>
+              );
+            })()}
 
-                    // Multi-variant group — collapsible
-                    const prices = group.items
-                      .map((s) => Number(s.price))
-                      .filter((p) => !Number.isNaN(p));
-                    const minPrice = prices.length ? Math.min(...prices) : null;
+            {/* Venue cards */}
+            {venues.length === 0 ? (
+              <div className="py-20 text-center text-gray-500">
+                {activeServiceName ? (
+                  <>
+                    No venues found offering &quot;{activeServiceName}&quot;
+                    {hasActiveFilters && " with the selected filters"}.
+                  </>
+                ) : (
+                  <>Select a service to see results</>
+                )}
+              </div>
+            ) : (
+              <div className={cn("space-y-4 transition-opacity duration-200", loading && "opacity-50 pointer-events-none")}>
+                {venues.map((venue, vi) => {
+                  const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
+                    if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
+                    if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
+                    return true;
+                  });
+                  if (matched.length === 0) return null;
 
-                    return (
-                      <div key={group.key}>
-                        {/* Group header */}
-                        <button
-                          type="button"
-                          onClick={() => toggleGroup(venueUuid, group.key)}
-                          className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
-                        >
-                          <div className="min-w-0 flex-1 flex items-center gap-2">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {group.label}
-                            </p>
-                            <span className="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 flex-shrink-0">
-                              {group.items.length}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {minPrice != null && (
-                              <span className="text-sm font-semibold text-gray-900">
-                                From {formatMoney(minPrice)}
-                              </span>
-                            )}
-                            <ChevronDown
-                              className={cn(
-                                "w-4 h-4 text-gray-400 transition-transform",
-                                isExpanded && "rotate-180"
-                              )}
+                  const address =
+                    venue.address?.formatted ||
+                    [venue.address?.line1, venue.address?.line2, venue.address?.postcode]
+                      .filter(Boolean)
+                      .join(", ");
+
+                  let distanceKm = null;
+                  const vLat = venue.address?.location?.lat;
+                  const vLon = venue.address?.location?.lon;
+                  if (selectedLocation?.lat && vLat && vLon) {
+                    distanceKm = calcDistance(
+                      selectedLocation.lat,
+                      selectedLocation.lon,
+                      vLat,
+                      vLon
+                    ).toFixed(1);
+                  }
+
+                  return (
+                    <div
+                      key={venue.venue?.uuid || vi}
+                      className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+                    >
+                      {/* Venue header */}
+                      <div className="flex items-center gap-4 px-4 py-4 border-b border-gray-100">
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
+                          {venue.primary_image?.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={venue.primary_image.url}
+                              alt={venue.venue?.name || ""}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.target.style.display = "none"; }}
                             />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 rounded-lg" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
+                          <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
+                            <MapPin className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{address}</span>
+                            {distanceKm && (
+                              <span className="flex-shrink-0 ml-2 font-medium text-gray-700">
+                                {distanceKm} km
+                              </span>
+                            )}
                           </div>
-                        </button>
+                        </div>
+                      </div>
 
-                        {/* Expanded variants */}
-                        {isExpanded && (
-                          <div className="bg-gray-50 divide-y divide-gray-100">
-                            {group.items.map((service, si) => {
-                              const meta = [service.category, service.audience].filter(Boolean).join(" · ");
-                              return (
+                      {/* All matched services collapsed into one group per venue */}
+                      <div className="divide-y divide-gray-100">
+                        {groupMatchedServices(matched).map((group) => {
+                          const venueUuid = venue.venue?.uuid || "";
+                          const groupId = `${venueUuid}::${group.key}`;
+                          const isExpanded = expandedGroups.has(groupId);
+
+                          if (group.items.length === 1) {
+                            const service = group.items[0];
+                            const meta = [service.category, service.audience].filter(Boolean).join(" · ");
+                            return (
                               <button
-                                key={service.uuid || si}
+                                key={group.key}
                                 type="button"
                                 onClick={() => handleServiceClick(venue, service)}
-                                className="w-full pl-8 pr-4 py-2.5 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
+                                className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
                               >
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-sm text-gray-700 truncate">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
                                     {service.display_name || service.name}
                                   </p>
                                   {meta && (
@@ -736,19 +1046,126 @@ export default function ServiceNameSearchClient({
                                   )}
                                 </div>
                               </button>
-                              );
-                            })}
-                          </div>
-                        )}
+                            );
+                          }
+
+                          // Multi-variant group — collapsible
+                          const prices = group.items
+                            .map((s) => Number(s.price))
+                            .filter((p) => !Number.isNaN(p));
+                          const minPrice = prices.length ? Math.min(...prices) : null;
+
+                          return (
+                            <div key={group.key}>
+                              {/* Group header */}
+                              <button
+                                type="button"
+                                onClick={() => toggleGroup(venueUuid, group.key)}
+                                className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+                              >
+                                <div className="min-w-0 flex-1 flex items-center gap-2">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {group.label}
+                                  </p>
+                                  <span className="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 flex-shrink-0">
+                                    {group.items.length}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {minPrice != null && (
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      From {formatMoney(minPrice)}
+                                    </span>
+                                  )}
+                                  <ChevronDown
+                                    className={cn(
+                                      "w-4 h-4 text-gray-400 transition-transform",
+                                      isExpanded && "rotate-180"
+                                    )}
+                                  />
+                                </div>
+                              </button>
+
+                              {/* Expanded variants */}
+                              {isExpanded && (
+                                <div className="bg-gray-50 divide-y divide-gray-100">
+                                  {group.items.map((service, si) => {
+                                    const meta = [service.category, service.audience].filter(Boolean).join(" · ");
+                                    return (
+                                    <button
+                                      key={service.uuid || si}
+                                      type="button"
+                                      onClick={() => handleServiceClick(venue, service)}
+                                      className="w-full pl-8 pr-4 py-2.5 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm text-gray-700 truncate">
+                                          {service.display_name || service.name}
+                                        </p>
+                                        {meta && (
+                                          <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col items-end flex-shrink-0 gap-0.5 text-right">
+                                        {service.price != null && (
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            {formatMoney(service.price)}
+                                          </span>
+                                        )}
+                                        {service.duration_minutes != null && (
+                                          <span className="text-xs text-gray-500">
+                                            {service.duration_minutes} min
+                                          </span>
+                                        )}
+                                      </div>
+                                    </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            )}
+
+        {/* Load More Section */}
+        {hasMore && !loading && venues.length > 0 && (
+          <div ref={loadMoreRef} className="py-6 text-center">
+            {isLoadingMore && (
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                Loading more venues...
+              </div>
+            )}
+          </div>
+        )}
+          </div>
+          </div>
+
+        {/* Right Column: Google Map */}
+        <div className="w-1/2 bg-white border-l border-gray-200 h-full overflow-hidden">
+          {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) && venues.length > 0 ? (
+            <VenueMap
+              venues={venues}
+              selectedLocation={selectedLocation}
+              serviceName={activeServiceName}
+            />
+          ) : (mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
+            <div className="w-full h-full flex items-center justify-center text-gray-500">
+              No venues to display
+            </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-500">
+              Loading map...
+            </div>
+          )}
         </div>
-      )}
+      </div>
+    )}
     </div>
-  );
-}
+  );}

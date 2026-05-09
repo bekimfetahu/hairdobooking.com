@@ -725,34 +725,34 @@ export default function Hero({
           )}
 
           {/* Main Heading */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] mb-6 px-2 sm:px-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6 px-2 sm:px-4 text-center">
             <div>Your <span className="text-accent">perfect</span> look</div>
             <div>{renderTitleWithRedWord('booked in seconds')}</div>
             {/* Red accent underline */}
             <span
-              className="block w-24 h-1 rounded-full mt-4 bg-primary"
+              className="block w-24 h-1 rounded-full mt-4 bg-primary mx-auto"
             />
           </h1>
 
           {/* Subtitle */}
-          <div className="mb-10 px-2 sm:px-4">
+          <div className="mb-10 px-2 sm:px-4 text-center">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-              Ready to Find Your Perfect Salon?
+              Ready to Find Your Salon?
             </h2>
-            <p className="text-base sm:text-lg text-gray-700 leading-relaxed mb-6 max-w-lg">
-              Search hundreds of salons, compare services, and book your next appointment in seconds.
+            <p className="text-base sm:text-lg text-gray-700 leading-relaxed mb-6 max-w-lg mx-auto">
+              Search hundreds of salons, compare services, and book your next appointment.
             </p>
             {/* CTA Buttons */}
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-3 flex-wrap justify-center">
               <button
                 onClick={() => router.push('/salon/search')}
-                className="px-6 py-2.5 bg-black text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                className="px-6 py-2.5 bg-black text-white font-medium rounded-full hover:bg-gray-800 transition-colors"
               >
                 Explore Salons
               </button>
               <button
                 onClick={() => router.push('/search/service')}
-                className="px-6 py-2.5 border-2 border-black text-black font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-6 py-2.5 border-2 border-black text-black font-medium rounded-full hover:bg-gray-50 transition-colors"
               >
                 Browse Services
               </button>
