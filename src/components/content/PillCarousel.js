@@ -45,10 +45,10 @@ export default function PillCarousel({
             <button
               key={pill.id || index}
               onClick={() => onPillClick(pill)}
-              className={`flex-shrink-0 cursor-pointer inline-flex items-center justify-center rounded-full font-normal gap-1 transition ease-in-out duration-150 text-xs px-3 py-1 whitespace-nowrap border border-gray-200 text-black outline-none ${
+              className={`flex-shrink-0 cursor-pointer inline-flex items-center justify-center rounded-full font-normal gap-1 transition ease-in-out duration-150 text-xs px-3 py-1 whitespace-nowrap border outline-none ${
                 isActive
-                  ? 'bg-gray-200 hover:bg-gray-250'
-                  : 'bg-gray-100 hover:bg-gray-150 active:bg-gray-175'
+                  ? 'bg-black text-white border-black hover:bg-gray-800'
+                  : 'bg-gray-100 text-black border-gray-200 hover:bg-gray-150 active:bg-gray-175'
               }`}
             >
               {pill.icon && <span className="text-base">{pill.icon}</span>}

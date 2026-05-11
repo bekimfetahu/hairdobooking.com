@@ -666,12 +666,12 @@ export default function Hero({
         }}
       />
 
-      <div className="relative max-w-6xl mx-auto px-3 sm:px-6 flex flex-col lg:flex-row items-center gap-6">
-        {/* Left Content */}
-        <div className="flex-1 max-w-4xl">
+      {/* Search Bar - Top, Centered, Spanning Full Width */}
+      <div className="relative w-full flex justify-center px-3 sm:px-6 mb-8">
+        <div className="max-w-4xl w-full">
           {/* Search Input */}
           {showSearchInput && (
-            <div ref={searchRef} className="relative mb-10">
+            <div ref={searchRef} className="relative">
               {/* Desktop Layout: Inline */}
               <div className="hidden sm:flex h-11 items-center bg-white rounded-full border border-gray-200 shadow-sm px-2">
                 {/* Search Input */}
@@ -735,10 +735,10 @@ export default function Hero({
               </div>
 
               {/* Mobile Layout: Stacked */}
-              <div className="sm:hidden space-y-3">
+              <div className="sm:hidden space-y-2">
                 {/* Search Input */}
-                <div className="h-10 flex items-center bg-white rounded-full border border-gray-200 px-3 shadow-sm">
-                  <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
+                <div className="h-8 flex items-center bg-white rounded-md border border-black px-2 shadow-sm">
+                  <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Services or Salons..."
@@ -749,24 +749,24 @@ export default function Hero({
                       setSelectedServiceOrSalon(false);
                       setShowDropdown(true);
                     }}
-                    className="w-full bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
+                    className="w-full bg-transparent outline-none text-xs text-gray-700 placeholder-gray-400"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-2"
+                      className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-1"
                       aria-label="Clear search"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
                 {/* Location Input + Search Button - Same Row */}
-                <div className="h-10 flex items-center gap-2">
+                <div className="h-8 flex items-center gap-1.5">
                   {/* Location Input */}
-                  <div className="flex-1 flex items-center bg-white rounded-full border border-gray-200 px-3 shadow-sm">
+                  <div className="flex-1 flex items-center bg-white rounded-md border border-black px-2 py-1 shadow-sm">
                     <LocationSearch
                       value={selectedLocation?.address || ''}
                       mapsReady={mapsReady}
@@ -787,7 +787,7 @@ export default function Hero({
                   <button
                     type="button"
                     onClick={handleSearchButtonClick}
-                    className="h-10 px-4 rounded-full border border-gray-200 bg-[#f8f8f8] hover:bg-gray-100 transition flex items-center justify-center text-sm font-medium text-gray-800 shrink-0"
+                    className="h-8 px-3 rounded-md border border-black bg-black text-white hover:bg-gray-800 transition flex items-center justify-center text-xs font-medium shrink-0"
                     aria-label="Search"
                   >
                     Search
@@ -811,7 +811,13 @@ export default function Hero({
               )}
             </div>
           )}
+        </div>
+      </div>
 
+      {/* Content + Image Layout - 2 Columns Below Search */}
+      <div className="relative max-w-6xl mx-auto px-3 sm:px-6 flex flex-col lg:flex-row items-center gap-6">
+        {/* Left Column - Text & Buttons */}
+        <div className="flex-1">
           {/* Main Heading */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6 px-2 sm:px-4 text-center text-black">
             <div>Your <span className="text-accent">perfect</span> look</div>
@@ -831,16 +837,16 @@ export default function Hero({
               Search hundreds of salons, compare services, and book your next appointment.
             </p>
             {/* CTA Buttons */}
-            <div className="flex gap-3 flex-wrap justify-center">
+            <div className="flex gap-2 sm:gap-3 flex-wrap justify-center">
               <button
                 onClick={() => router.push('/salon/search')}
-                className="px-6 py-2.5 bg-black text-white font-medium rounded-full hover:bg-gray-800 transition-colors"
+                className="px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-base bg-black text-white font-medium rounded-full hover:bg-gray-800 transition-colors"
               >
                 Explore Salons
               </button>
               <button
                 onClick={() => router.push('/search/service')}
-                className="px-6 py-2.5 border-2 border-black text-black font-medium rounded-full hover:bg-gray-50 transition-colors"
+                className="px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-base border-2 border-black text-black font-medium rounded-full hover:bg-gray-50 transition-colors"
               >
                 Browse Services
               </button>

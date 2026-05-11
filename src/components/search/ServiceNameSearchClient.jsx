@@ -3,9 +3,10 @@
 import React from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { Filter, ChevronDown, MapPin, Search } from "lucide-react";
+import { Filter, ChevronDown, MapPin, Search, Clock, ChevronUp } from "lucide-react";
 import LocationSearch from "@/components/search/LocationSearch";
 import PillCarousel from "@/components/content/PillCarousel";
+import VenueSearchResultCard from "@/components/search/VenueSearchResultCard";
 import { useSearchFilters } from "@/hooks/useSearchFilters";
 import { useServiceSearch } from "@/hooks/useServiceSearch";
 import { searchVenues } from "@/services/search/searchService";
@@ -55,6 +56,12 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
     // Initialize map if needed (use direct constructor like PreferredSalonSearch)
     if (!mapInstanceRef.current) {
       try {
+        // Ensure Map constructor is available
+        if (typeof window.google?.maps?.Map !== 'function') {
+          console.warn('[VenueMap] Map constructor not ready yet');
+          return;
+        }
+        
         mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
           zoom: 12,
           center,
@@ -75,6 +82,12 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
         // Clear existing markers
         markersRef.current.forEach(({ marker }) => marker?.setMap(null));
         markersRef.current = [];
+
+        // Ensure Marker and LatLngBounds are available
+        if (typeof window.google?.maps?.Marker !== 'function' || typeof window.google?.maps?.LatLngBounds !== 'function') {
+          console.warn('[VenueMap] Marker or LatLngBounds not ready yet');
+          return;
+        }
 
         // Add markers for each venue
         const bounds = new window.google.maps.LatLngBounds();
@@ -102,6 +115,12 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
               <p style="margin: 0; font-size: 12px; color: #666;">${venue.address?.formatted || ""}</p>
             </div>
           `;
+
+          // Ensure InfoWindow is available
+          if (typeof window.google?.maps?.InfoWindow !== 'function') {
+            console.warn('[VenueMap] InfoWindow not ready yet');
+            return;
+          }
 
           const infoWindow = new window.google.maps.InfoWindow({
             content: infoContent,
@@ -137,33 +156,55 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
           bounds.extend(position);
         });
 
-        // Fit bounds with proper sequence: trigger resize first, then fit bounds
-        // This ensures the map has correct dimensions before calculating bounds
-        if (venues.length > 0) {
-          // Trigger initial resize to let map recalculate dimensions
+        // Fit bounds with proper sequence
+        if (venues.length > 0 && selectedLocation) {
+          // Single resize before fitBounds (don't trigger after)
           window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
           
-          // Small delay to let resize settle, then fit bounds
           setTimeout(() => {
             if (mapInstanceRef.current && venues.length > 0) {
               try {
-                // Add padding to fitBounds to show full search area (100px on all sides)
-                // This prevents over-zooming when venues are clustered
-                mapInstanceRef.current.fitBounds(bounds, 100);
+                // Parse searchDistance (e.g., "10km" -> 10)
+                const distanceMatch = (searchDistance || "10km").match(/(\d+)/);
+                const distanceKm = distanceMatch ? parseInt(distanceMatch[1]) : 10;
+                const totalRadiusKm = distanceKm + 5; // Add 5km buffer
+
+                // Create a bounds around the search location with the specified radius
+                const R = 6371; // Earth's radius in km
+                const lat = (selectedLocation.lat * Math.PI) / 180;
+                const lon = (selectedLocation.lon * Math.PI) / 180;
+                const d = totalRadiusKm / R;
+
+                const searchBounds = new window.google.maps.LatLngBounds();
                 
-                // Optionally set a maximum zoom to avoid over-zooming on single venue
-                // Max zoom of 15 ensures we see the surrounding area
-                if (mapInstanceRef.current.getZoom() > 15) {
-                  mapInstanceRef.current.setZoom(15);
-                }
-                
-                // Trigger another resize after fitBounds to ensure proper rendering
-                window.google.maps.event.trigger(mapInstanceRef.current, 'resize');
+                // Add points around the search location to define the radius
+                const offsetLat = (d * 180) / Math.PI;
+                const offsetLon = (d * 180) / (Math.PI * Math.cos(lat));
+
+                searchBounds.extend(new window.google.maps.LatLng(
+                  selectedLocation.lat + offsetLat,
+                  selectedLocation.lon
+                ));
+                searchBounds.extend(new window.google.maps.LatLng(
+                  selectedLocation.lat - offsetLat,
+                  selectedLocation.lon
+                ));
+                searchBounds.extend(new window.google.maps.LatLng(
+                  selectedLocation.lat,
+                  selectedLocation.lon + offsetLon
+                ));
+                searchBounds.extend(new window.google.maps.LatLng(
+                  selectedLocation.lat,
+                  selectedLocation.lon - offsetLon
+                ));
+
+                // Fit to search bounds (will show the search radius with buffer)
+                mapInstanceRef.current.fitBounds(searchBounds, 50);
               } catch (err) {
                 console.error('[VenueMap] fitBounds error:', err);
               }
             }
-          }, 100);
+          }, 50);
         }
     } catch (err) {
       console.error('[VenueMap] Map error:', err);
@@ -250,6 +291,9 @@ export default function ServiceNameSearchClient({
   // Mobile map bottom sheet state
   const [showMobileMap, setShowMobileMap] = React.useState(false);
 
+  // Map visibility toggle
+  const [showMap, setShowMap] = React.useState(false);
+
   // Service search input state
   const [serviceQuery, setServiceQuery] = React.useState(serviceName || "");
   const [activeServiceName, setActiveServiceName] = React.useState(serviceName || "");
@@ -257,6 +301,8 @@ export default function ServiceNameSearchClient({
   const [selectedServiceOrSalon, setSelectedServiceOrSalon] = React.useState(false); // Track if service/salon is selected
   // Tracks which service groups are expanded: Set of "venueUuid::groupKey"
   const [expandedGroups, setExpandedGroups] = React.useState(new Set());
+  // Tracks which venue has opening hours expanded: Set of venueUuid
+  const [expandedOpeningHours, setExpandedOpeningHours] = React.useState(new Set());
   const serviceSearchRef = React.useRef(null);
   const serviceDebounceRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
@@ -708,8 +754,38 @@ export default function ServiceNameSearchClient({
     });
   };
 
+  const getTodayDayName = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[new Date().getDay()];
+  };
+
+  const getTodayOpeningHours = (hours) => {
+    if (!hours || !Array.isArray(hours) || hours.length === 0) return null;
+    const todayDay = getTodayDayName();
+    const todayHours = hours.find(h => h.day === todayDay);
+    return todayHours;
+  };
+
+  const formatTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'pm' : 'am';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}${minutes === '00' ? '' : ':' + minutes}${ampm}`;
+  };
+
+  const toggleOpeningHours = (venueUuid) => {
+    setExpandedOpeningHours((prev) => {
+      const next = new Set(prev);
+      if (next.has(venueUuid)) next.delete(venueUuid);
+      else next.add(venueUuid);
+      return next;
+    });
+  };
+
   return (
-    <div className="w-full min-h-screen bg-gray-50">
+    <div className="w-full min-h-screen">
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
         strategy="lazyOnload"
@@ -717,10 +793,10 @@ export default function ServiceNameSearchClient({
       />
 
       {/* Full-width search bar */}
-      <div className="w-full flex justify-center p-4 sticky top-16 z-30">
+      <div className="w-full flex justify-center p-4 z-30">
         <div className="max-w-4xl w-full">
           <div ref={serviceSearchRef} className="relative">
-            <div className="w-full h-11 bg-white rounded-full shadow-sm border border-gray-200 flex items-center px-2">
+            <div className="hidden sm:flex w-full h-11 bg-white rounded-full shadow-sm items-center px-2">
               {/* Search Services */}
               <div className="flex items-center flex-1 px-3">
                 <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
@@ -785,6 +861,74 @@ export default function ServiceNameSearchClient({
               >
                 Search
               </button>
+            </div>
+
+            {/* Mobile Layout: Stacked */}
+            <div className="sm:hidden space-y-2">
+              {/* Search Input */}
+              <div className="h-8 flex items-center bg-white rounded-md border border-black px-2 shadow-sm">
+                <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={serviceQuery}
+                  onChange={handleServiceQueryChange}
+                  onFocus={() => {
+                    if (suppressNextFocusRef.current) {
+                      suppressNextFocusRef.current = false;
+                      return;
+                    }
+                    setSelectedServiceOrSalon(false);
+                    if (!dropdownLockRef.current) {
+                      setShowServiceDropdown(true);
+                    }
+                  }}
+                  placeholder="Search Services..."
+                  className="w-full bg-transparent outline-none text-xs text-gray-700 placeholder-gray-400"
+                />
+                {serviceQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setServiceQuery('');
+                      setShowServiceDropdown(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
+                    aria-label="Clear search"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Location Input + Search Button - Same Row */}
+              <div className="h-8 flex items-center gap-1.5">
+                {/* Location Input */}
+                <div className="flex-1 flex items-center bg-white rounded-md border border-black px-2 py-1 shadow-sm">
+                  <LocationSearch
+                    value={selectedLocation?.address || initialLocationLabel}
+                    mapsReady={mapsReady}
+                    onLocationChange={(loc) => {
+                      setSelectedLocation(loc);
+                      setShowServiceDropdown(false);
+                    }}
+                    onLocationFocus={() => setShowServiceDropdown(false)}
+                    placeholder="Location..."
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Search Button */}
+                <button
+                  onClick={handleSearchButtonClick}
+                  disabled={!serviceQuery.trim()}
+                  className="h-8 px-3 rounded-md border border-black bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center text-xs font-medium shrink-0"
+                  aria-label="Search"
+                >
+                  Search
+                </button>
+              </div>
             </div>
 
           {/* Dropdown */}
@@ -982,7 +1126,7 @@ export default function ServiceNameSearchClient({
         <>
           {featuredLoading ? (
             // Loading state
-            <div className="px-4 py-3 border-b border-gray-200 bg-white">
+            <div className="py-3 border-b border-gray-200 bg-white">
               <div className="max-w-7xl mx-auto">
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -997,10 +1141,10 @@ export default function ServiceNameSearchClient({
             </div>
           ) : featuredServices.length > 0 ? (
             // Loaded state with carousel
-            <div className="px-6 py-3 border-b border-gray-200 bg-white">
+            <div className="py-3 border-b border-gray-200 bg-white">
               <div className="max-w-7xl mx-auto">
                 <PillCarousel
-                  title=""
+                  title="Popular Searches"
                   pills={featuredServices.map((service) => ({
                     id: service.uuid || service.name,
                     name: service.name,
@@ -1034,7 +1178,7 @@ export default function ServiceNameSearchClient({
         </>
       )}
 
-      {/* Result count label - above the border */}
+      {/* Result count feedback with Show Map button */}
       {activeServiceName && !loading && venues.length > 0 && (() => {
         const venuesWithMatch = venues.filter(venue => {
           const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
@@ -1046,27 +1190,35 @@ export default function ServiceNameSearchClient({
         });
         if (venuesWithMatch.length === 0) return null;
         return (
-          <div className="px-6 py-1 bg-white border-b border-gray-200">
-            <p className="text-sm text-gray-600 font-medium">
-              {venuesWithMatch.length} {venuesWithMatch.length === 1 ? "venue" : "venues"} offer &quot;{activeServiceName}&quot;
-            </p>
+          <div className="py-2 px-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-700 font-medium">
+                Showing {venuesWithMatch.length} {venuesWithMatch.length === 1 ? "salon" : "salons"} offering &quot;{activeServiceName}&quot;
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowMap(!showMap)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                {showMap ? "Hide Map" : "Show Map"}
+              </button>
+            </div>
           </div>
         );
       })()}
 
-      {/* Border separator removed - border now on label section */}
-
-      {/* 2-Column Layout: Venues List (left) + Map (right) — Only show when service is selected */}
+      {/* Layout: 2 Columns (Grid view or List+Map) */}
       {activeServiceName && (
         <div className="flex flex-1 overflow-hidden h-[calc(100vh-200px)] relative">
-          {/* Left: Venues List - scrollable (Full width on mobile, 50% on desktop) */}
-          <div className="flex-1 md:flex-none md:w-1/2 overflow-y-auto px-4 py-6">
-          <div className="max-w-2xl mx-auto">
+          {/* Left Column: Venues List or Half-Grid */}
+          <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-0" : "w-1/2 overflow-y-auto pl-4 pr-2 py-4"}>
+          <div className={showMap ? "max-w-2xl mx-auto" : ""}>
             {/* Loading indicator when refreshing results */}
             {loading && venues.length > 0 && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+              <div className="flex items-center gap-2 py-2">
                 <div className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm text-blue-700">Searching for new results...</span>
+                <span className="text-sm text-gray-700">Searching for new results...</span>
               </div>
             )}
 
@@ -1084,7 +1236,23 @@ export default function ServiceNameSearchClient({
               </div>
             ) : (
               <div className={cn("space-y-4 transition-opacity duration-200", loading && "opacity-50 pointer-events-none")}>
-                {venues.map((venue, vi) => {
+                {/* When not showing map, show only left half of venues. When showing map, show all venues */}
+                {(showMap ? venues : venues.slice(0, Math.ceil(venues.length / 2))).map((venue, vi) => {
+                  return (
+                    <VenueSearchResultCard
+                      key={venue.venue?.uuid || vi}
+                      venue={venue}
+                      index={vi}
+                      activeServiceName={activeServiceName}
+                      selectedFilters={selectedFilters}
+                      selectedLocation={selectedLocation}
+                      expandedOpeningHours={expandedOpeningHours}
+                      toggleOpeningHours={toggleOpeningHours}
+                      expandedGroups={expandedGroups}
+                      toggleGroup={toggleGroup}
+                      handleServiceClick={handleServiceClick}
+                    />
+                  );
                   const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
                     if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
                     if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
@@ -1098,26 +1266,28 @@ export default function ServiceNameSearchClient({
                       .filter(Boolean)
                       .join(", ");
 
-                  let distanceKm = null;
+                  let distanceMiles = null;
                   const vLat = venue.address?.location?.lat;
                   const vLon = venue.address?.location?.lon;
                   if (selectedLocation?.lat && vLat && vLon) {
-                    distanceKm = calcDistance(
+                    const distanceKm = calcDistance(
                       selectedLocation.lat,
                       selectedLocation.lon,
                       vLat,
                       vLon
-                    ).toFixed(1);
+                    );
+                    distanceMiles = (distanceKm / 1.60934).toFixed(1);
                   }
 
                   return (
                     <div
-                      key={venue.venue?.uuid || vi}
-                      className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden"
+                      key={venue.venue?.uuid || vi} 
+                      className="overflow-hidden border-b border-gray-200 pt-4 pb-0"
                     >
-                      {/* Venue header */}
-                      <div className="flex items-center gap-4 px-4 py-4 border-b border-gray-100">
-                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
+                      {/* Venue header - Stacked on mobile, horizontal on desktop */}
+                      <div className="flex flex-col md:flex-row md:items-start gap-2 pl-0 pr-0 md:pl-0 md:pr-0 pt-0 md:py-0">
+                        {/* Image - Full width on mobile, fixed landscape on desktop */}
+                        <div className="w-full md:w-48 h-40 md:h-32 bg-gray-100 flex-shrink-0 overflow-hidden rounded-md">
                           {venue.primary_image?.url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
@@ -1127,20 +1297,82 @@ export default function ServiceNameSearchClient({
                               onError={(e) => { e.target.style.display = "none"; }}
                             />
                           ) : (
-                            <div className="w-full h-full bg-gray-200 rounded-lg" />
+                            <div className="w-full h-full bg-gray-200" />
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        
+                        {/* Venue info - Below image on mobile, beside image on desktop */}
+                        <div className="flex-1 min-w-0 pl-0 pr-0 md:pl-2 md:pr-0 py-0 md:py-0">
                           <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
-                          <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
-                            <MapPin className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{address}</span>
-                            {distanceKm && (
-                              <span className="flex-shrink-0 ml-2 font-medium text-gray-700">
-                                {distanceKm} km
-                              </span>
+                          <div className="flex items-center justify-between gap-2 mt-0.5">
+                            <div className="flex items-center gap-1 text-sm text-gray-500 min-w-0">
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{address}</span>
+                            </div>
+                            {distanceMiles && (
+                              <div className="text-sm font-medium text-gray-700 flex-shrink-0">
+                                {distanceMiles} mi
+                              </div>
                             )}
                           </div>
+                          
+                          {/* Opening Hours */}
+                          {venue.opening_hours && venue.opening_hours.length > 0 && (() => {
+                            const todayHours = getTodayOpeningHours(venue.opening_hours);
+                            const isHoursExpanded = expandedOpeningHours.has(venue.venue?.uuid);
+                            
+                            return (
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOpeningHours(venue.venue?.uuid)}
+                                  className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                                >
+                                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span>
+                                    {todayHours 
+                                      ? `${todayHours.day} ${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`
+                                      : 'Closed'
+                                    }
+                                  </span>
+                                  {isHoursExpanded ? (
+                                    <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" />
+                                  ) : (
+                                    <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
+                                  )}
+                                </button>
+                                
+                                {/* Expanded hours */}
+                                {isHoursExpanded && (() => {
+                                  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                                  return (
+                                    <div className="mt-2 pl-5 border-l border-gray-200">
+                                      <div className="space-y-1">
+                                        {allDays.map((day) => {
+                                          const hours = venue.opening_hours.find(h => h.day === day);
+                                          const isClosed = !hours || !hours.open || !hours.close;
+                                          return (
+                                            <div key={day} className="flex items-center justify-between text-xs">
+                                              <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isClosed ? 'bg-gray-300' : 'bg-green-500'}`} />
+                                                <span className={`font-medium ${isClosed ? 'text-gray-400' : 'text-gray-600'}`}>{day}</span>
+                                              </div>
+                                              <span className={isClosed ? 'text-gray-400' : 'text-gray-500'}>
+                                                {isClosed
+                                                  ? 'Closed'
+                                                  : `${formatTime(hours.open)} - ${formatTime(hours.close)}`
+                                                }
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -1159,7 +1391,7 @@ export default function ServiceNameSearchClient({
                                 key={group.key}
                                 type="button"
                                 onClick={() => handleServiceClick(venue, service)}
-                                className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+                                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
                               >
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium text-gray-900 truncate">
@@ -1197,15 +1429,12 @@ export default function ServiceNameSearchClient({
                               <button
                                 type="button"
                                 onClick={() => toggleGroup(venueUuid, group.key)}
-                                className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+                                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
                               >
-                                <div className="min-w-0 flex-1 flex items-center gap-2">
+                                <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium text-gray-900 truncate">
-                                    {group.label}
+                                    {group.label} ({group.items.length})
                                   </p>
-                                  <span className="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 flex-shrink-0">
-                                    {group.items.length}
-                                  </span>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   {minPrice != null && (
@@ -1224,7 +1453,7 @@ export default function ServiceNameSearchClient({
 
                               {/* Expanded variants */}
                               {isExpanded && (
-                                <div className="bg-gray-50 divide-y divide-gray-100">
+                                <div className="divide-y divide-gray-100">
                                   {group.items.map((service, si) => {
                                     const meta = [service.category, service.audience].filter(Boolean).join(" · ");
                                     return (
@@ -1232,7 +1461,7 @@ export default function ServiceNameSearchClient({
                                       key={service.uuid || si}
                                       type="button"
                                       onClick={() => handleServiceClick(venue, service)}
-                                      className="w-full pl-8 pr-4 py-2.5 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
+                                      className="w-full pl-8 pr-4 py-3 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
                                     >
                                       <div className="min-w-0 flex-1">
                                         <p className="text-sm text-gray-700 truncate">
@@ -1283,25 +1512,291 @@ export default function ServiceNameSearchClient({
           </div>
           </div>
 
-        {/* Right Column: Google Map (Hidden on mobile, visible on desktop) */}
-        <div className="hidden md:block w-1/2 bg-white border-l border-gray-200 h-full overflow-hidden">
-          {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) && venues.length > 0 ? (
-            <VenueMap
-              venues={venues}
-              selectedLocation={selectedLocation}
-              serviceName={activeServiceName}
-              router={router}
-            />
-          ) : (mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
-            <div className="w-full h-full flex items-center justify-center text-gray-500">
-              No venues to display
+          {/* Right Column: Second Half of Venues or Google Map */}
+          {!showMap ? (
+            <div className="w-1/2 overflow-y-auto pl-2 pr-4 py-4 border-l border-gray-200">
+              <div className={cn("space-y-4 transition-opacity duration-200", loading && "opacity-50 pointer-events-none")}>
+                {/* Show right half of venues */}
+                {venues.slice(Math.ceil(venues.length / 2)).map((venue, vi) => {
+                  return (
+                    <VenueSearchResultCard
+                      key={venue.venue?.uuid || vi}
+                      venue={venue}
+                      index={vi}
+                      activeServiceName={activeServiceName}
+                      selectedFilters={selectedFilters}
+                      selectedLocation={selectedLocation}
+                      expandedOpeningHours={expandedOpeningHours}
+                      toggleOpeningHours={toggleOpeningHours}
+                      expandedGroups={expandedGroups}
+                      toggleGroup={toggleGroup}
+                      handleServiceClick={handleServiceClick}
+                    />
+                  );
+                  const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
+                    if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
+                    if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
+                    return true;
+                  });
+                  if (matched.length === 0) return null;
+
+                  const address =
+                    venue.address?.formatted ||
+                    [venue.address?.line1, venue.address?.line2, venue.address?.postcode]
+                      .filter(Boolean)
+                      .join(", ");
+
+                  let distanceMiles = null;
+                  const vLat = venue.address?.location?.lat;
+                  const vLon = venue.address?.location?.lon;
+                  if (selectedLocation?.lat && vLat && vLon) {
+                    const distanceKm = calcDistance(
+                      selectedLocation.lat,
+                      selectedLocation.lon,
+                      vLat,
+                      vLon
+                    );
+                    distanceMiles = (distanceKm / 1.60934).toFixed(1);
+                  }
+
+                  return (
+                    <div
+                      key={venue.venue?.uuid || vi} 
+                      className="overflow-hidden border-b border-gray-200 pt-4 pb-0"
+                    >
+                      {/* Venue header - Stacked on mobile, horizontal on desktop */}
+                      <div className="flex flex-col md:flex-row md:items-start gap-2 pl-0 pr-0 md:pl-0 md:pr-0 pt-0 md:py-0">
+                        {/* Image - Full width on mobile, fixed landscape on desktop */}
+                        <div className="w-full md:w-48 h-40 md:h-32 bg-gray-100 flex-shrink-0 overflow-hidden rounded-md">
+                          {venue.primary_image?.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={venue.primary_image.url}
+                              alt={venue.venue?.name || ""}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.target.style.display = "none"; }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200" />
+                          )}
+                        </div>
+                        
+                        {/* Venue info - Below image on mobile, beside image on desktop */}
+                        <div className="flex-1 min-w-0 pl-0 pr-0 md:pl-2 md:pr-0 py-0 md:py-0">
+                          <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
+                          <div className="flex items-center justify-between gap-2 mt-0.5">
+                            <div className="flex items-center gap-1 text-sm text-gray-500 min-w-0">
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{address}</span>
+                            </div>
+                            {distanceMiles && (
+                              <div className="text-sm font-medium text-gray-700 flex-shrink-0">
+                                {distanceMiles} mi
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Opening Hours */}
+                          {venue.opening_hours && venue.opening_hours.length > 0 && (() => {
+                            const todayHours = getTodayOpeningHours(venue.opening_hours);
+                            const isHoursExpanded = expandedOpeningHours.has(venue.venue?.uuid);
+                            
+                            return (
+                              <div className="mt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOpeningHours(venue.venue?.uuid)}
+                                  className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                                >
+                                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span>
+                                    {todayHours 
+                                      ? `${todayHours.day} ${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`
+                                      : 'Closed'
+                                    }
+                                  </span>
+                                  {isHoursExpanded ? (
+                                    <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" />
+                                  ) : (
+                                    <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
+                                  )}
+                                </button>
+                                
+                                {/* Expanded hours */}
+                                {isHoursExpanded && (() => {
+                                  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                                  return (
+                                    <div className="mt-2 pl-5 border-l border-gray-200">
+                                      <div className="space-y-1">
+                                        {allDays.map((day) => {
+                                          const hours = venue.opening_hours.find(h => h.day === day);
+                                          const isClosed = !hours || !hours.open || !hours.close;
+                                          return (
+                                            <div key={day} className="flex items-center justify-between text-xs">
+                                              <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isClosed ? 'bg-gray-300' : 'bg-green-500'}`} />
+                                                <span className={`font-medium ${isClosed ? 'text-gray-400' : 'text-gray-600'}`}>{day}</span>
+                                              </div>
+                                              <span className={isClosed ? 'text-gray-400' : 'text-gray-500'}>
+                                                {isClosed
+                                                  ? 'Closed'
+                                                  : `${formatTime(hours.open)} - ${formatTime(hours.close)}`
+                                                }
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+
+                      {/* All matched services collapsed into one group per venue */}
+                      <div className="divide-y divide-gray-100">
+                        {groupMatchedServices(matched).map((group) => {
+                          const venueUuid = venue.venue?.uuid || "";
+                          const groupId = `${venueUuid}::${group.key}`;
+                          const isExpanded = expandedGroups.has(groupId);
+
+                          if (group.items.length === 1) {
+                            const service = group.items[0];
+                            const meta = [service.category, service.audience].filter(Boolean).join(" · ");
+                            return (
+                              <button
+                                key={group.key}
+                                type="button"
+                                onClick={() => handleServiceClick(venue, service)}
+                                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {service.display_name || service.name}
+                                  </p>
+                                  {meta && (
+                                    <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end flex-shrink-0 gap-0.5 text-right">
+                                  {service.price != null && (
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      {formatMoney(service.price)}
+                                    </span>
+                                  )}
+                                  {service.duration_minutes != null && (
+                                    <span className="text-xs text-gray-500">
+                                      {service.duration_minutes} min
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          }
+
+                          // Multi-variant group — collapsible
+                          const prices = group.items
+                            .map((s) => Number(s.price))
+                            .filter((p) => !Number.isNaN(p));
+                          const minPrice = prices.length ? Math.min(...prices) : null;
+
+                          return (
+                            <div key={group.key}>
+                              {/* Group header */}
+                              <button
+                                type="button"
+                                onClick={() => toggleGroup(venueUuid, group.key)}
+                                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {group.label} ({group.items.length})
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {minPrice != null && (
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      From {formatMoney(minPrice)}
+                                    </span>
+                                  )}
+                                  <ChevronDown
+                                    className={cn(
+                                      "w-4 h-4 text-gray-400 transition-transform",
+                                      isExpanded && "rotate-180"
+                                    )}
+                                  />
+                                </div>
+                              </button>
+
+                              {/* Expanded variants */}
+                              {isExpanded && (
+                                <div className="divide-y divide-gray-100">
+                                  {group.items.map((service, si) => {
+                                    const meta = [service.category, service.audience].filter(Boolean).join(" · ");
+                                    return (
+                                    <button
+                                      key={service.uuid || si}
+                                      type="button"
+                                      onClick={() => handleServiceClick(venue, service)}
+                                      className="w-full pl-8 pr-4 py-3 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm text-gray-700 truncate">
+                                          {service.display_name || service.name}
+                                        </p>
+                                        {meta && (
+                                          <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col items-end flex-shrink-0 gap-0.5 text-right">
+                                        {service.price != null && (
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            {formatMoney(service.price)}
+                                          </span>
+                                        )}
+                                        {service.duration_minutes != null && (
+                                          <span className="text-xs text-gray-500">
+                                            {service.duration_minutes} min
+                                          </span>
+                                        )}
+                                      </div>
+                                    </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-500">
-              Loading map...
+            <div className="hidden md:block w-1/2 bg-white border-l border-gray-200 h-full overflow-hidden">
+              {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) && venues.length > 0 ? (
+                <VenueMap
+                  venues={venues}
+                  selectedLocation={selectedLocation}
+                  serviceName={activeServiceName}
+                  router={router}
+                />
+              ) : (mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
+                <div className="w-full h-full flex items-center justify-center text-gray-500">
+                  No venues to display
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-500">
+                  Loading map...
+                </div>
+              )}
             </div>
           )}
-        </div>
 
         {/* Mobile Map Bottom Sheet */}
         {showMobileMap && (
