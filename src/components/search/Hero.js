@@ -2,7 +2,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
-import { Search, ChevronDown, Filter } from 'lucide-react';
+import { Search, ChevronDown, Filter, X } from 'lucide-react';
 import LocationSearch from '@/components/search/LocationSearch';
 import { cn } from '@/lib/utils';
 import { useVenueSearch } from '@/hooks/useVenueSearch';
@@ -14,7 +14,7 @@ import { getIcon } from '@/lib/iconMap';
 // Custom scrollbar styling for glass-like appearance
 const scrollbarStyle = `
   .glass-scroll::-webkit-scrollbar {
-    width: 8px;
+    width: 12px;
   }
   
   .glass-scroll::-webkit-scrollbar-track {
@@ -81,6 +81,7 @@ export default function Hero({
   const [searchDistance, setSearchDistance] = React.useState('10km'); // 5km, 10km, or 15km
   const [isDefaultLocationLoaded, setIsDefaultLocationLoaded] = React.useState(!!initialVenues?.length);
   const [mapsReady, setMapsReady] = React.useState(false);
+  const [selectedServiceOrSalon, setSelectedServiceOrSalon] = React.useState(false); // Track if service/salon is selected
   const searchRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
@@ -177,6 +178,29 @@ export default function Hero({
     } else {
       setShowDropdown(false);
     }
+  };
+
+  // Handle search button click - navigate to search results page
+  const handleSearchButtonClick = () => {
+    if (!searchQuery.trim()) return;
+    
+    const params = new URLSearchParams();
+    params.set('q', searchQuery);
+    
+    // Pass location details if available
+    if (selectedLocation?.address) params.set('loc', selectedLocation.address);
+    if (selectedLocation?.lat !== undefined) params.set('lat', String(selectedLocation.lat));
+    if (selectedLocation?.lon !== undefined) params.set('lon', String(selectedLocation.lon));
+    
+    // Pass search distance
+    if (searchDistance) params.set('distance', searchDistance);
+    
+    // Pass filters if any
+    if (selectedFilters.categories?.length) params.set('categories', selectedFilters.categories.join(','));
+    if (selectedFilters.audiences?.length) params.set('audiences', selectedFilters.audiences.join(','));
+    
+    // Navigate to search page
+    router.push(`/search/service?${params.toString()}`);
   };
 
   // Cleanup debounce timer on component unmount
@@ -319,28 +343,14 @@ export default function Hero({
 
   const handleServiceSelect = (service) => {
     setShowDropdown(false);
-    const params = new URLSearchParams();
-    // Pass the search query if present
-    if (searchQuery) params.set('q', searchQuery);
-    // Pass the selected service NAME (canonical name, not UUID)
-    // Backend will find all global services with this name and their UUIDs
-    if (service?.name) params.set('service', service.name);
-    // Pass location details
-    if (selectedLocation?.address) params.set('loc', selectedLocation.address);
-    if (selectedLocation?.lat !== undefined && selectedLocation?.lat !== null) params.set('lat', String(selectedLocation.lat));
-    if (selectedLocation?.lon !== undefined && selectedLocation?.lon !== null) params.set('lon', String(selectedLocation.lon));
-    // Pass search distance
-    if (searchDistance) params.set('distance', searchDistance);
-    // Pass all selected filters, using canonical keys
-    if (selectedFilters.categories?.length) params.set('categories', selectedFilters.categories.join(','));
-    if (selectedFilters.audiences?.length) params.set('audiences', selectedFilters.audiences.join(','));
-    // If more filters are added in the future, add them here
-    router.push(`/search/service?${params.toString()}`);
+    setSelectedServiceOrSalon(true);
+    setSearchQuery(service?.name || '');
   };
 
   const handleVenueSelect = (venue) => {
     setShowDropdown(false);
-    router.push(`/salon/${venue.slug}`);
+    setSelectedServiceOrSalon(true);
+    setSearchQuery(venue?.name || '');
   };
 
   // Render filter toggle button
@@ -662,46 +672,49 @@ export default function Hero({
           {/* Search Input */}
           {showSearchInput && (
             <div ref={searchRef} className="relative mb-10">
-              <div className="flex items-center bg-white rounded-full border border-gray-200 px-2 sm:px-4 py-0.5 shadow-sm overflow-visible">
-                {/* Search Input - 60% width */}
-                <div className="w-3/5 flex items-center gap-0">
-                  <div className="relative flex-1 min-w-0">
-                    <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-400 flex-shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Search Services or Salons..."
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      onFocus={() => {
-                        setIsLocationSearchFocused(false);
-                        setShowDropdown(true);
-                      }}
-                      className={cn(
-                        'w-full h-8 sm:h-9 pl-6 sm:pl-8 pr-1 sm:pr-2 rounded-full border-0 bg-transparent',
-                        'text-sm sm:text-base text-gray-900 placeholder-gray-500',
-                        'focus:outline-none',
-                        'transition-all duration-200'
-                      )}
-                    />
-                  </div>
+              {/* Desktop Layout: Inline */}
+              <div className="hidden sm:flex h-11 items-center bg-white rounded-full border border-gray-200 shadow-sm px-2">
+                {/* Search Input */}
+                <div className="flex items-center flex-1 px-3">
+                  <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search Services or Salons..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={() => {
+                      setIsLocationSearchFocused(false);
+                      setSelectedServiceOrSalon(false);
+                      setShowDropdown(true);
+                    }}
+                    className="w-full bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Divider */}
-                <div className="h-5 sm:h-6 bg-gray-200 w-px"></div>
+                <span className="text-gray-300 text-xs select-none">|</span>
 
-                {/* Location Search Input - 40% width */}
-                <div className="w-2/5 flex items-center">
+                {/* Location Input */}
+                <div className="flex items-center w-56 px-3">
                   <LocationSearch
                     value={selectedLocation?.address || ''}
                     mapsReady={mapsReady}
                     onLocationChange={handleLocationChange}
                     onLocationFocus={() => {
-                      console.log('[Hero] Location search focused');
                       setIsLocationSearchFocused(true);
                       setShowDropdown(false);
                     }}
                     onLocationBlur={() => {
-                      console.log('[Hero] Location search blurred');
                       setIsLocationSearchFocused(false);
                     }}
                     placeholder="Location..."
@@ -709,64 +722,98 @@ export default function Hero({
                   />
                 </div>
 
-                {/* Button */}
-                {/* <Button
-                  variant="default"
-                  size="lg"
-                  className="rounded-full px-3 sm:px-6 py-2 whitespace-nowrap ml-1 sm:ml-2 text-sm sm:text-base flex-shrink-0"
-                  onClick={() => {}}
+                {/* Search Button */}
+                <button
+                  type="button"
+                  onClick={handleSearchButtonClick}
+                  className="ml-2 h-8 px-4 rounded-full border border-gray-200 bg-[#f8f8f8] hover:bg-gray-100 transition flex items-center justify-center text-sm font-medium text-gray-800 shrink-0"
+                  aria-label="Search"
+                  title="Search"
                 >
-                  <span className="hidden sm:inline">Explore</span>
-                  <span className="sm:hidden">→</span>
-                  <span className="ml-2 hidden sm:inline">→</span>
-                </Button> */}
+                  Search
+                </button>
               </div>
 
-              {/* Dropdown Results - 2 Column Layout: Services Left, Venues Right */}
-              {showDropdown && !isLocationSearchFocused && (
-                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999]">
-                  {/* Filter Toggle & Categories */}
-                  {renderFilterToggle()}
-                  {renderFilterCategories()}
-
-                  {/* 2-Column Layout */}
-                  {!venuesLoading && !servicesLoading && (
-                    <div className="flex max-h-96">
-                      {/* Left Column: Services */}
-                      <div className="flex-1 border-r border-gray-200 overflow-y-auto glass-scroll">
-                        {renderServicesSection()}
-                      </div>
-
-                      {/* Right Column: Venues */}
-                      <div className="flex-1 overflow-y-auto glass-scroll">
-                        {renderVenuesSection()}
-                      </div>
-                    </div>
+              {/* Mobile Layout: Stacked */}
+              <div className="sm:hidden space-y-3">
+                {/* Search Input */}
+                <div className="h-10 flex items-center bg-white rounded-full border border-gray-200 px-3 shadow-sm">
+                  <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search Services or Salons..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={() => {
+                      setIsLocationSearchFocused(false);
+                      setSelectedServiceOrSalon(false);
+                      setShowDropdown(true);
+                    }}
+                    className="w-full bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-2"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   )}
+                </div>
 
-                  {/* Loading State */}
-                  {(venuesLoading || servicesLoading) && (
-                    <div className="p-4 text-center text-sm text-gray-500">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        {searchQuery.length >= 1 ? 'Searching...' : 'Loading results...'}
-                      </div>
-                    </div>
-                  )}
+                {/* Location Input + Search Button - Same Row */}
+                <div className="h-10 flex items-center gap-2">
+                  {/* Location Input */}
+                  <div className="flex-1 flex items-center bg-white rounded-full border border-gray-200 px-3 shadow-sm">
+                    <LocationSearch
+                      value={selectedLocation?.address || ''}
+                      mapsReady={mapsReady}
+                      onLocationChange={handleLocationChange}
+                      onLocationFocus={() => {
+                        setIsLocationSearchFocused(true);
+                        setShowDropdown(false);
+                      }}
+                      onLocationBlur={() => {
+                        setIsLocationSearchFocused(false);
+                      }}
+                      placeholder="Location..."
+                      className="w-full"
+                    />
+                  </div>
 
-                  {/* No Results Message */}
-                  {!venuesLoading && !servicesLoading && searchQuery.length >= 1 && venues.length === 0 && services.length === 0 && (
-                    <div className="p-4 text-center text-sm text-gray-500">
-                      No results found for &quot;{searchQuery}&quot;
+                  {/* Search Button */}
+                  <button
+                    type="button"
+                    onClick={handleSearchButtonClick}
+                    className="h-10 px-4 rounded-full border border-gray-200 bg-[#f8f8f8] hover:bg-gray-100 transition flex items-center justify-center text-sm font-medium text-gray-800 shrink-0"
+                    aria-label="Search"
+                  >
+                    Search
+                  </button>
+                </div>
+              </div>
+
+              {/* Dropdown Results - Single Column Layout */}
+              {showDropdown && !isLocationSearchFocused && !selectedServiceOrSalon && (
+                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto glass-scroll">
+                  {/* Single unified column */}
+                  <div className="flex flex-col">
+                    <div className="border-b border-gray-200">
+                      {renderServicesSection()}
                     </div>
-                  )}
+                    <div>
+                      {renderVenuesSection()}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
           {/* Main Heading */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6 px-2 sm:px-4 text-center">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] mb-6 px-2 sm:px-4 text-center text-black">
             <div>Your <span className="text-accent">perfect</span> look</div>
             <div>{renderTitleWithRedWord('booked in seconds')}</div>
             {/* Red accent underline */}

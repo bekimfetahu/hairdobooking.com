@@ -244,8 +244,8 @@ export default function ServiceNameSearchClient({
 
   // Featured services state
   const [featuredServices, setFeaturedServices] = React.useState(initialFeaturedServices);
-  const [initialLoadFromFeatured, setInitialLoadFromFeatured] = React.useState(!serviceName && initialFeaturedServices.length > 0);
-  const [featuredLoading, setFeaturedLoading] = React.useState(!serviceName && initialFeaturedServices.length === 0);
+  const [showFeaturedPills, setShowFeaturedPills] = React.useState(initialFeaturedServices.length > 0);
+  const [featuredLoading, setFeaturedLoading] = React.useState(initialFeaturedServices.length === 0);
 
   // Mobile map bottom sheet state
   const [showMobileMap, setShowMobileMap] = React.useState(false);
@@ -254,12 +254,15 @@ export default function ServiceNameSearchClient({
   const [serviceQuery, setServiceQuery] = React.useState(serviceName || "");
   const [activeServiceName, setActiveServiceName] = React.useState(serviceName || "");
   const [showServiceDropdown, setShowServiceDropdown] = React.useState(false);
+  const [selectedServiceOrSalon, setSelectedServiceOrSalon] = React.useState(false); // Track if service/salon is selected
   // Tracks which service groups are expanded: Set of "venueUuid::groupKey"
   const [expandedGroups, setExpandedGroups] = React.useState(new Set());
   const serviceSearchRef = React.useRef(null);
   const serviceDebounceRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
   const loadMoreRef = React.useRef(null);
+  const suppressNextFocusRef = React.useRef(false);
+  const dropdownLockRef = React.useRef(false);
 
   const { options: filterOptions, selectedFilters, toggleFilter, clearFilters } = useSearchFilters();
   const { results: serviceResults, loading: serviceSearchLoading, search: searchServices } = useServiceSearch();
@@ -301,17 +304,20 @@ export default function ServiceNameSearchClient({
     clearTimeout(serviceDebounceRef.current);
     if (val.trim().length >= 1) {
       serviceDebounceRef.current = setTimeout(() => {
-        // Search services with location AND filter parameters
-        void searchServices({ 
-          q: val.trim(), 
-          perPage: 8,
-          lat: selectedLocation?.lat,
-          lon: selectedLocation?.lon,
-          distance: searchDistance,
-          category: selectedFilters.categories?.length ? selectedFilters.categories.join(',') : undefined,
-          audience: selectedFilters.audiences?.length ? selectedFilters.audiences.join(',') : undefined,
-        });
-        setShowServiceDropdown(true);
+        // Only open dropdown if not locked (i.e., not in the middle of a selection)
+        if (!dropdownLockRef.current) {
+          // Search services with location AND filter parameters
+          void searchServices({ 
+            q: val.trim(), 
+            perPage: 8,
+            lat: selectedLocation?.lat,
+            lon: selectedLocation?.lon,
+            distance: searchDistance,
+            category: selectedFilters.categories?.length ? selectedFilters.categories.join(',') : undefined,
+            audience: selectedFilters.audiences?.length ? selectedFilters.audiences.join(',') : undefined,
+          });
+          setShowServiceDropdown(true);
+        }
       }, 300);
     } else {
       setShowServiceDropdown(false);
@@ -386,11 +392,46 @@ export default function ServiceNameSearchClient({
   );
 
   const handleServiceSelect = (service) => {
+    // Just populate input and close dropdown - don't navigate yet
+    // User must click search button to navigate with URL params
+    dropdownLockRef.current = true;
+    suppressNextFocusRef.current = true;
     setShowServiceDropdown(false);
+    setSelectedServiceOrSalon(true);
     setServiceQuery(service.name);
     setActiveServiceName(service.name);
-    // Fetch venues for the newly selected service
-    void fetchVenues({ activeService: service.name });
+    // Blur the input to prevent focus from affecting dropdown
+    if (serviceSearchRef.current?.querySelector('input')) {
+      serviceSearchRef.current.querySelector('input').blur();
+    }
+    
+    // Unlock dropdown after a brief delay to allow all state updates to settle
+    setTimeout(() => {
+      dropdownLockRef.current = false;
+    }, 50);
+  };
+
+  // Handle search button click - navigate with URL params (like Hero)
+  const handleSearchButtonClick = () => {
+    if (!serviceQuery.trim()) return;
+    
+    const params = new URLSearchParams();
+    params.set('q', serviceQuery);
+    
+    // Pass location details if available
+    if (selectedLocation?.address) params.set('loc', selectedLocation.address);
+    if (selectedLocation?.lat !== undefined) params.set('lat', String(selectedLocation.lat));
+    if (selectedLocation?.lon !== undefined) params.set('lon', String(selectedLocation.lon));
+    
+    // Pass search distance
+    if (searchDistance) params.set('distance', searchDistance);
+    
+    // Pass filters if any
+    if (selectedFilters.categories?.length) params.set('categories', selectedFilters.categories.join(','));
+    if (selectedFilters.audiences?.length) params.set('audiences', selectedFilters.audiences.join(','));
+    
+    // Navigate to search page with new params
+    router.push(`/search/service?${params.toString()}`);
   };
 
   // Close service dropdown on outside click
@@ -511,11 +552,20 @@ export default function ServiceNameSearchClient({
     seededRef.current = true;
   }, [filterOptions, initialCategories, initialAudiences, selectedFilters, toggleFilter]);
 
+  // Sync serviceName prop changes (e.g., when pill is clicked and URL changes)
+  // The server has already fetched venues for the new service and passed them as initialVenues
+  React.useEffect(() => {
+    if (serviceName && serviceName !== activeServiceName) {
+      setActiveServiceName(serviceName);
+      setServiceQuery(serviceName);
+    }
+  }, [serviceName, activeServiceName]);
+
   // Client-side fallback: fetch featured services if not provided from SSR
   const featuredFetchedRef = React.useRef(false);
   React.useEffect(() => {
     if (featuredFetchedRef.current) return;
-    if (serviceName) return; // Only fetch in browse mode
+    // Always fetch featured services, regardless of whether serviceName is set
     if (featuredServices.length > 0) { // Already have them from SSR
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFeaturedLoading(false);
@@ -557,7 +607,7 @@ export default function ServiceNameSearchClient({
         const services = data?.data || [];
         
         setFeaturedServices(services);
-        setInitialLoadFromFeatured(services.length > 0);
+        setShowFeaturedPills(services.length > 0);
         setFeaturedLoading(false);
       } catch (err) {
         console.error('[ServiceNameSearchClient] Failed to fetch featured services:', err.message);
@@ -598,7 +648,7 @@ export default function ServiceNameSearchClient({
   const autoFetchVenuesRef = React.useRef(false);
   React.useEffect(() => {
     if (featuredInitializedRef.current) return;
-    if (!initialLoadFromFeatured) return;
+    if (!showFeaturedPills) return;
     if (!isDefaultLocationLoaded) return; // Wait for location to be loaded
     if (featuredServices.length === 0) return;
 
@@ -613,7 +663,7 @@ export default function ServiceNameSearchClient({
     
     // Immediately fetch venues for the first featured service
     void fetchVenues({ activeService: firstFeatured.name });
-  }, [initialLoadFromFeatured, isDefaultLocationLoaded, featuredServices, selectedLocation?.address, selectedLocation?.lat, selectedLocation?.lon, searchDistance, router, fetchVenues]);
+  }, [showFeaturedPills, isDefaultLocationLoaded, featuredServices, selectedLocation?.address, selectedLocation?.lat, selectedLocation?.lon, searchDistance, router, fetchVenues]);
 
   // Fetch venues when activeServiceName changes (including auto-selected featured service)
   React.useEffect(() => {
@@ -640,7 +690,12 @@ export default function ServiceNameSearchClient({
 
   const handleServiceClick = (venue, service) => {
     if (!venue?.venue?.slug || !service?.uuid) return;
-    router.push(`/salon/${venue.venue.slug}/service/${service.uuid}`);
+    // Close dropdowns and mark as selected
+    setShowServiceDropdown(false);
+    setExpandedFilter(null);
+    setSelectedServiceOrSalon(true);
+    // Set search value to the venue name
+    setServiceQuery(venue.venue.name || '');
   };
 
   const toggleGroup = (venueUuid, groupKey) => {
@@ -662,21 +717,29 @@ export default function ServiceNameSearchClient({
       />
 
       {/* Full-width search bar */}
-      <div className="w-full bg-white border-b border-gray-200 px-4 py-2 sticky top-16 z-30">
-        <div className="max-w-2xl mx-auto">
+      <div className="w-full flex justify-center p-4 sticky top-16 z-30">
+        <div className="max-w-4xl w-full">
           <div ref={serviceSearchRef} className="relative">
-            <div className="flex items-center bg-white rounded-full border border-gray-200 px-2 sm:px-4 py-0.5 shadow-sm overflow-visible">
-            {/* Service search — 60% */}
-            <div className="w-3/5 flex items-center">
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-400 flex-shrink-0" />
+            <div className="w-full h-11 bg-white rounded-full shadow-sm border border-gray-200 flex items-center px-2">
+              {/* Search Services */}
+              <div className="flex items-center flex-1 px-3">
+                <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
                 <input
                   type="text"
                   value={serviceQuery}
                   onChange={handleServiceQueryChange}
-                  onFocus={() => setShowServiceDropdown(true)}
+                  onFocus={() => {
+                    if (suppressNextFocusRef.current) {
+                      suppressNextFocusRef.current = false;
+                      return;
+                    }
+                    setSelectedServiceOrSalon(false);
+                    if (!dropdownLockRef.current) {
+                      setShowServiceDropdown(true);
+                    }
+                  }}
                   placeholder="Search Services..."
-                  className="w-full h-8 sm:h-9 pl-6 sm:pl-8 pr-6 sm:pr-8 rounded-full border-0 bg-transparent text-sm sm:text-base text-gray-900 placeholder-gray-500 focus:outline-none transition-all duration-200"
+                  className="w-full bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
                 />
                 {serviceQuery && (
                   <button
@@ -684,9 +747,8 @@ export default function ServiceNameSearchClient({
                     onClick={() => {
                       setServiceQuery('');
                       setShowServiceDropdown(false);
-                      // Don't clear venues immediately - let them show in disabled state while loading
                     }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
                     aria-label="Clear search"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -695,30 +757,38 @@ export default function ServiceNameSearchClient({
                   </button>
                 )}
               </div>
-            </div>
 
-            {/* Divider */}
-            <div className="h-5 sm:h-6 bg-gray-200 w-px flex-shrink-0" />
+              {/* Divider */}
+              <span className="text-gray-300 text-xs select-none">|</span>
 
-            {/* Location — 40% */}
-            <div className="w-2/5 flex items-center">
-              <LocationSearch
-                value={selectedLocation?.address || initialLocationLabel}
-                mapsReady={mapsReady}
-                onLocationChange={(loc) => {
-                  setSelectedLocation(loc);
-                  setShowServiceDropdown(false);
-                  void fetchVenues({ location: loc });
-                }}
-                onLocationFocus={() => setShowServiceDropdown(false)}
-                placeholder="Location..."
-                className="w-full"
-              />
+              {/* Location */}
+              <div className="flex items-center w-56 px-3">
+                <LocationSearch
+                  value={selectedLocation?.address || initialLocationLabel}
+                  mapsReady={mapsReady}
+                  onLocationChange={(loc) => {
+                    setSelectedLocation(loc);
+                    setShowServiceDropdown(false);
+                  }}
+                  onLocationFocus={() => setShowServiceDropdown(false)}
+                  placeholder="Location..."
+                  className="w-full"
+                />
+              </div>
+
+              {/* Search Button */}
+              <button
+                onClick={handleSearchButtonClick}
+                disabled={!serviceQuery.trim()}
+                className="ml-2 h-8 px-4 rounded-full border border-gray-200 bg-[#f8f8f8] hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center text-sm font-medium text-gray-800 shrink-0"
+                aria-label="Search"
+              >
+                Search
+              </button>
             </div>
-          </div>
 
           {/* Dropdown */}
-          {showServiceDropdown && (
+          {showServiceDropdown && !selectedServiceOrSalon && (
             <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
               {/* Filter toggle — right aligned, same as Hero */}
               <div className="flex items-center justify-end px-3 py-3 border-b border-gray-200">
@@ -849,7 +919,10 @@ export default function ServiceNameSearchClient({
                       key={service.name || i}
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleServiceSelect(service)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleServiceSelect(service);
+                      }}
                       className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                     >
                       <p className="text-sm font-semibold text-gray-900">{service.name}</p>
@@ -879,7 +952,10 @@ export default function ServiceNameSearchClient({
                       key={service.uuid || service.name || i}
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleServiceSelect(service)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleServiceSelect(service);
+                      }}
                       className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                     >
                       <p className="text-sm font-semibold text-gray-900">{service.name}</p>
@@ -900,14 +976,14 @@ export default function ServiceNameSearchClient({
       </div>
       </div>
 
+
       {/* Featured Services Pills — Show in browse mode (loading or loaded) — Stay visible when featured service is selected */}
-      {initialLoadFromFeatured && (
+      {showFeaturedPills && (
         <>
           {featuredLoading ? (
             // Loading state
-            <div className="px-4 py-6 border-b border-gray-200 bg-white">
+            <div className="px-4 py-3 border-b border-gray-200 bg-white">
               <div className="max-w-7xl mx-auto">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Popular Searches</h3>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div
@@ -921,20 +997,35 @@ export default function ServiceNameSearchClient({
             </div>
           ) : featuredServices.length > 0 ? (
             // Loaded state with carousel
-            <div className="px-6 py-6 border-b border-gray-200 bg-white">
+            <div className="px-6 py-3 border-b border-gray-200 bg-white">
               <div className="max-w-7xl mx-auto">
                 <PillCarousel
-                  title="Popular Searches"
+                  title=""
                   pills={featuredServices.map((service) => ({
                     id: service.uuid || service.name,
                     name: service.name,
                   }))}
                   activePillId={activeServiceName}
                   onPillClick={(pill) => {
-                    setServiceQuery(pill.name);
-                    setActiveServiceName(pill.name);
-                    setShowServiceDropdown(false);
-                    void fetchVenues({ activeService: pill.name });
+                    const params = new URLSearchParams();
+                    params.set('q', pill.name);
+                    if (selectedLocation?.address) {
+                      params.set('loc', selectedLocation.address);
+                    }
+                    if (selectedLocation?.lat && selectedLocation?.lon) {
+                      params.set('lat', selectedLocation.lat);
+                      params.set('lon', selectedLocation.lon);
+                    }
+                    if (searchDistance) {
+                      params.set('distance', searchDistance);
+                    }
+                    if (selectedFilters.categories.length > 0) {
+                      params.set('categories', selectedFilters.categories.join(','));
+                    }
+                    if (selectedFilters.audiences.length > 0) {
+                      params.set('audiences', selectedFilters.audiences.join(','));
+                    }
+                    router.push(`/search/service?${params.toString()}`);
                   }}
                 />
               </div>

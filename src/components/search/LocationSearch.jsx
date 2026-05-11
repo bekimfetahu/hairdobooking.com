@@ -280,9 +280,9 @@ export default function LocationSearch({
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`} suppressHydrationWarning>
-      <div className="flex gap-1 sm:gap-2 items-center px-3 sm:px-4 py-2 overflow-hidden" suppressHydrationWarning>
+      <div className="flex gap-2 items-center overflow-hidden h-full" suppressHydrationWarning>
         {/* Location Icon */}
-        <MapPin className="w-4 sm:w-5 h-4 sm:h-5 text-gray-400 pointer-events-none flex-shrink-0" />
+        <MapPin className="w-4 h-4 text-gray-600 pointer-events-none flex-shrink-0" />
 
         {/* Custom Input - uses fixed positioning for dropdown */}
         <div className="w-full relative z-10">
@@ -294,7 +294,7 @@ export default function LocationSearch({
             onChange={handleInputChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            className="w-full h-8 sm:h-9 border-0 bg-transparent text-sm sm:text-base text-gray-900 placeholder-gray-500 transition-colors duration-200 focus:outline-none truncate"
+            className="w-full h-full border-0 bg-transparent text-sm text-gray-700 placeholder-gray-600 transition-colors duration-200 focus:outline-none truncate leading-none"
           />
         </div>
 
@@ -303,11 +303,11 @@ export default function LocationSearch({
           <button
             type="button"
             onClick={handleClear}
-            className="w-4 sm:w-5 h-4 sm:h-5 text-gray-400 hover:text-gray-600 flex items-center justify-center flex-shrink-0"
+            className="w-4 h-4 text-gray-400 hover:text-gray-600 flex items-center justify-center flex-shrink-0"
             title="Clear location"
             aria-label="Clear location"
           >
-            <X className="w-4 sm:w-5 h-4 sm:h-5" />
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>

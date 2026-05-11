@@ -14,7 +14,8 @@ import laravelApp from "@/services/laravelApp";
  */
 export default async function ServiceNameSearchPage({ searchParams }) {
   const query = (await searchParams) || {};
-  const serviceName = query.service || null;
+  // Accept both 'q' (from Home Hero/Pills) and 'service' (legacy) parameter names
+  const serviceName = query.q || query.service || null;
 
   const lat = query.lat ? Number(query.lat) : null;
   const lon = query.lon ? Number(query.lon) : null;
@@ -26,7 +27,20 @@ export default async function ServiceNameSearchPage({ searchParams }) {
   let initialVenues = [];
   let initialFeaturedServices = [];
 
-  // Only fetch venues if a service is provided
+  // Always fetch featured services (for pills that are always visible)
+  try {
+    const params = {};
+    if (lat) params.lat = lat;
+    if (lon) params.lon = lon;
+    if (lat && lon) params.distance = distance;
+
+    const response = await laravelApp.get("/client/search/featured-services", { params });
+    initialFeaturedServices = response.data?.data || [];
+  } catch {
+    // Page still renders; client will retry
+  }
+
+  // Also fetch venues if a service is provided
   if (serviceName) {
     try {
       // Pass service name to backend, which will resolve all UUIDs with that name
@@ -43,25 +57,12 @@ export default async function ServiceNameSearchPage({ searchParams }) {
     } catch {
       // Page still renders; client will retry
     }
-  } else {
-    // Browse mode: fetch featured services on server (like home page)
-    try {
-      const params = {};
-      if (lat) params.lat = lat;
-      if (lon) params.lon = lon;
-      if (lat && lon) params.distance = distance;
-
-      const response = await laravelApp.get("/client/search/featured-services", { params });
-      initialFeaturedServices = response.data?.data || [];
-    } catch {
-      // Page still renders; client will retry
-    }
   }
 
   return (
     <PageShell
       variant="marketing"
-      title={serviceName ? `${serviceName} near you` : "Browse Services"}
+      title={serviceName ? `${serviceName} near you` : ""}
       contentClassName="mt-6"
     >
       <ServiceNameSearchClient
