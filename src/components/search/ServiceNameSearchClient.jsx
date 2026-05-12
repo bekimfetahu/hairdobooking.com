@@ -788,7 +788,7 @@ export default function ServiceNameSearchClient({
   };
 
   return (
-    <div className="w-full min-h-screen">
+    <div className="relative w-full min-h-screen overflow-hidden pt-2 pb-0 md:pt-4">
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
         strategy="lazyOnload"
@@ -796,13 +796,13 @@ export default function ServiceNameSearchClient({
       />
 
       {/* Full-width search bar */}
-      <div className="w-full flex justify-center p-4 z-30">
+      <div className="relative w-full flex justify-center px-3 sm:px-6 pb-4 z-30">
         <div className="max-w-4xl w-full">
           <div ref={serviceSearchRef} className="relative">
-            <div className="hidden sm:flex w-full h-11 bg-white rounded-full shadow-sm items-center px-2">
+            <div className="hidden sm:flex h-11 items-center rounded-full border border-black/80 bg-white/95 px-2 shadow-[0_18px_45px_rgba(0,0,0,0.14)] ring-2 ring-black/10 backdrop-blur-xl">
               {/* Search Services */}
               <div className="flex items-center flex-1 px-3">
-                <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
+                <Search className="w-4 h-4 text-black mr-2 flex-shrink-0" />
                 <input
                   type="text"
                   value={serviceQuery}
@@ -838,7 +838,7 @@ export default function ServiceNameSearchClient({
               </div>
 
               {/* Divider */}
-              <span className="text-gray-300 text-xs select-none">|</span>
+              <span className="text-black/25 text-xs select-none">|</span>
 
               {/* Location */}
               <div className="flex items-center w-56 px-3">
@@ -859,7 +859,7 @@ export default function ServiceNameSearchClient({
               <button
                 onClick={handleSearchButtonClick}
                 disabled={!serviceQuery.trim()}
-                className="ml-2 h-8 px-4 rounded-full border border-gray-200 bg-[#f8f8f8] hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center text-sm font-medium text-gray-800 shrink-0"
+                className="ml-2 h-8 px-4 rounded-full border border-black bg-black text-white shadow-sm transition hover:bg-neutral-800 hover:border-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-medium shrink-0"
                 aria-label="Search"
               >
                 Search
@@ -867,10 +867,10 @@ export default function ServiceNameSearchClient({
             </div>
 
             {/* Mobile Layout: Stacked */}
-            <div className="sm:hidden space-y-2">
+            <div className="sm:hidden space-y-2 bg-transparent">
               {/* Search Input */}
-              <div className="h-8 flex items-center bg-white rounded-md border border-black px-2 shadow-sm">
-                <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
+              <div className="h-8 flex items-center rounded-md border border-black/70 bg-white px-2 shadow-sm">
+                <Search className="w-3.5 h-3.5 text-black mr-1.5 flex-shrink-0" />
                 <input
                   type="text"
                   value={serviceQuery}
@@ -908,7 +908,7 @@ export default function ServiceNameSearchClient({
               {/* Location Input + Search Button - Same Row */}
               <div className="h-8 flex items-center gap-1.5">
                 {/* Location Input */}
-                <div className="flex-1 flex items-center bg-white rounded-md border border-black px-2 py-1 shadow-sm">
+                <div className="flex-1 flex items-center rounded-md border border-black/70 bg-white px-2 py-1 shadow-sm">
                   <LocationSearch
                     value={selectedLocation?.address || initialLocationLabel}
                     mapsReady={mapsReady}
@@ -926,7 +926,7 @@ export default function ServiceNameSearchClient({
                 <button
                   onClick={handleSearchButtonClick}
                   disabled={!serviceQuery.trim()}
-                  className="h-8 px-3 rounded-md border border-black bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center text-xs font-medium shrink-0"
+                  className="h-8 px-3 rounded-md border border-black bg-black text-white transition hover:bg-neutral-800 hover:border-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-xs font-medium shrink-0"
                   aria-label="Search"
                 >
                   Search
@@ -936,7 +936,7 @@ export default function ServiceNameSearchClient({
 
           {/* Dropdown */}
           {showServiceDropdown && !selectedServiceOrSalon && (
-            <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
+            <div className="absolute top-full mt-2 w-full bg-white border border-black/10 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
               {/* Filter toggle — right aligned, same as Hero */}
               <div className="flex items-center justify-end px-3 py-3 border-b border-gray-200">
                 <button
@@ -945,8 +945,8 @@ export default function ServiceNameSearchClient({
                   className={cn(
                     "flex items-center gap-2 px-2 py-1 rounded-lg border transition-all",
                     hasActiveFilters
-                      ? "border-primary text-primary bg-blue-50"
-                      : "border-gray-300 text-gray-700 bg-white hover:border-gray-400"
+                      ? "border-black text-black bg-neutral-100"
+                      : "border-gray-300 text-gray-700 bg-white hover:border-black/40"
                   )}
                 >
                   <Filter className="w-4 h-4" />
@@ -960,7 +960,7 @@ export default function ServiceNameSearchClient({
               {/* Expandable filter panel */}
               {expandedFilter === "filters" && (
                 <div className="p-3 border-b border-gray-200">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filterOptions.categories?.length > 0 && (
                       <div>
                         <h4 className="text-xs font-semibold text-gray-900 mb-2">Categories</h4>
@@ -1003,28 +1003,28 @@ export default function ServiceNameSearchClient({
                             );
                           })}
                         </div>
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
-                          <div className="flex gap-4">
-                            {["5km", "10km", "15km", "30km"].map((d) => (
-                              <label key={d} className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="sn-distance"
-                                  checked={searchDistance === d}
-                                  onChange={() => {
-                                    setSearchDistance(d);
-                                    void fetchVenues({ distance: d });
-                                  }}
-                                  className="w-4 h-4 text-blue-600 border-gray-300"
-                                />
-                                <span className="text-sm text-gray-700">{d}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
                       </div>
                     )}
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
+                    <div className="flex flex-wrap gap-4">
+                      {['5km', '10km', '15km', '30km'].map((d) => (
+                        <label key={d} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="sn-distance"
+                            checked={searchDistance === d}
+                            onChange={() => {
+                              setSearchDistance(d);
+                              void fetchVenues({ distance: d });
+                            }}
+                            className="w-4 h-4 text-blue-600 border-gray-300"
+                          />
+                          <span className="text-sm text-gray-700">{d}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                   <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200">
                     <button
@@ -1042,7 +1042,7 @@ export default function ServiceNameSearchClient({
                     <button
                       type="button"
                       onClick={() => { void fetchVenues(); setExpandedFilter(null); setShowServiceDropdown(false); }}
-                      className="px-4 py-1.5 bg-black text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors"
+                      className="px-4 py-1.5 bg-black text-white text-xs font-medium rounded-md hover:bg-neutral-800 transition-colors"
                     >
                       Apply
                     </button>
@@ -1060,7 +1060,7 @@ export default function ServiceNameSearchClient({
                 </div>
               ) : serviceResults.length > 0 ? (
                 <>
-                  <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-100">Services</div>
+                  <div className="sticky top-0 px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-200">Services</div>
                   {serviceResults.map((service, i) => (
                     <button
                       key={service.name || i}
@@ -1093,7 +1093,7 @@ export default function ServiceNameSearchClient({
               ) : featuredServices.length > 0 ? (
                 // Show featured services when: query matches featured service OR query is empty
                 <>
-                  <div className="px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-100">Featured Services</div>
+                  <div className="sticky top-0 px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-200">Featured Services</div>
                   {featuredServices.map((service, i) => (
                     <button
                       key={service.uuid || service.name || i}
@@ -1129,7 +1129,7 @@ export default function ServiceNameSearchClient({
         <>
           {featuredLoading ? (
             // Loading state
-            <div className="py-3 border-b border-gray-200 bg-white">
+            <div className="py-3 border-b border-gray-200 bg-white/90 backdrop-blur-xl">
               <div className="max-w-7xl mx-auto">
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -1144,7 +1144,7 @@ export default function ServiceNameSearchClient({
             </div>
           ) : featuredServices.length > 0 ? (
             // Loaded state with carousel
-            <div className="py-3 border-b border-gray-200 bg-white">
+            <div className="py-3 border-b border-gray-200 bg-white/90 backdrop-blur-xl">
               <div className="max-w-7xl mx-auto">
                 <PillCarousel
                   title="Popular Searches"
@@ -1193,7 +1193,7 @@ export default function ServiceNameSearchClient({
         });
         if (venuesWithMatch.length === 0) return null;
         return (
-          <div className="py-2 px-4 border-b border-gray-200">
+          <div className="py-2 px-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-700 font-medium">
                 Showing {venuesWithMatch.length} {venuesWithMatch.length === 1 ? "salon" : "salons"} offering &quot;{activeServiceName}&quot;
@@ -1215,13 +1215,14 @@ export default function ServiceNameSearchClient({
       {activeServiceName && (
         <div className="flex flex-1 overflow-hidden h-[calc(100vh-200px)] relative">
           {/* Results Column: Grid layout (when map hidden) or List layout (when map shown) */}
-          <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-4" : "w-full overflow-y-auto px-4 py-4"}>
+          <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-4" : "w-full overflow-y-auto px-0 py-4"}>
             <div className={showMap ? "max-w-2xl mx-auto" : ""}>
               <VenueSearchResultsList
                 venues={venues}
                 activeServiceName={activeServiceName}
                 selectedFilters={selectedFilters}
                 selectedLocation={selectedLocation}
+                showMap={showMap}
                 loading={loading}
                 hasMore={hasMore}
                 isLoadingMore={isLoadingMore}
@@ -1256,8 +1257,11 @@ export default function ServiceNameSearchClient({
               )}
             </div>
           )}
+          
         </div>
       )}
+
+      <div className="h-10 md:hidden" aria-hidden="true" />
 
       {/* Mobile Map Bottom Sheet - 3/4 height, stacked directly above button with no gap */}
       {showMobileMap && (

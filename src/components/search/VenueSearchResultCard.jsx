@@ -78,9 +78,9 @@ function VenueSearchResultCard({
   const venueUuid = venue.venue?.uuid || "";
 
   return (
-    <div className="overflow-hidden border-b border-gray-200 pt-4 pb-0">
-      <div className="flex flex-col md:flex-row md:items-start gap-2 pl-0 pr-0 md:pl-0 md:pr-0 pt-0 md:py-0">
-        <div className="w-full md:w-48 h-40 md:h-32 bg-gray-100 flex-shrink-0 overflow-hidden rounded-md">
+    <div className="overflow-hidden rounded-sm border border-gray-200 bg-white shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-start gap-2 p-3 md:p-4">
+        <div className="w-full md:w-48 h-40 md:h-32 bg-gray-100 flex-shrink-0 overflow-hidden rounded-sm">
           {venue.primary_image?.url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -94,7 +94,7 @@ function VenueSearchResultCard({
           )}
         </div>
 
-        <div className="flex-1 min-w-0 pl-0 pr-0 md:pl-2 md:pr-0 py-0 md:py-0">
+        <div className="flex-1 min-w-0 py-0 md:py-0">
           <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
           <div className="flex items-center justify-between gap-2 mt-0.5">
             <div className="flex items-center gap-1 text-sm text-gray-500 min-w-0">
@@ -175,7 +175,7 @@ function VenueSearchResultCard({
         </div>
       </div>
 
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-gray-100 border-t border-gray-100">
         {groupMatchedServices(matched).map((group) => {
           const groupId = `${venueUuid}::${group.key}`;
           const isExpanded = expandedGroups.has(groupId);
@@ -189,7 +189,7 @@ function VenueSearchResultCard({
                 key={group.key}
                 type="button"
                 onClick={() => handleServiceClick(venue, service)}
-                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+                className="w-full px-3 md:px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900 truncate">
@@ -223,7 +223,7 @@ function VenueSearchResultCard({
               <button
                 type="button"
                 onClick={() => toggleGroup(venueUuid, group.key)}
-                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+                className="w-full px-3 md:px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900 truncate">
@@ -252,7 +252,7 @@ function VenueSearchResultCard({
                         key={service.uuid || serviceIndex}
                         type="button"
                         onClick={() => handleServiceClick(venue, service)}
-                        className="w-full pl-8 pr-4 py-3 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
+                        className="w-full pl-10 pr-4 py-3 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm text-gray-700 truncate">

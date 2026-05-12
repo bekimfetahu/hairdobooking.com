@@ -40,12 +40,12 @@ export default function FeaturedSalons() {
                             {/* Interactive slider (client component) — will hydrate on client */}
                             <div className="block sm:hidden">
                                 {/* On small screens, mount the interactive slider directly */}
-                                <ImageSlider slides={showcaseSlides} sliderHeight={220} sliderHeightMobile={160} fullBleed className="h-auto" />
+                                <ImageSlider slides={showcaseSlides} sliderHeight={220} sliderHeightMobile={160} className="h-auto" />
                             </div>
 
                             {/* On larger screens, also mount the interactive slider (hydration will replace/augment preview) */}
                             <div className="hidden sm:block">
-                                <ImageSlider slides={showcaseSlides} sliderHeight={280} fullBleed className="h-auto" />
+                                <ImageSlider slides={showcaseSlides} sliderHeight={280} className="h-auto" />
                             </div>
                         </div>
                     </div>

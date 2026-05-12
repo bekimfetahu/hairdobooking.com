@@ -62,8 +62,7 @@ export default async function ServiceNameSearchPage({ searchParams }) {
   return (
     <PageShell
       variant="marketing"
-      title={serviceName ? `${serviceName} near you` : ""}
-      contentClassName="mt-6"
+      contentClassName="mt-0"
     >
       <ServiceNameSearchClient
         serviceName={serviceName}

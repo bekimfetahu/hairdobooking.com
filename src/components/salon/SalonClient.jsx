@@ -6,7 +6,6 @@ import { Calendar, Sparkles, Banknote, User, Clock, ChevronDown, MapPin, Filter,
 import Swal from "sweetalert2";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/iconMap";
-import { useSalonSlider } from "@/context/SalonSliderContext";
 import {
   fetchSalonBySlug,
   fetchSalonProfessionals,
@@ -182,33 +181,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [expandedServices, setExpandedServices] = useState({});
   const [expandedFilter, setExpandedFilter] = useState(null);
-  const { showImageSlider, setShowImageSlider } = useSalonSlider();
-  const [lastScrollY, setLastScrollY] = useState(0);
   const searchInputRef = useRef(null);
-
-  // Hide slider on first scroll down and focus on search input
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      
-      // If scrolling down and gallery is visible, hide it and focus search input
-      if (currentScrollY > lastScrollY && showImageSlider) {
-        setShowImageSlider(false);
-        // Focus on search input with a small delay to ensure it's rendered
-        setTimeout(() => {
-          searchInputRef.current?.focus();
-        }, 50);
-      }
-      
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [lastScrollY, showImageSlider, setShowImageSlider]);
 
   const toggleFilter = useCallback(() => {
     setExpandedFilter(expandedFilter === 'filters' ? null : 'filters');
@@ -683,13 +656,13 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
       {!loading && !error && (
         <div className="space-y-6">
-          {/* Gallery slider - only shown when slider is expanded */}
+          {/* Gallery slider */}
           <section className="relative">
             {images.length === 0 && (
               <p className="mt-2 text-sm text-neutral-500">This salon has not added any gallery images yet.</p>
             )}
 
-            {images.length > 0 && showImageSlider && (
+            {images.length > 0 && (
               <ImageSlider
                 slides={images.map((img) => ({ src: img.path ? `${process.env.NEXT_PUBLIC_LARAVEL_URL}/storage/${img.path}` : "", label: img.caption || "" }))}
                 sliderHeight={300}

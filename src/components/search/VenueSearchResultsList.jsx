@@ -15,6 +15,7 @@ function VenueSearchResultsList({
   activeServiceName = "",
   selectedFilters = {},
   selectedLocation = null,
+  showMap = false,
   loading = false,
   hasMore = false,
   isLoadingMore = false,
@@ -63,8 +64,8 @@ function VenueSearchResultsList({
         </div>
       )}
 
-      {/* Grid Layout - 2 columns on desktop, hidden on mobile */}
-      <div className="hidden md:grid grid-cols-2 gap-4">
+      {/* Grid Layout - 2 columns on desktop when map is hidden */}
+      <div className={cn("hidden", showMap ? "md:block space-y-4" : "md:grid md:grid-cols-2 gap-4") }>
         {venues.map((venue, vi) => (
           <VenueSearchResultCard
             key={venue.venue?.uuid || vi}

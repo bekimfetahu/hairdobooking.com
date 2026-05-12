@@ -47,12 +47,16 @@ export default function Navbar() {
     const isForBusinessPage = pathname === '/partners' || pathname.startsWith('/partners/');
     const isPricingPage = pathname === '/pricing' || pathname.startsWith('/pricing/');
     const isLoginPage = pathname === '/login' || pathname.startsWith('/login/');
+    const primaryVenue = user?.client?.primary_venue ?? null;
+    const primaryVenueSlug = primaryVenue?.slug ?? null;
+    const primaryVenueLabel = primaryVenue?.name || 'Choose preferred salon';
+    const bookNowHref = isAuthenticated && primaryVenueSlug ? `/salon/${primaryVenueSlug}` : '/register';
 
     const visibleNavLinks = navLinks.filter((link) => {
         if (link.href === '/pricing' && !(isForBusinessPage || isPricingPage)) return false;
         if (link.href === '/register' && (isForBusinessPage || isPricingPage)) return false;
         return true;
-    });
+    }).map((link) => (link.href === '/register' ? { ...link, href: bookNowHref } : link));
 
     const displayName = useMemo(() => {
         return (
@@ -60,10 +64,7 @@ export default function Navbar() {
         );
     }, [user]);
 
-    const primaryVenue = user?.client?.primary_venue ?? null;
     const primaryVenueUuid = primaryVenue?.uuid ?? null;
-    const primaryVenueSlug = primaryVenue?.slug ?? null;
-    const primaryVenueLabel = primaryVenue?.name || 'Choose preferred salon';
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -326,20 +327,6 @@ export default function Navbar() {
                                     </button>
 
                                     <div className="space-y-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleNavigatePreferredSalon}
-                                            className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
-                                        >
-                                            <MapPin className="h-4 w-4 shrink-0 text-black" />
-                                            <span className="truncate">My preferred salon</span>
-                                        </button>
-                                        {accountLinks.map((link) => {
-                                            const Icon = link.icon;
-                                            const isActive = pathname === getBasePath(link.href) || pathname.startsWith(`${getBasePath(link.href)}/`);
-                                            return (
-                                                <Link
-                                                    key={link.href}
                                                     href={link.href}
                                                     className={`flex items-center gap-3 rounded-md px-4 py-3 text-sm font-normal transition-colors ${
                                                         isActive ? 'text-black' : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
@@ -373,7 +360,7 @@ export default function Navbar() {
                                     </Link>
 
                                     <Link
-                                        href="/register"
+                                        href={bookNowHref}
                                         className="flex items-center justify-center rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
                                     >
                                         Get started

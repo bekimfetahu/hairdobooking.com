@@ -140,6 +140,8 @@ export default function NavbarStatic({ initialUser = null }) {
     return user?.client?.primary_venue?.slug ?? null;
   }, [user]);
 
+  const bookNowHref = isAuthenticated && preferredVenueSlug ? `/salon/${preferredVenueSlug}` : '/register';
+
   const handleLogout = async () => {
     try {
       const res = await fetch('/api/auth/logout', {
@@ -225,7 +227,7 @@ export default function NavbarStatic({ initialUser = null }) {
           )}
 
           {!(isForBusinessPage || isPricingPage) && (
-            <Link href="/register" className={navLinkClasses('/register')}>
+            <Link href={bookNowHref} className={navLinkClasses('/register')}>
               <CalendarDays className="h-4 w-4 text-black" />
               Book now
             </Link>
@@ -257,20 +259,6 @@ export default function NavbarStatic({ initialUser = null }) {
                       <p className="text-xs text-neutral-500">Manage your bookings and profile</p>
                     </div>
                     <div className="p-2">
-                      {preferredVenueSlug && (
-                        <Link
-                          href={`/salon/${preferredVenueSlug}`}
-                          className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal transition-colors ${
-                            pathname === `/salon/${preferredVenueSlug}` || pathname.startsWith(`/salon/${preferredVenueSlug}/`)
-                              ? 'text-black'
-                              : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
-                          }`}
-                          onClick={() => setIsUserMenuOpen(false)}
-                        >
-                          <MapPin className="h-4 w-4 shrink-0 text-black" />
-                          <span className="truncate">Preferred salon</span>
-                        </Link>
-                      )}
                       <Link
                         href="/dashboard"
                         className="mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
@@ -345,7 +333,7 @@ export default function NavbarStatic({ initialUser = null }) {
 
               {!(isForBusinessPage || isPricingPage) && (
                 <Link
-                  href="/register"
+                  href={bookNowHref}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
                 >
