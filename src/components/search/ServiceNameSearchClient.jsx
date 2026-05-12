@@ -7,6 +7,7 @@ import { Filter, ChevronDown, MapPin, Search, Clock, ChevronUp } from "lucide-re
 import LocationSearch from "@/components/search/LocationSearch";
 import PillCarousel from "@/components/content/PillCarousel";
 import VenueSearchResultCard from "@/components/search/VenueSearchResultCard";
+import VenueSearchResultsList from "@/components/search/VenueSearchResultsList";
 import { useSearchFilters } from "@/hooks/useSearchFilters";
 import { useServiceSearch } from "@/hooks/useServiceSearch";
 import { searchVenues } from "@/services/search/searchService";
@@ -293,6 +294,7 @@ export default function ServiceNameSearchClient({
 
   // Map visibility toggle
   const [showMap, setShowMap] = React.useState(false);
+
 
   // Service search input state
   const [serviceQuery, setServiceQuery] = React.useState(serviceName || "");
@@ -606,6 +608,7 @@ export default function ServiceNameSearchClient({
       setServiceQuery(serviceName);
     }
   }, [serviceName, activeServiceName]);
+
 
   // Client-side fallback: fetch featured services if not provided from SSR
   const featuredFetchedRef = React.useRef(false);
@@ -1198,7 +1201,7 @@ export default function ServiceNameSearchClient({
               <button
                 type="button"
                 onClick={() => setShowMap(!showMap)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 {showMap ? "Hide Map" : "Show Map"}
@@ -1208,576 +1211,32 @@ export default function ServiceNameSearchClient({
         );
       })()}
 
-      {/* Layout: 2 Columns (Grid view or List+Map) */}
+      {/* Layout: Grid results when map hidden, List+Map when map shown */}
       {activeServiceName && (
         <div className="flex flex-1 overflow-hidden h-[calc(100vh-200px)] relative">
-          {/* Left Column: Venues List or Half-Grid */}
-          <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-0" : "w-1/2 overflow-y-auto pl-4 pr-2 py-4"}>
-          <div className={showMap ? "max-w-2xl mx-auto" : ""}>
-            {/* Loading indicator when refreshing results */}
-            {loading && venues.length > 0 && (
-              <div className="flex items-center gap-2 py-2">
-                <div className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm text-gray-700">Searching for new results...</span>
-              </div>
-            )}
-
-            {/* Venue cards */}
-            {venues.length === 0 ? (
-              <div className="py-20 text-center text-gray-500">
-                {activeServiceName ? (
-                  <>
-                    No venues found offering &quot;{activeServiceName}&quot;
-                    {hasActiveFilters && " with the selected filters"}.
-                  </>
-                ) : (
-                  <>Select a service to see results</>
-                )}
-              </div>
-            ) : (
-              <div className={cn("space-y-4 transition-opacity duration-200", loading && "opacity-50 pointer-events-none")}>
-                {/* When not showing map, show only left half of venues. When showing map, show all venues */}
-                {(showMap ? venues : venues.slice(0, Math.ceil(venues.length / 2))).map((venue, vi) => {
-                  return (
-                    <VenueSearchResultCard
-                      key={venue.venue?.uuid || vi}
-                      venue={venue}
-                      index={vi}
-                      activeServiceName={activeServiceName}
-                      selectedFilters={selectedFilters}
-                      selectedLocation={selectedLocation}
-                      expandedOpeningHours={expandedOpeningHours}
-                      toggleOpeningHours={toggleOpeningHours}
-                      expandedGroups={expandedGroups}
-                      toggleGroup={toggleGroup}
-                      handleServiceClick={handleServiceClick}
-                    />
-                  );
-                  const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
-                    if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
-                    if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
-                    return true;
-                  });
-                  if (matched.length === 0) return null;
-
-                  const address =
-                    venue.address?.formatted ||
-                    [venue.address?.line1, venue.address?.line2, venue.address?.postcode]
-                      .filter(Boolean)
-                      .join(", ");
-
-                  let distanceMiles = null;
-                  const vLat = venue.address?.location?.lat;
-                  const vLon = venue.address?.location?.lon;
-                  if (selectedLocation?.lat && vLat && vLon) {
-                    const distanceKm = calcDistance(
-                      selectedLocation.lat,
-                      selectedLocation.lon,
-                      vLat,
-                      vLon
-                    );
-                    distanceMiles = (distanceKm / 1.60934).toFixed(1);
-                  }
-
-                  return (
-                    <div
-                      key={venue.venue?.uuid || vi} 
-                      className="overflow-hidden border-b border-gray-200 pt-4 pb-0"
-                    >
-                      {/* Venue header - Stacked on mobile, horizontal on desktop */}
-                      <div className="flex flex-col md:flex-row md:items-start gap-2 pl-0 pr-0 md:pl-0 md:pr-0 pt-0 md:py-0">
-                        {/* Image - Full width on mobile, fixed landscape on desktop */}
-                        <div className="w-full md:w-48 h-40 md:h-32 bg-gray-100 flex-shrink-0 overflow-hidden rounded-md">
-                          {venue.primary_image?.url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={venue.primary_image.url}
-                              alt={venue.venue?.name || ""}
-                              className="w-full h-full object-cover"
-                              onError={(e) => { e.target.style.display = "none"; }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200" />
-                          )}
-                        </div>
-                        
-                        {/* Venue info - Below image on mobile, beside image on desktop */}
-                        <div className="flex-1 min-w-0 pl-0 pr-0 md:pl-2 md:pr-0 py-0 md:py-0">
-                          <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
-                          <div className="flex items-center justify-between gap-2 mt-0.5">
-                            <div className="flex items-center gap-1 text-sm text-gray-500 min-w-0">
-                              <MapPin className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">{address}</span>
-                            </div>
-                            {distanceMiles && (
-                              <div className="text-sm font-medium text-gray-700 flex-shrink-0">
-                                {distanceMiles} mi
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Opening Hours */}
-                          {venue.opening_hours && venue.opening_hours.length > 0 && (() => {
-                            const todayHours = getTodayOpeningHours(venue.opening_hours);
-                            const isHoursExpanded = expandedOpeningHours.has(venue.venue?.uuid);
-                            
-                            return (
-                              <div className="mt-2">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleOpeningHours(venue.venue?.uuid)}
-                                  className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                                >
-                                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                                  <span>
-                                    {todayHours 
-                                      ? `${todayHours.day} ${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`
-                                      : 'Closed'
-                                    }
-                                  </span>
-                                  {isHoursExpanded ? (
-                                    <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" />
-                                  ) : (
-                                    <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
-                                  )}
-                                </button>
-                                
-                                {/* Expanded hours */}
-                                {isHoursExpanded && (() => {
-                                  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                                  return (
-                                    <div className="mt-2 pl-5 border-l border-gray-200">
-                                      <div className="space-y-1">
-                                        {allDays.map((day) => {
-                                          const hours = venue.opening_hours.find(h => h.day === day);
-                                          const isClosed = !hours || !hours.open || !hours.close;
-                                          return (
-                                            <div key={day} className="flex items-center justify-between text-xs">
-                                              <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isClosed ? 'bg-gray-300' : 'bg-green-500'}`} />
-                                                <span className={`font-medium ${isClosed ? 'text-gray-400' : 'text-gray-600'}`}>{day}</span>
-                                              </div>
-                                              <span className={isClosed ? 'text-gray-400' : 'text-gray-500'}>
-                                                {isClosed
-                                                  ? 'Closed'
-                                                  : `${formatTime(hours.open)} - ${formatTime(hours.close)}`
-                                                }
-                                              </span>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-
-                      {/* All matched services collapsed into one group per venue */}
-                      <div className="divide-y divide-gray-100">
-                        {groupMatchedServices(matched).map((group) => {
-                          const venueUuid = venue.venue?.uuid || "";
-                          const groupId = `${venueUuid}::${group.key}`;
-                          const isExpanded = expandedGroups.has(groupId);
-
-                          if (group.items.length === 1) {
-                            const service = group.items[0];
-                            const meta = [service.category, service.audience].filter(Boolean).join(" · ");
-                            return (
-                              <button
-                                key={group.key}
-                                type="button"
-                                onClick={() => handleServiceClick(venue, service)}
-                                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {service.display_name || service.name}
-                                  </p>
-                                  {meta && (
-                                    <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-end flex-shrink-0 gap-0.5 text-right">
-                                  {service.price != null && (
-                                    <span className="text-sm font-semibold text-gray-900">
-                                      {formatMoney(service.price)}
-                                    </span>
-                                  )}
-                                  {service.duration_minutes != null && (
-                                    <span className="text-xs text-gray-500">
-                                      {service.duration_minutes} min
-                                    </span>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          }
-
-                          // Multi-variant group — collapsible
-                          const prices = group.items
-                            .map((s) => Number(s.price))
-                            .filter((p) => !Number.isNaN(p));
-                          const minPrice = prices.length ? Math.min(...prices) : null;
-
-                          return (
-                            <div key={group.key}>
-                              {/* Group header */}
-                              <button
-                                type="button"
-                                onClick={() => toggleGroup(venueUuid, group.key)}
-                                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {group.label} ({group.items.length})
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  {minPrice != null && (
-                                    <span className="text-sm font-semibold text-gray-900">
-                                      From {formatMoney(minPrice)}
-                                    </span>
-                                  )}
-                                  <ChevronDown
-                                    className={cn(
-                                      "w-4 h-4 text-gray-400 transition-transform",
-                                      isExpanded && "rotate-180"
-                                    )}
-                                  />
-                                </div>
-                              </button>
-
-                              {/* Expanded variants */}
-                              {isExpanded && (
-                                <div className="divide-y divide-gray-100">
-                                  {group.items.map((service, si) => {
-                                    const meta = [service.category, service.audience].filter(Boolean).join(" · ");
-                                    return (
-                                    <button
-                                      key={service.uuid || si}
-                                      type="button"
-                                      onClick={() => handleServiceClick(venue, service)}
-                                      className="w-full pl-8 pr-4 py-3 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
-                                    >
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-sm text-gray-700 truncate">
-                                          {service.display_name || service.name}
-                                        </p>
-                                        {meta && (
-                                          <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
-                                        )}
-                                      </div>
-                                      <div className="flex flex-col items-end flex-shrink-0 gap-0.5 text-right">
-                                        {service.price != null && (
-                                          <span className="text-sm font-semibold text-gray-900">
-                                            {formatMoney(service.price)}
-                                          </span>
-                                        )}
-                                        {service.duration_minutes != null && (
-                                          <span className="text-xs text-gray-500">
-                                            {service.duration_minutes} min
-                                          </span>
-                                        )}
-                                      </div>
-                                    </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-        {/* Load More Section */}
-        {hasMore && !loading && venues.length > 0 && (
-          <div ref={loadMoreRef} className="py-6 text-center">
-            {isLoadingMore && (
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                Loading more venues...
-              </div>
-            )}
-          </div>
-        )}
-          </div>
-          </div>
-
-          {/* Right Column: Second Half of Venues or Google Map */}
-          {!showMap ? (
-            <div className="w-1/2 overflow-y-auto pl-2 pr-4 py-4 border-l border-gray-200">
-              <div className={cn("space-y-4 transition-opacity duration-200", loading && "opacity-50 pointer-events-none")}>
-                {/* Show right half of venues */}
-                {venues.slice(Math.ceil(venues.length / 2)).map((venue, vi) => {
-                  return (
-                    <VenueSearchResultCard
-                      key={venue.venue?.uuid || vi}
-                      venue={venue}
-                      index={vi}
-                      activeServiceName={activeServiceName}
-                      selectedFilters={selectedFilters}
-                      selectedLocation={selectedLocation}
-                      expandedOpeningHours={expandedOpeningHours}
-                      toggleOpeningHours={toggleOpeningHours}
-                      expandedGroups={expandedGroups}
-                      toggleGroup={toggleGroup}
-                      handleServiceClick={handleServiceClick}
-                    />
-                  );
-                  const matched = getMatchedServices(venue, activeServiceName).filter((s) => {
-                    if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(s.category_id))) return false;
-                    if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(s.audience_id))) return false;
-                    return true;
-                  });
-                  if (matched.length === 0) return null;
-
-                  const address =
-                    venue.address?.formatted ||
-                    [venue.address?.line1, venue.address?.line2, venue.address?.postcode]
-                      .filter(Boolean)
-                      .join(", ");
-
-                  let distanceMiles = null;
-                  const vLat = venue.address?.location?.lat;
-                  const vLon = venue.address?.location?.lon;
-                  if (selectedLocation?.lat && vLat && vLon) {
-                    const distanceKm = calcDistance(
-                      selectedLocation.lat,
-                      selectedLocation.lon,
-                      vLat,
-                      vLon
-                    );
-                    distanceMiles = (distanceKm / 1.60934).toFixed(1);
-                  }
-
-                  return (
-                    <div
-                      key={venue.venue?.uuid || vi} 
-                      className="overflow-hidden border-b border-gray-200 pt-4 pb-0"
-                    >
-                      {/* Venue header - Stacked on mobile, horizontal on desktop */}
-                      <div className="flex flex-col md:flex-row md:items-start gap-2 pl-0 pr-0 md:pl-0 md:pr-0 pt-0 md:py-0">
-                        {/* Image - Full width on mobile, fixed landscape on desktop */}
-                        <div className="w-full md:w-48 h-40 md:h-32 bg-gray-100 flex-shrink-0 overflow-hidden rounded-md">
-                          {venue.primary_image?.url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={venue.primary_image.url}
-                              alt={venue.venue?.name || ""}
-                              className="w-full h-full object-cover"
-                              onError={(e) => { e.target.style.display = "none"; }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200" />
-                          )}
-                        </div>
-                        
-                        {/* Venue info - Below image on mobile, beside image on desktop */}
-                        <div className="flex-1 min-w-0 pl-0 pr-0 md:pl-2 md:pr-0 py-0 md:py-0">
-                          <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
-                          <div className="flex items-center justify-between gap-2 mt-0.5">
-                            <div className="flex items-center gap-1 text-sm text-gray-500 min-w-0">
-                              <MapPin className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">{address}</span>
-                            </div>
-                            {distanceMiles && (
-                              <div className="text-sm font-medium text-gray-700 flex-shrink-0">
-                                {distanceMiles} mi
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Opening Hours */}
-                          {venue.opening_hours && venue.opening_hours.length > 0 && (() => {
-                            const todayHours = getTodayOpeningHours(venue.opening_hours);
-                            const isHoursExpanded = expandedOpeningHours.has(venue.venue?.uuid);
-                            
-                            return (
-                              <div className="mt-2">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleOpeningHours(venue.venue?.uuid)}
-                                  className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                                >
-                                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                                  <span>
-                                    {todayHours 
-                                      ? `${todayHours.day} ${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`
-                                      : 'Closed'
-                                    }
-                                  </span>
-                                  {isHoursExpanded ? (
-                                    <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" />
-                                  ) : (
-                                    <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
-                                  )}
-                                </button>
-                                
-                                {/* Expanded hours */}
-                                {isHoursExpanded && (() => {
-                                  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                                  return (
-                                    <div className="mt-2 pl-5 border-l border-gray-200">
-                                      <div className="space-y-1">
-                                        {allDays.map((day) => {
-                                          const hours = venue.opening_hours.find(h => h.day === day);
-                                          const isClosed = !hours || !hours.open || !hours.close;
-                                          return (
-                                            <div key={day} className="flex items-center justify-between text-xs">
-                                              <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isClosed ? 'bg-gray-300' : 'bg-green-500'}`} />
-                                                <span className={`font-medium ${isClosed ? 'text-gray-400' : 'text-gray-600'}`}>{day}</span>
-                                              </div>
-                                              <span className={isClosed ? 'text-gray-400' : 'text-gray-500'}>
-                                                {isClosed
-                                                  ? 'Closed'
-                                                  : `${formatTime(hours.open)} - ${formatTime(hours.close)}`
-                                                }
-                                              </span>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-
-                      {/* All matched services collapsed into one group per venue */}
-                      <div className="divide-y divide-gray-100">
-                        {groupMatchedServices(matched).map((group) => {
-                          const venueUuid = venue.venue?.uuid || "";
-                          const groupId = `${venueUuid}::${group.key}`;
-                          const isExpanded = expandedGroups.has(groupId);
-
-                          if (group.items.length === 1) {
-                            const service = group.items[0];
-                            const meta = [service.category, service.audience].filter(Boolean).join(" · ");
-                            return (
-                              <button
-                                key={group.key}
-                                type="button"
-                                onClick={() => handleServiceClick(venue, service)}
-                                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {service.display_name || service.name}
-                                  </p>
-                                  {meta && (
-                                    <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-end flex-shrink-0 gap-0.5 text-right">
-                                  {service.price != null && (
-                                    <span className="text-sm font-semibold text-gray-900">
-                                      {formatMoney(service.price)}
-                                    </span>
-                                  )}
-                                  {service.duration_minutes != null && (
-                                    <span className="text-xs text-gray-500">
-                                      {service.duration_minutes} min
-                                    </span>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          }
-
-                          // Multi-variant group — collapsible
-                          const prices = group.items
-                            .map((s) => Number(s.price))
-                            .filter((p) => !Number.isNaN(p));
-                          const minPrice = prices.length ? Math.min(...prices) : null;
-
-                          return (
-                            <div key={group.key}>
-                              {/* Group header */}
-                              <button
-                                type="button"
-                                onClick={() => toggleGroup(venueUuid, group.key)}
-                                className="w-full pl-0 pr-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {group.label} ({group.items.length})
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  {minPrice != null && (
-                                    <span className="text-sm font-semibold text-gray-900">
-                                      From {formatMoney(minPrice)}
-                                    </span>
-                                  )}
-                                  <ChevronDown
-                                    className={cn(
-                                      "w-4 h-4 text-gray-400 transition-transform",
-                                      isExpanded && "rotate-180"
-                                    )}
-                                  />
-                                </div>
-                              </button>
-
-                              {/* Expanded variants */}
-                              {isExpanded && (
-                                <div className="divide-y divide-gray-100">
-                                  {group.items.map((service, si) => {
-                                    const meta = [service.category, service.audience].filter(Boolean).join(" · ");
-                                    return (
-                                    <button
-                                      key={service.uuid || si}
-                                      type="button"
-                                      onClick={() => handleServiceClick(venue, service)}
-                                      className="w-full pl-8 pr-4 py-3 text-left hover:bg-gray-100 transition-colors flex items-center justify-between gap-4"
-                                    >
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-sm text-gray-700 truncate">
-                                          {service.display_name || service.name}
-                                        </p>
-                                        {meta && (
-                                          <p className="text-xs text-gray-500 mt-0.5">{meta}</p>
-                                        )}
-                                      </div>
-                                      <div className="flex flex-col items-end flex-shrink-0 gap-0.5 text-right">
-                                        {service.price != null && (
-                                          <span className="text-sm font-semibold text-gray-900">
-                                            {formatMoney(service.price)}
-                                          </span>
-                                        )}
-                                        {service.duration_minutes != null && (
-                                          <span className="text-xs text-gray-500">
-                                            {service.duration_minutes} min
-                                          </span>
-                                        )}
-                                      </div>
-                                    </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          {/* Results Column: Grid layout (when map hidden) or List layout (when map shown) */}
+          <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-4" : "w-full overflow-y-auto px-4 py-4"}>
+            <div className={showMap ? "max-w-2xl mx-auto" : ""}>
+              <VenueSearchResultsList
+                venues={venues}
+                activeServiceName={activeServiceName}
+                selectedFilters={selectedFilters}
+                selectedLocation={selectedLocation}
+                loading={loading}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                expandedOpeningHours={expandedOpeningHours}
+                toggleOpeningHours={toggleOpeningHours}
+                expandedGroups={expandedGroups}
+                toggleGroup={toggleGroup}
+                handleServiceClick={handleServiceClick}
+                loadMoreRef={loadMoreRef}
+              />
             </div>
-          ) : (
+          </div>
+
+          {/* Map Column: Shows when map is enabled */}
+          {showMap && (
             <div className="hidden md:block w-1/2 bg-white border-l border-gray-200 h-full overflow-hidden">
               {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) && venues.length > 0 ? (
                 <VenueMap
@@ -1797,56 +1256,43 @@ export default function ServiceNameSearchClient({
               )}
             </div>
           )}
-
-        {/* Mobile Map Bottom Sheet */}
-        {showMobileMap && (
-          <div className="fixed inset-0 md:hidden bg-black/40 z-40" onClick={() => setShowMobileMap(false)} />
-        )}
-        <div className={cn(
-          "fixed bottom-0 left-0 right-0 md:hidden transition-all duration-300 z-50 bg-white rounded-t-2xl shadow-lg flex flex-col",
-          showMobileMap ? "h-3/4" : "h-20"
-        )}>
-          {/* Handle bar and toggle button */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
-            <div className="flex-1" />
-            <div className="w-12 h-1 bg-gray-300 rounded-full" />
-            <button
-              onClick={() => setShowMobileMap(!showMobileMap)}
-              className="flex-1 text-right text-xs text-gray-500 hover:text-gray-700"
-            >
-              {showMobileMap ? "Hide" : ""}
-            </button>
-          </div>
-
-          {/* Map or Show Map Button */}
-          {showMobileMap ? (
-            <div className="flex-1 overflow-hidden w-full">
-              {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) && venues.length > 0 ? (
-                <VenueMap
-                  venues={venues}
-                  selectedLocation={selectedLocation}
-                  serviceName={activeServiceName}
-                  router={router}
-                />
-              ) : null}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center px-4 py-4">
-              <button
-                type="button"
-                onClick={() => setShowMobileMap(true)}
-                className="cursor-pointer inline-flex items-center justify-center rounded-full font-semibold text-white gap-2 bg-brand-blue border border-brand-blue hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 transition ease-in-out duration-150 text-base px-8 py-3"
-              >
-                View Map
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right w-5 h-5" aria-hidden="true">
-                  <path d="M5 12h14"></path>
-                  <path d="m12 5 7 7-7 7"></path>
-                </svg>
-              </button>
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Mobile Map Bottom Sheet - 3/4 height, stacked directly above button with no gap */}
+      {showMobileMap && (
+        <div className="fixed inset-0 md:hidden bg-black/40 z-40" onClick={() => setShowMobileMap(false)} />
+      )}
+      <div className={cn(
+        "fixed left-0 right-0 md:hidden transition-all duration-300 z-50 bg-white flex flex-col overflow-hidden",
+        showMobileMap ? "bottom-16 h-3/4" : "bottom-16 h-0"
+      )}>
+        {/* Map Content */}
+        {showMobileMap && (
+          <div className="w-full h-full overflow-hidden">
+            {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) && venues.length > 0 ? (
+              <VenueMap
+                venues={venues}
+                selectedLocation={selectedLocation}
+                serviceName={activeServiceName}
+                router={router}
+              />
+            ) : null}
+          </div>
+        )}
       </div>
-    )}
+
+      {/* Full-width toggle button at very bottom - sticks to bottom, no gap */}
+      <button
+        type="button"
+        onClick={() => setShowMobileMap(!showMobileMap)}
+        className="fixed bottom-0 left-0 right-0 md:hidden w-full px-4 py-4 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-800 font-semibold flex items-center justify-center gap-2 transition-colors z-50 border-t border-gray-200"
+      >
+        <MapPin className="w-5 h-5" />
+        {showMobileMap ? "Hide Map" : "Show Map"}
+      </button>
+
+      {/* End main layout */}
     </div>
-  );}
+  );
+}
