@@ -199,8 +199,14 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
                   selectedLocation.lon - offsetLon
                 ));
 
-                // Fit to search bounds (will show the search radius with buffer)
+                // Fit to search bounds, then clamp the zoom so city searches stay readable.
                 mapInstanceRef.current.fitBounds(searchBounds, 50);
+                window.google.maps.event.addListenerOnce(mapInstanceRef.current, "bounds_changed", () => {
+                  const currentZoom = mapInstanceRef.current.getZoom();
+                  if (currentZoom != null) {
+                    mapInstanceRef.current.setZoom(Math.max(currentZoom, 13));
+                  }
+                });
               } catch (err) {
                 console.error('[VenueMap] fitBounds error:', err);
               }
