@@ -11,41 +11,6 @@ import { useFeaturedServices } from '@/hooks/useFeaturedServices';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { getIcon } from '@/lib/iconMap';
 
-// Custom scrollbar styling for glass-like appearance
-const scrollbarStyle = `
-  .glass-scroll::-webkit-scrollbar {
-    width: 12px;
-  }
-  
-  .glass-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .glass-scroll::-webkit-scrollbar-thumb {
-    background: linear-gradient(to right, 
-      rgba(107, 114, 128, 0.5) 0%,
-      rgba(156, 163, 175, 0.15) 25%,
-      rgba(209, 213, 219, 0.08) 50%,
-      rgba(156, 163, 175, 0.15) 75%,
-      rgba(107, 114, 128, 0.5) 100%
-    );
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-  }
-  
-  .glass-scroll::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(to right, 
-      rgba(107, 114, 128, 0.7) 0%,
-      rgba(156, 163, 175, 0.25) 25%,
-      rgba(209, 213, 219, 0.15) 50%,
-      rgba(156, 163, 175, 0.25) 75%,
-      rgba(107, 114, 128, 0.7) 100%
-    );
-    background-clip: padding-box;
-  }
-`;
-
 /**
  * Calculate distance between two coordinates using Haversine formula
  */
@@ -652,7 +617,6 @@ export default function Hero({
 
   return (
     <section className="relative overflow-visible pt-5 pb-0 md:pt-8 md:pb-0">
-      <style>{scrollbarStyle}</style>
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
         strategy="lazyOnload"
@@ -673,10 +637,10 @@ export default function Hero({
           {showSearchInput && (
             <div ref={searchRef} className="relative">
               {/* Desktop Layout: Inline */}
-              <div className="hidden sm:flex h-11 items-center bg-white rounded-full border border-gray-200 shadow-sm px-2">
+              <div className="hidden sm:flex h-11 items-center rounded-full border border-black/80 bg-white/95 px-2 shadow-[0_18px_45px_rgba(0,0,0,0.14)] ring-2 ring-black/10 backdrop-blur-xl">
                 {/* Search Input */}
                 <div className="flex items-center flex-1 px-3">
-                  <Search className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
+                  <Search className="w-4 h-4 text-black mr-2 flex-shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Services or Salons..."
@@ -702,7 +666,7 @@ export default function Hero({
                 </div>
 
                 {/* Divider */}
-                <span className="text-gray-300 text-xs select-none">|</span>
+                <span className="text-black/25 text-xs select-none">|</span>
 
                 {/* Location Input */}
                 <div className="flex items-center w-56 px-3">
@@ -726,7 +690,7 @@ export default function Hero({
                 <button
                   type="button"
                   onClick={handleSearchButtonClick}
-                  className="ml-2 h-8 px-4 rounded-full border border-gray-200 bg-[#f8f8f8] hover:bg-gray-100 transition flex items-center justify-center text-sm font-medium text-gray-800 shrink-0"
+                  className="ml-2 h-8 px-4 rounded-full border border-black bg-black text-white shadow-sm transition hover:bg-neutral-800 hover:border-neutral-800 flex items-center justify-center text-sm font-medium shrink-0"
                   aria-label="Search"
                   title="Search"
                 >
@@ -737,8 +701,8 @@ export default function Hero({
               {/* Mobile Layout: Stacked */}
               <div className="sm:hidden space-y-2">
                 {/* Search Input */}
-                <div className="h-8 flex items-center bg-white rounded-md border border-black px-2 shadow-sm">
-                  <Search className="w-3.5 h-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
+                <div className="h-8 flex items-center rounded-md border border-black/70 bg-white px-2 shadow-sm">
+                  <Search className="w-3.5 h-3.5 text-black mr-1.5 flex-shrink-0" />
                   <input
                     type="text"
                     placeholder="Search Services or Salons..."
@@ -766,7 +730,7 @@ export default function Hero({
                 {/* Location Input + Search Button - Same Row */}
                 <div className="h-8 flex items-center gap-1.5">
                   {/* Location Input */}
-                  <div className="flex-1 flex items-center bg-white rounded-md border border-black px-2 py-1 shadow-sm">
+                  <div className="flex-1 flex items-center rounded-md border border-black/70 bg-white px-2 py-1 shadow-sm">
                     <LocationSearch
                       value={selectedLocation?.address || ''}
                       mapsReady={mapsReady}
@@ -787,7 +751,7 @@ export default function Hero({
                   <button
                     type="button"
                     onClick={handleSearchButtonClick}
-                    className="h-8 px-3 rounded-md border border-black bg-black text-white hover:bg-gray-800 transition flex items-center justify-center text-xs font-medium shrink-0"
+                    className="h-8 px-3 rounded-md border border-black bg-black text-white transition hover:bg-neutral-800 hover:border-neutral-800 flex items-center justify-center text-xs font-medium shrink-0"
                     aria-label="Search"
                   >
                     Search
@@ -797,7 +761,7 @@ export default function Hero({
 
               {/* Dropdown Results - Single Column Layout */}
               {showDropdown && !isLocationSearchFocused && !selectedServiceOrSalon && (
-                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto glass-scroll">
+                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
                   {/* Single unified column */}
                   <div className="flex flex-col">
                     <div className="border-b border-gray-200">
