@@ -314,7 +314,7 @@ export default function LocationSearch({
 
       {/* Dropdown with suggestions - positioned relative to container to escape overflow-hidden */}
       {showDropdown && isClient && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-md z-40 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-md z-[60] overflow-hidden">
               {/* Current Location Option */}
               <button
                 type="button"

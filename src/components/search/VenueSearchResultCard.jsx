@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { ChevronDown, ChevronUp, Clock, MapPin } from "lucide-react";
 
 function formatMoney(value) {
@@ -76,102 +77,113 @@ function VenueSearchResultCard({
   }
 
   const venueUuid = venue.venue?.uuid || "";
-
+  const venueSlug = venue.venue?.slug || "";
   return (
     <div className="overflow-hidden rounded-sm border border-gray-200 bg-white shadow-sm">
-      <div className="flex flex-col md:flex-row md:items-start gap-2 p-3 md:p-4">
-        <div className="w-full md:w-48 h-40 md:h-32 bg-gray-100 flex-shrink-0 overflow-hidden rounded-sm">
-          {venue.primary_image?.url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={venue.primary_image.url}
-              alt={venue.venue?.name || ""}
-              className="w-full h-full object-cover"
-              onError={(event) => { event.target.style.display = "none"; }}
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200" />
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0 py-0 md:py-0">
-          <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
-          <div className="flex items-center justify-between gap-2 mt-0.5">
-            <div className="flex items-center gap-1 text-sm text-gray-500 min-w-0">
-              <MapPin className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{address}</span>
-            </div>
-            {distanceMiles && (
-              <div className="text-sm font-medium text-gray-700 flex-shrink-0">
-                {distanceMiles} mi
-              </div>
+      <div className="relative w-full flex flex-col md:flex-row md:items-start gap-2 p-3 md:p-4 text-left">
+        <div className="absolute inset-0 rounded-sm bg-gray-50 opacity-0 transition-opacity duration-150 peer-hover:opacity-100 pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-start gap-2 flex-1 min-w-0">
+          <Link
+            href={venueSlug ? `/salon/${venueSlug}` : "#"}
+            onClick={(event) => {
+              if (!venueSlug) {
+                event.preventDefault();
+              }
+            }}
+            className="peer w-full md:w-48 h-40 md:h-32 bg-gray-100 flex-shrink-0 overflow-hidden rounded-sm cursor-pointer transition-opacity hover:opacity-95"
+          >
+            {venue.primary_image?.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={venue.primary_image.url}
+                alt={venue.venue?.name || ""}
+                className="w-full h-full object-cover"
+                onError={(event) => { event.target.style.display = "none"; }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200" />
             )}
-          </div>
+          </Link>
 
-          {venue.opening_hours && venue.opening_hours.length > 0 && (() => {
-            const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-            const todayHours = venue.opening_hours.find((hours) => hours.day === today);
-            const isHoursExpanded = expandedOpeningHours.has(venueUuid);
-
-            const formatTime = (time) => {
-              if (!time) return "";
-              const [hourString, minuteString] = time.split(":");
-              const hour = Number(hourString);
-              const minute = minuteString;
-              const period = hour >= 12 ? "pm" : "am";
-              const displayHour = hour % 12 || 12;
-              return minute === "00" ? `${displayHour}${period}` : `${displayHour}:${minute}${period}`;
-            };
-
-            return (
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={() => toggleOpeningHours(venueUuid)}
-                  className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                >
-                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>
-                    {todayHours
-                      ? `${todayHours.day} ${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`
-                      : "Closed"}
-                  </span>
-                  {isHoursExpanded ? (
-                    <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
-                  )}
-                </button>
-
-                {isHoursExpanded && (() => {
-                  const allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-                  return (
-                    <div className="mt-2 pl-5 border-l border-gray-200">
-                      <div className="space-y-1">
-                        {allDays.map((day) => {
-                          const hours = venue.opening_hours.find((hour) => hour.day === day);
-                          const isClosed = !hours || !hours.open || !hours.close;
-                          return (
-                            <div key={day} className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isClosed ? "bg-gray-300" : "bg-green-500"}`} />
-                                <span className={`font-medium ${isClosed ? "text-gray-400" : "text-gray-600"}`}>{day}</span>
-                              </div>
-                              <span className={isClosed ? "text-gray-400" : "text-gray-500"}>
-                                {isClosed
-                                  ? "Closed"
-                                  : `${formatTime(hours.open)} - ${formatTime(hours.close)}`}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
+          <div className="flex-1 min-w-0 py-0 md:py-0">
+            <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
+            <div className="flex items-center justify-between gap-2 mt-0.5">
+              <div className="flex items-center gap-1.5 text-sm text-gray-600 min-w-0">
+                <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">{address}</span>
               </div>
-            );
-          })()}
+              {distanceMiles && (
+                <div className="text-sm font-medium text-gray-700 flex-shrink-0">
+                  {distanceMiles} mi
+                </div>
+              )}
+            </div>
+
+            {venue.opening_hours && venue.opening_hours.length > 0 && (() => {
+              const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+              const todayHours = venue.opening_hours.find((hours) => hours.day === today);
+              const isHoursExpanded = expandedOpeningHours.has(venueUuid);
+
+              const formatTime = (time) => {
+                if (!time) return "";
+                const [hourString, minuteString] = time.split(":");
+                const hour = Number(hourString);
+                const minute = minuteString;
+                const period = hour >= 12 ? "pm" : "am";
+                const displayHour = hour % 12 || 12;
+                return minute === "00" ? `${displayHour}${period}` : `${displayHour}:${minute}${period}`;
+              };
+
+              return (
+                <div className="mt-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleOpeningHours(venueUuid)}
+                    className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>
+                      {todayHours
+                        ? `${todayHours.day} ${formatTime(todayHours.open)} - ${formatTime(todayHours.close)}`
+                        : "Closed"}
+                    </span>
+                    {isHoursExpanded ? (
+                      <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
+                    )}
+                  </button>
+
+                  {isHoursExpanded && (() => {
+                    const allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+                    return (
+                      <div className="mt-2 pl-5 border-l border-gray-200">
+                        <div className="space-y-1">
+                          {allDays.map((day) => {
+                            const hours = venue.opening_hours.find((hour) => hour.day === day);
+                            const isClosed = !hours || !hours.open || !hours.close;
+                            return (
+                              <div key={day} className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isClosed ? "bg-gray-300" : "bg-green-500"}`} />
+                                  <span className={`font-medium ${isClosed ? "text-gray-400" : "text-gray-600"}`}>{day}</span>
+                                </div>
+                                <span className={isClosed ? "text-gray-400" : "text-gray-500"}>
+                                  {isClosed
+                                    ? "Closed"
+                                    : `${formatTime(hours.open)} - ${formatTime(hours.close)}`}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </div>
 

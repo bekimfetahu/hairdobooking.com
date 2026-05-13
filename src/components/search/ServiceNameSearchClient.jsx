@@ -374,6 +374,7 @@ export default function ServiceNameSearchClient({
         }
       }, 300);
     } else {
+      setSelectedServiceOrSalon(false);
       setShowServiceDropdown(false);
     }
   };
@@ -606,16 +607,6 @@ export default function ServiceNameSearchClient({
     seededRef.current = true;
   }, [filterOptions, initialCategories, initialAudiences, selectedFilters, toggleFilter]);
 
-  // Sync serviceName prop changes (e.g., when pill is clicked and URL changes)
-  // The server has already fetched venues for the new service and passed them as initialVenues
-  React.useEffect(() => {
-    if (serviceName && serviceName !== activeServiceName) {
-      setActiveServiceName(serviceName);
-      setServiceQuery(serviceName);
-    }
-  }, [serviceName, activeServiceName]);
-
-
   // Client-side fallback: fetch featured services if not provided from SSR
   const featuredFetchedRef = React.useRef(false);
   React.useEffect(() => {
@@ -705,6 +696,7 @@ export default function ServiceNameSearchClient({
     if (featuredInitializedRef.current) return;
     if (!showFeaturedPills) return;
     if (!isDefaultLocationLoaded) return; // Wait for location to be loaded
+    if (serviceName) return;
     if (featuredServices.length === 0) return;
 
     featuredInitializedRef.current = true;
@@ -745,12 +737,7 @@ export default function ServiceNameSearchClient({
 
   const handleServiceClick = (venue, service) => {
     if (!venue?.venue?.slug || !service?.uuid) return;
-    // Close dropdowns and mark as selected
-    setShowServiceDropdown(false);
-    setExpandedFilter(null);
-    setSelectedServiceOrSalon(true);
-    // Set search value to the venue name
-    setServiceQuery(venue.venue.name || '');
+    router.push(`/salon/${venue.venue.slug}/service/${service.uuid}`);
   };
 
   const toggleGroup = (venueUuid, groupKey) => {
@@ -793,11 +780,21 @@ export default function ServiceNameSearchClient({
     });
   };
 
+  React.useEffect(() => {
+    if (mapsReady) return;
+    if (typeof window === 'undefined') return;
+
+    if (window.google?.maps?.importLibrary) {
+      setMapsReady(true);
+    }
+  }, [mapsReady]);
+
   return (
     <div className="relative w-full min-h-screen overflow-hidden pt-2 pb-0 md:pt-4">
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
         strategy="lazyOnload"
+        onReady={() => setMapsReady(true)}
         onLoad={() => setMapsReady(true)}
       />
 
@@ -831,6 +828,7 @@ export default function ServiceNameSearchClient({
                     type="button"
                     onClick={() => {
                       setServiceQuery('');
+                      setSelectedServiceOrSalon(false);
                       setShowServiceDropdown(false);
                     }}
                     className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
@@ -899,6 +897,7 @@ export default function ServiceNameSearchClient({
                     type="button"
                     onClick={() => {
                       setServiceQuery('');
+                      setSelectedServiceOrSalon(false);
                       setShowServiceDropdown(false);
                     }}
                     className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
@@ -1057,7 +1056,34 @@ export default function ServiceNameSearchClient({
               )}
 
               {/* Service suggestions */}
-              {serviceSearchLoading ? (
+              {serviceQuery.trim().length === 0 ? (
+                featuredServices.length > 0 ? (
+                  <>
+                    <div className="sticky top-0 px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-200">Featured Services</div>
+                    {featuredServices.map((service, i) => (
+                      <button
+                        key={service.uuid || service.name || i}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleServiceSelect(service);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                      >
+                        <p className="text-sm font-semibold text-gray-900">{service.name}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-gray-500">
+                            {Array.isArray(service.categories) && service.categories.length > 0
+                              ? service.categories.join(", ")
+                              : service.category || ""}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                ) : null
+              ) : serviceSearchLoading ? (
                 <div className="p-4 text-center text-sm text-gray-500">
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -1097,7 +1123,6 @@ export default function ServiceNameSearchClient({
               ) : serviceQuery.trim().length >= 1 && !featuredServices.some(s => s.name.toLowerCase() === serviceQuery.trim().toLowerCase()) ? (
                 <div className="p-4 text-center text-sm text-gray-500">No services found for &quot;{serviceQuery}&quot;</div>
               ) : featuredServices.length > 0 ? (
-                // Show featured services when: query matches featured service OR query is empty
                 <>
                   <div className="sticky top-0 px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-600 border-b border-gray-200">Featured Services</div>
                   {featuredServices.map((service, i) => (
@@ -1178,7 +1203,7 @@ export default function ServiceNameSearchClient({
                     if (selectedFilters.audiences.length > 0) {
                       params.set('audiences', selectedFilters.audiences.join(','));
                     }
-                    router.push(`/search/service?${params.toString()}`);
+                    window.location.href = `/search/service?${params.toString()}`;
                   }}
                 />
               </div>

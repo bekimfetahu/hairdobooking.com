@@ -50,6 +50,7 @@ export default function Hero({
   const searchRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
+  const suppressNextAutoSearchRef = React.useRef(false);
   const router = useRouter();
   
   const { results: venues, loading: venuesLoading, search: searchVenues } = useVenueSearch(initialVenues);
@@ -293,6 +294,11 @@ export default function Hero({
 
   // Re-search when filters change
   React.useEffect(() => {
+    if (suppressNextAutoSearchRef.current) {
+      suppressNextAutoSearchRef.current = false;
+      return;
+    }
+
     if (searchQuery.length >= 1) {
       const timerId = window.setTimeout(() => {
         void handleSearch(searchQuery);
@@ -309,12 +315,14 @@ export default function Hero({
   const handleServiceSelect = (service) => {
     setShowDropdown(false);
     setSelectedServiceOrSalon(true);
+    suppressNextAutoSearchRef.current = true;
     setSearchQuery(service?.name || '');
   };
 
   const handleVenueSelect = (venue) => {
     setShowDropdown(false);
     setSelectedServiceOrSalon(true);
+    suppressNextAutoSearchRef.current = true;
     setSearchQuery(venue?.name || '');
   };
 
@@ -631,7 +639,7 @@ export default function Hero({
       />
 
       {/* Search Bar - Top, Centered, Spanning Full Width */}
-      <div className="relative w-full flex justify-center px-3 sm:px-6 mb-8">
+      <div className="relative z-40 w-full flex justify-center px-3 sm:px-6 mb-8">
         <div className="max-w-4xl w-full">
           {/* Search Input */}
           {showSearchInput && (
@@ -761,7 +769,7 @@ export default function Hero({
 
               {/* Dropdown Results - Single Column Layout */}
               {showDropdown && !isLocationSearchFocused && !selectedServiceOrSalon && (
-                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
+                <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg z-40 max-h-96 overflow-y-auto">
                   {/* Single unified column */}
                   <div className="flex flex-col">
                     <div className="border-b border-gray-200">
