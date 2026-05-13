@@ -131,7 +131,7 @@ function VenueSearchResultCard({
                 const minute = minuteString;
                 const period = hour >= 12 ? "pm" : "am";
                 const displayHour = hour % 12 || 12;
-                return minute === "00" ? `${displayHour}${period}` : `${displayHour}:${minute}${period}`;
+                return `${displayHour}:${minute}${period}`;
               };
 
               return (
