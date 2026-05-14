@@ -14,6 +14,7 @@ function VenueSearchResultsList({
   venues = [],
   activeServiceName = "",
   selectedFilters = {},
+  filterOptions = {},
   selectedLocation = null,
   showMap = false,
   loading = false,
@@ -73,6 +74,7 @@ function VenueSearchResultsList({
             index={vi}
             activeServiceName={activeServiceName}
             selectedFilters={selectedFilters}
+            filterOptions={filterOptions}
             selectedLocation={selectedLocation}
             expandedOpeningHours={expandedOpeningHours}
             toggleOpeningHours={toggleOpeningHours}

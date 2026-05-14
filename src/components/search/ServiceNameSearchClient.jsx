@@ -268,13 +268,16 @@ export default function ServiceNameSearchClient({
   initialDistance = "10km",
   initialCategories = null,
   initialAudiences = null,
+  initialVenuesMeta = null,
 }) {
   const router = useRouter();
   const [venues, setVenues] = React.useState(initialVenues);
   const [loading, setLoading] = React.useState(false);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [hasMore, setHasMore] = React.useState(true);
+  const [currentPage, setCurrentPage] = React.useState(initialVenuesMeta?.current_page ? Number(initialVenuesMeta.current_page) : 1);
+  const [hasMore, setHasMore] = React.useState(
+    initialVenuesMeta ? (Number(initialVenuesMeta.total || 0) > (initialVenues?.length || 0)) : true
+  );
   const [mapsReady, setMapsReady] = React.useState(false);
   const [expandedFilter, setExpandedFilter] = React.useState(null);
   const [searchDistance, setSearchDistance] = React.useState(initialDistance);
@@ -320,8 +323,6 @@ export default function ServiceNameSearchClient({
 
   const { options: filterOptions, selectedFilters, toggleFilter, clearFilters, replaceFilters } = useSearchFilters();
   const { results: serviceResults, loading: serviceSearchLoading, search: searchServices } = useServiceSearch();
-  const [draftFilters, setDraftFilters] = React.useState(selectedFilters);
-  const [draftSearchDistance, setDraftSearchDistance] = React.useState(searchDistance);
 
   /**
    * From a venue ES response, return all services whose global_service_uuid matches the searched UUID,
@@ -363,13 +364,21 @@ export default function ServiceNameSearchClient({
         // Only open dropdown if not locked (i.e., not in the middle of a selection)
         if (!dropdownLockRef.current) {
           // Search services with location AND filter parameters
+          // Convert selected category IDs to names if filterOptions available
+          const categoryParam = (selectedFilters.categories?.length && filterOptions.categories?.length)
+            ? filterOptions.categories
+                .filter((c) => selectedFilters.categories.includes(c.id))
+                .map((c) => c.name)
+                .join(',')
+            : (selectedFilters.categories?.length ? selectedFilters.categories.join(',') : undefined);
+
           void searchServices({ 
             q: val.trim(), 
             perPage: 8,
             lat: selectedLocation?.lat,
             lon: selectedLocation?.lon,
             distance: searchDistance,
-            category: selectedFilters.categories?.length ? selectedFilters.categories.join(',') : undefined,
+            category: categoryParam,
             audience: selectedFilters.audiences?.length ? selectedFilters.audiences.join(',') : undefined,
           });
           setShowServiceDropdown(true);
@@ -393,6 +402,15 @@ export default function ServiceNameSearchClient({
     } = {}) => {
       // Assign defaults if not provided
       if (typeof activeService === 'undefined') activeService = activeServiceName;
+      const svc = activeService;
+
+      // If we already have SSR-provided venues for page 1 and the requested
+      // fetch is the same service + page 1 (non-append), skip the redundant call.
+      if (!append && page === 1 && venues.length > 0 && svc && svc === activeServiceName) {
+        // eslint-disable-next-line no-console
+        console.debug('[ServiceNameSearchClient] Skipping redundant fetchVenues for SSR data', { svc, page });
+        return;
+      }
       const isInitialLoad = page === 1;
       if (isInitialLoad) {
         setLoading(true);
@@ -400,15 +418,37 @@ export default function ServiceNameSearchClient({
         setIsLoadingMore(true);
       }
       try {
+        // Build params; avoid sending raw numeric IDs for category/audience until filterOptions are loaded
         const params = {
           lat: location?.lat,
           lon: location?.lon,
           distance,
-          category: filters.categories?.length ? filters.categories.join(",") : undefined,
-          audience: filters.audiences?.length ? filters.audiences.join(",") : undefined,
           perPage: 4,
           page,
         };
+
+        if (filters.categories?.length) {
+          if (filterOptions.categories?.length) {
+            params.category = filterOptions.categories
+              .filter((c) => filters.categories.includes(c.id))
+              .map((c) => c.name)
+              .join(',');
+          } else {
+            // Defer sending category until we can map IDs to names to avoid backend mismatches
+          }
+        }
+
+        if (filters.audiences?.length) {
+          if (filterOptions.audiences?.length) {
+            params.audience = filters.audiences.join(',');
+          } else {
+            // Defer sending audience until options loaded
+          }
+        }
+
+        // Debug log to help trace unexpected client fetches
+        // eslint-disable-next-line no-console
+        console.debug('[ServiceNameSearchClient] fetchVenues params:', params);
         if (activeService) {
           params.service = activeService;
         }
@@ -482,7 +522,12 @@ export default function ServiceNameSearchClient({
     if (searchDistance) params.set('distance', searchDistance);
     
     // Pass filters if any
-    if (selectedFilters.categories?.length) params.set('categories', selectedFilters.categories.join(','));
+    if (selectedFilters.categories?.length) {
+      const cats = (filterOptions.categories?.length)
+        ? filterOptions.categories.filter((c) => selectedFilters.categories.includes(c.id)).map((c) => c.name)
+        : selectedFilters.categories;
+      params.set('categories', cats.join(','));
+    }
     if (selectedFilters.audiences?.length) params.set('audiences', selectedFilters.audiences.join(','));
     
     // Navigate to search page with new params
@@ -491,25 +536,42 @@ export default function ServiceNameSearchClient({
 
   React.useEffect(() => {
     if (expandedFilter !== "filters") return;
-
-    setDraftFilters({
-      categories: [...(selectedFilters.categories || [])],
-      audiences: [...(selectedFilters.audiences || [])],
-    });
-    setDraftSearchDistance(searchDistance);
-  }, [expandedFilter, selectedFilters.categories, selectedFilters.audiences, searchDistance]);
+    // No draft model: UI checkboxes bind directly to selectedFilters
+  }, [expandedFilter]);
 
   const handleApplyFilters = () => {
-    replaceFilters(draftFilters);
-    setSearchDistance(draftSearchDistance);
+    // Apply current selected filters (already mutated by UI) and distance
+    // selectedFilters is managed by useSearchFilters; searchDistance is local state
     setExpandedFilter(null);
     setShowServiceDropdown(false);
-    void fetchVenues({
-      filters: draftFilters,
-      distance: draftSearchDistance,
-      location: selectedLocation,
-      activeService: activeServiceName,
-    });
+
+    // Build SSR URL params so the page reloads server-side with new filters
+    const params = new URLSearchParams();
+    const svc = activeServiceName || serviceQuery;
+    if (svc) params.set('q', svc);
+    if (selectedLocation?.address) params.set('loc', selectedLocation.address);
+    if (selectedLocation?.lat !== undefined) params.set('lat', String(selectedLocation.lat));
+    if (selectedLocation?.lon !== undefined) params.set('lon', String(selectedLocation.lon));
+    if (searchDistance) params.set('distance', searchDistance);
+
+    // Categories: prefer names when available
+    if (selectedFilters.categories?.length) {
+      const cats = (filterOptions.categories?.length)
+        ? filterOptions.categories.filter((c) => selectedFilters.categories.includes(c.id)).map((c) => c.name)
+        : selectedFilters.categories;
+      params.set('categories', cats.join(','));
+    }
+
+    // Audiences: prefer names when available
+    if (selectedFilters.audiences?.length) {
+      const auds = (filterOptions.audiences?.length)
+        ? filterOptions.audiences.filter((a) => selectedFilters.audiences.includes(a.id)).map((a) => a.name)
+        : selectedFilters.audiences;
+      params.set('audiences', auds.join(','));
+    }
+
+    // Navigate to SSR page to reload results server-side
+    router.push(`/search/service?${params.toString()}`);
   };
 
   React.useLayoutEffect(() => {
@@ -643,25 +705,23 @@ export default function ServiceNameSearchClient({
   const seededRef = React.useRef(false);
   React.useEffect(() => {
     if (seededRef.current) return;
-    if (!filterOptions.categories?.length && !filterOptions.audiences?.length) return;
-    if (!initialCategories && !initialAudiences) { seededRef.current = true; return; }
+    if (!filterOptions.categories?.length) return; // wait for categories mapping
+    if (!initialCategories) { seededRef.current = true; return; }
 
-    const catIds = initialCategories
-      ? initialCategories.split(",").map(Number).filter(Boolean)
-      : [];
-    const audIds = initialAudiences
-      ? initialAudiences.split(",").map(Number).filter(Boolean)
-      : [];
+    const tokens = initialCategories.split(',').map(s => s.trim()).filter(Boolean);
+    const resolvedIds = tokens.map((tok) => {
+      const asNum = Number(tok);
+      if (Number.isFinite(asNum) && asNum > 0) return asNum;
+      const found = filterOptions.categories.find((c) => c.name === tok || c.name.toLowerCase() === tok.toLowerCase());
+      return found ? Number(found.id) : null;
+    }).filter(Boolean);
 
-    catIds.forEach((id) => {
-      if (!selectedFilters.categories.includes(id)) toggleFilter("categories", id);
-    });
-    audIds.forEach((id) => {
-      if (!selectedFilters.audiences.includes(id)) toggleFilter("audiences", id);
-    });
+    if (resolvedIds.length > 0) {
+      replaceFilters({ categories: resolvedIds, audiences: [] });
+    }
 
     seededRef.current = true;
-  }, [filterOptions, initialCategories, initialAudiences, selectedFilters, toggleFilter]);
+  }, [filterOptions, initialCategories, replaceFilters]);
 
   // Client-side fallback: fetch featured services if not provided from SSR
   const featuredFetchedRef = React.useRef(false);
@@ -1042,18 +1102,9 @@ export default function ServiceNameSearchClient({
                               <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={draftFilters.categories?.includes(cat.id) || false}
+                                  checked={selectedFilters.categories?.includes(cat.id) || false}
                                   onChange={() => {
-                                    const categoryId = Number(cat.id);
-                                    setDraftFilters((prev) => {
-                                      const current = prev.categories || [];
-                                      return {
-                                        ...prev,
-                                        categories: current.includes(categoryId)
-                                          ? current.filter((id) => id !== categoryId)
-                                          : [...current, categoryId],
-                                      };
-                                    });
+                                    toggleFilter('categories', cat.id);
                                   }}
                                   className="w-4 h-4 rounded border-gray-300"
                                 />
@@ -1075,18 +1126,9 @@ export default function ServiceNameSearchClient({
                               <label key={aud.id} className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={draftFilters.audiences?.includes(aud.id) || false}
+                                  checked={selectedFilters.audiences?.includes(aud.id) || false}
                                   onChange={() => {
-                                    const audienceId = Number(aud.id);
-                                    setDraftFilters((prev) => {
-                                      const current = prev.audiences || [];
-                                      return {
-                                        ...prev,
-                                        audiences: current.includes(audienceId)
-                                          ? current.filter((id) => id !== audienceId)
-                                          : [...current, audienceId],
-                                      };
-                                    });
+                                    toggleFilter('audiences', aud.id);
                                   }}
                                   className="w-4 h-4 rounded border-gray-300"
                                 />
@@ -1107,8 +1149,8 @@ export default function ServiceNameSearchClient({
                           <input
                             type="radio"
                             name="sn-distance-mobile"
-                            checked={draftSearchDistance === d}
-                            onChange={() => setDraftSearchDistance(d)}
+                            checked={searchDistance === d}
+                            onChange={() => setSearchDistance(d)}
                             className="w-4 h-4 text-blue-600 border-gray-300"
                           />
                           <span className="text-sm text-gray-700">{d}</span>
@@ -1120,8 +1162,8 @@ export default function ServiceNameSearchClient({
                     <button
                       type="button"
                       onClick={() => {
-                        setDraftFilters({ categories: [], audiences: [] });
-                        setDraftSearchDistance("10km");
+                        clearFilters();
+                        setSearchDistance("10km");
                       }}
                       className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
                     >
@@ -1255,19 +1297,8 @@ export default function ServiceNameSearchClient({
                             <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={draftFilters.categories?.includes(cat.id) || false}
-                                onChange={() => {
-                                  const categoryId = Number(cat.id);
-                                  setDraftFilters((prev) => {
-                                    const current = prev.categories || [];
-                                    return {
-                                      ...prev,
-                                      categories: current.includes(categoryId)
-                                        ? current.filter((id) => id !== categoryId)
-                                        : [...current, categoryId],
-                                    };
-                                  });
-                                }}
+                                checked={selectedFilters.categories?.includes(cat.id) || false}
+                                onChange={() => toggleFilter('categories', cat.id)}
                                 className="w-4 h-4 rounded border-gray-300"
                               />
                               {Icon && <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />}
@@ -1288,19 +1319,8 @@ export default function ServiceNameSearchClient({
                             <label key={aud.id} className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={draftFilters.audiences?.includes(aud.id) || false}
-                                onChange={() => {
-                                  const audienceId = Number(aud.id);
-                                  setDraftFilters((prev) => {
-                                    const current = prev.audiences || [];
-                                    return {
-                                      ...prev,
-                                      audiences: current.includes(audienceId)
-                                        ? current.filter((id) => id !== audienceId)
-                                        : [...current, audienceId],
-                                    };
-                                  });
-                                }}
+                                checked={selectedFilters.audiences?.includes(aud.id) || false}
+                                onChange={() => toggleFilter('audiences', aud.id)}
                                 className="w-4 h-4 rounded border-gray-300"
                               />
                               {Icon && <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />}
@@ -1320,8 +1340,8 @@ export default function ServiceNameSearchClient({
                         <input
                           type="radio"
                           name="sn-distance"
-                          checked={draftSearchDistance === d}
-                          onChange={() => setDraftSearchDistance(d)}
+                          checked={searchDistance === d}
+                          onChange={() => setSearchDistance(d)}
                           className="w-4 h-4 text-blue-600 border-gray-300"
                         />
                         <span className="text-sm text-gray-700">{d}</span>
@@ -1333,8 +1353,8 @@ export default function ServiceNameSearchClient({
                   <button
                     type="button"
                       onClick={() => {
-                        setDraftFilters({ categories: [], audiences: [] });
-                        setDraftSearchDistance("10km");
+                        clearFilters();
+                        setSearchDistance("10km");
                       }}
                     className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
                   >
@@ -1399,7 +1419,10 @@ export default function ServiceNameSearchClient({
                       params.set('distance', searchDistance);
                     }
                     if (selectedFilters.categories.length > 0) {
-                      params.set('categories', selectedFilters.categories.join(','));
+                      const cats = (filterOptions.categories?.length)
+                        ? filterOptions.categories.filter((c) => selectedFilters.categories.includes(c.id)).map((c) => c.name)
+                        : selectedFilters.categories;
+                      params.set('categories', cats.join(','));
                     }
                     if (selectedFilters.audiences.length > 0) {
                       params.set('audiences', selectedFilters.audiences.join(','));
@@ -1453,6 +1476,7 @@ export default function ServiceNameSearchClient({
                 venues={venues}
                 activeServiceName={activeServiceName}
                 selectedFilters={selectedFilters}
+                filterOptions={filterOptions}
                 selectedLocation={selectedLocation}
                 showMap={showMap}
                 loading={loading}

@@ -42,6 +42,7 @@ function VenueSearchResultCard({
   index,
   activeServiceName,
   selectedFilters,
+  filterOptions,
   selectedLocation,
   expandedOpeningHours,
   toggleOpeningHours,
@@ -49,9 +50,36 @@ function VenueSearchResultCard({
   toggleGroup,
   handleServiceClick,
 }) {
+  // Build selected category names from selectedFilters using filterOptions when available
+  const selectedCategoryNames = (selectedFilters.categories || []).map((id) => {
+    const found = filterOptions?.categories?.find((c) => Number(c.id) === Number(id));
+    return found ? found.name : null;
+  }).filter(Boolean);
+
+  const selectedAudienceNames = (selectedFilters.audiences || []).map((id) => {
+    const found = filterOptions?.audiences?.find((a) => Number(a.id) === Number(id));
+    return found ? found.name : null;
+  }).filter(Boolean);
+
   const matched = getMatchedServices(venue, activeServiceName).filter((service) => {
-    if (selectedFilters.categories?.length && !selectedFilters.categories.includes(Number(service.category_id))) return false;
-    if (selectedFilters.audiences?.length && !selectedFilters.audiences.includes(Number(service.audience_id))) return false;
+    // Category match: accept if service has numeric category_id matching selectedFilters,
+    // or if service.category (name) matches any selected category name.
+    if (selectedFilters.categories?.length) {
+      const catId = Number(service.category_id);
+      const catName = service.category || service.category_name || null;
+      const idMatches = !Number.isNaN(catId) && selectedFilters.categories.includes(catId);
+      const nameMatches = catName && selectedCategoryNames.length > 0 && selectedCategoryNames.some((n) => n.toLowerCase() === String(catName).toLowerCase());
+      if (!idMatches && !nameMatches) return false;
+    }
+
+    if (selectedFilters.audiences?.length) {
+      const audId = Number(service.audience_id);
+      const audName = service.audience || service.audience_name || null;
+      const idMatches = !Number.isNaN(audId) && selectedFilters.audiences.includes(audId);
+      const nameMatches = audName && selectedAudienceNames.length > 0 && selectedAudienceNames.some((n) => n.toLowerCase() === String(audName).toLowerCase());
+      if (!idMatches && !nameMatches) return false;
+    }
+
     return true;
   });
 

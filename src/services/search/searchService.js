@@ -56,9 +56,14 @@ export async function searchFeaturedServices({ lat, lon, distance } = {}) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-      
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      } catch (e) {
+        const text = await response.text();
+        errorMessage = text ? text : `HTTP ${response.status}: ${response.statusText}`;
+      }
       throw new Error(errorMessage);
     }
 
@@ -94,9 +99,14 @@ export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 1
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-      
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      } catch (e) {
+        const text = await response.text();
+        errorMessage = text ? text : `HTTP ${response.status}: ${response.statusText}`;
+      }
       throw new Error(errorMessage);
     }
 
@@ -142,9 +152,14 @@ export async function searchServices({ q, category, audience, lat, lon, distance
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-      
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      } catch (e) {
+        const text = await response.text();
+        errorMessage = text ? text : `HTTP ${response.status}: ${response.statusText}`;
+      }
       throw new Error(errorMessage);
     }
 

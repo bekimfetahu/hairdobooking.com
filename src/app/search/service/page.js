@@ -21,10 +21,12 @@ export default async function ServiceNameSearchPage({ searchParams }) {
   const lon = query.lon ? Number(query.lon) : null;
   const distance = query.distance || "10km";
   const loc = query.loc || "";
-  const categories = query.categories || null;
-  const audiences = query.audiences || null;
+  // Support both singular and plural query param names: `category` or `categories`, `audience` or `audiences`.
+  const categories = query.categories ?? query.category ?? null;
+  const audiences = query.audiences ?? query.audience ?? null;
 
   let initialVenues = [];
+  let initialVenuesMeta = null;
   let initialFeaturedServices = [];
 
   // Always fetch featured services (for pills that are always visible)
@@ -54,6 +56,8 @@ export default async function ServiceNameSearchPage({ searchParams }) {
 
       const response = await laravelApp.get("/client/search/venues", { params });
       initialVenues = response.data?.data || [];
+      // Pass meta so the client can hydrate pagination state and avoid unnecessary loads
+      initialVenuesMeta = response.data?.meta || null;
     } catch {
       // Page still renders; client will retry
     }
@@ -67,6 +71,7 @@ export default async function ServiceNameSearchPage({ searchParams }) {
       <ServiceNameSearchClient
         serviceName={serviceName}
         initialVenues={initialVenues}
+        initialVenuesMeta={initialVenuesMeta}
         initialFeaturedServices={initialFeaturedServices}
         initialLocationLabel={loc}
         initialLocationLat={lat}
