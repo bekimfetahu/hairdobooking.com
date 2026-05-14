@@ -46,11 +46,12 @@ export function useSearchFilters() {
    * Toggle a filter checkbox
    */
   const toggleFilter = useCallback((filterType, filterId) => {
+    const normalizedFilterId = Number(filterId);
     setSelectedFilters((prev) => {
       const current = prev[filterType] || [];
-      const updated = current.includes(filterId)
-        ? current.filter((id) => id !== filterId)
-        : [...current, filterId];
+      const updated = current.includes(normalizedFilterId)
+        ? current.filter((id) => id !== normalizedFilterId)
+        : [...current, normalizedFilterId];
 
       return {
         ...prev,
@@ -66,6 +67,13 @@ export function useSearchFilters() {
     setSelectedFilters({
       categories: [],
       audiences: [],
+    });
+  }, []);
+
+  const replaceFilters = useCallback((nextFilters) => {
+    setSelectedFilters({
+      categories: Array.isArray(nextFilters?.categories) ? nextFilters.categories : [],
+      audiences: Array.isArray(nextFilters?.audiences) ? nextFilters.audiences : [],
     });
   }, []);
 
@@ -101,6 +109,7 @@ export function useSearchFilters() {
     error,
     toggleFilter,
     clearFilters,
+    replaceFilters,
     getFilterQueryParams,
     hasActiveFilters,
   };

@@ -148,10 +148,12 @@ export default function Hero({
 
   // Handle search button click - navigate to search results page
   const handleSearchButtonClick = () => {
-    if (!searchQuery.trim()) return;
-    
     const params = new URLSearchParams();
-    params.set('q', searchQuery);
+    const query = searchQuery.trim();
+
+    if (query) {
+      params.set('q', query);
+    }
     
     // Pass location details if available
     if (selectedLocation?.address) params.set('loc', selectedLocation.address);
@@ -639,7 +641,7 @@ export default function Hero({
       />
 
       {/* Search Bar - Top, Centered, Spanning Full Width */}
-      <div className="relative z-40 w-full flex justify-center px-3 sm:px-6 mb-8">
+      <div className="relative z-40 w-full flex justify-center px-5 sm:px-6 mb-8">
         <div className="max-w-4xl w-full">
           {/* Search Input */}
           {showSearchInput && (
@@ -709,7 +711,7 @@ export default function Hero({
               {/* Mobile Layout: Stacked */}
               <div className="sm:hidden space-y-2">
                 {/* Search Input */}
-                <div className="h-8 flex items-center rounded-md border border-black/70 bg-white px-2 shadow-sm">
+                <div className="h-[35px] flex items-center rounded-md border border-black/70 bg-white px-2 shadow-sm">
                   <Search className="w-3.5 h-3.5 text-black mr-1.5 flex-shrink-0" />
                   <input
                     type="text"
@@ -721,7 +723,7 @@ export default function Hero({
                       setSelectedServiceOrSalon(false);
                       setShowDropdown(true);
                     }}
-                    className="w-full bg-transparent outline-none text-xs text-gray-700 placeholder-gray-400"
+                    className="w-full bg-transparent outline-none text-xs text-gray-700 placeholder:text-sm placeholder-gray-400"
                   />
                   {searchQuery && (
                     <button

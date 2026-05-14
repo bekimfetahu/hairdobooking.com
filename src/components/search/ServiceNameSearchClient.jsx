@@ -3,7 +3,7 @@
 import React from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { Filter, ChevronDown, MapPin, Search, Clock, ChevronUp } from "lucide-react";
+import { ChevronDown, MapPin, Search, Clock, ChevronUp, SlidersHorizontal } from "lucide-react";
 import LocationSearch from "@/components/search/LocationSearch";
 import PillCarousel from "@/components/content/PillCarousel";
 import VenueSearchResultCard from "@/components/search/VenueSearchResultCard";
@@ -31,7 +31,6 @@ function calcDistance(lat1, lon1, lat2, lon2) {
       Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
 /**
  * VenueMap Component - Displays all venues on a Google Map
  * Simplified version based on PreferredSalonSearch pattern
@@ -43,8 +42,6 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!window.google?.maps || !mapRef.current) return;
-
     // Calculate center from selected location or first venue
     let center = { lat: 51.5074, lng: -0.1278 }; // London default
     if (selectedLocation) {
@@ -312,14 +309,19 @@ export default function ServiceNameSearchClient({
   // Tracks which venue has opening hours expanded: Set of venueUuid
   const [expandedOpeningHours, setExpandedOpeningHours] = React.useState(new Set());
   const serviceSearchRef = React.useRef(null);
+  const desktopSearchInputRef = React.useRef(null);
+  const filterButtonRef = React.useRef(null);
   const serviceDebounceRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
   const loadMoreRef = React.useRef(null);
   const suppressNextFocusRef = React.useRef(false);
   const dropdownLockRef = React.useRef(false);
+  const [filterDropdownStyle, setFilterDropdownStyle] = React.useState(null);
 
-  const { options: filterOptions, selectedFilters, toggleFilter, clearFilters } = useSearchFilters();
+  const { options: filterOptions, selectedFilters, toggleFilter, clearFilters, replaceFilters } = useSearchFilters();
   const { results: serviceResults, loading: serviceSearchLoading, search: searchServices } = useServiceSearch();
+  const [draftFilters, setDraftFilters] = React.useState(selectedFilters);
+  const [draftSearchDistance, setDraftSearchDistance] = React.useState(searchDistance);
 
   /**
    * From a venue ES response, return all services whose global_service_uuid matches the searched UUID,
@@ -392,13 +394,11 @@ export default function ServiceNameSearchClient({
       // Assign defaults if not provided
       if (typeof activeService === 'undefined') activeService = activeServiceName;
       const isInitialLoad = page === 1;
-      
       if (isInitialLoad) {
         setLoading(true);
       } else {
         setIsLoadingMore(true);
       }
-      
       try {
         const params = {
           lat: location?.lat,
@@ -489,11 +489,67 @@ export default function ServiceNameSearchClient({
     router.push(`/search/service?${params.toString()}`);
   };
 
+  React.useEffect(() => {
+    if (expandedFilter !== "filters") return;
+
+    setDraftFilters({
+      categories: [...(selectedFilters.categories || [])],
+      audiences: [...(selectedFilters.audiences || [])],
+    });
+    setDraftSearchDistance(searchDistance);
+  }, [expandedFilter, selectedFilters.categories, selectedFilters.audiences, searchDistance]);
+
+  const handleApplyFilters = () => {
+    replaceFilters(draftFilters);
+    setSearchDistance(draftSearchDistance);
+    setExpandedFilter(null);
+    setShowServiceDropdown(false);
+    void fetchVenues({
+      filters: draftFilters,
+      distance: draftSearchDistance,
+      location: selectedLocation,
+      activeService: activeServiceName,
+    });
+  };
+
+  React.useLayoutEffect(() => {
+    if (expandedFilter !== "filters") {
+      setFilterDropdownStyle(null);
+      return;
+    }
+
+    const updateFilterDropdownPosition = () => {
+      const container = serviceSearchRef.current;
+      const searchInputWrapper = desktopSearchInputRef.current;
+      const button = filterButtonRef.current;
+
+      if (!container || !searchInputWrapper || !button) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const searchRect = searchInputWrapper.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+
+      const left = Math.max(0, searchRect.left - containerRect.left);
+      const right = Math.max(0, containerRect.right - buttonRect.right);
+
+      setFilterDropdownStyle({
+        left: `${left}px`,
+        right: `${right}px`,
+        top: "calc(100% + 8px)",
+      });
+    };
+
+    updateFilterDropdownPosition();
+    window.addEventListener("resize", updateFilterDropdownPosition);
+    return () => window.removeEventListener("resize", updateFilterDropdownPosition);
+  }, [expandedFilter]);
+
   // Close service dropdown on outside click
   React.useEffect(() => {
     const handleClick = (e) => {
       if (serviceSearchRef.current && !serviceSearchRef.current.contains(e.target)) {
         setShowServiceDropdown(false);
+        setExpandedFilter(null);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -732,7 +788,6 @@ export default function ServiceNameSearchClient({
 
   const handleLocationChange = (locationData) => {
     setSelectedLocation(locationData);
-    void fetchVenues({ location: locationData });
   };
 
   const handleServiceClick = (venue, service) => {
@@ -799,7 +854,7 @@ export default function ServiceNameSearchClient({
       />
 
       {/* Full-width search bar */}
-      <div className="relative w-full flex justify-center px-3 sm:px-6 pb-4 z-30">
+      <div className="relative w-full flex justify-center px-5 sm:px-6 pb-4 z-30">
         <div className="max-w-4xl w-full">
           <div ref={serviceSearchRef} className="relative">
             <div className="hidden sm:flex h-11 items-center rounded-full border border-black/80 bg-white/95 px-2 shadow-[0_18px_45px_rgba(0,0,0,0.14)] ring-2 ring-black/10 backdrop-blur-xl">
@@ -861,6 +916,24 @@ export default function ServiceNameSearchClient({
 
               {/* Search Button */}
               <button
+                ref={filterButtonRef}
+                type="button"
+                onClick={() => setExpandedFilter(expandedFilter === "filters" ? null : "filters")}
+                className={cn(
+                  "ml-2 h-8 px-4 rounded-full border transition-all flex items-center justify-center gap-2 text-sm font-normal shrink-0",
+                  hasActiveFilters
+                    ? "border-black text-black bg-neutral-100 hover:bg-neutral-200"
+                    : "border-black/10 text-black bg-neutral-50 hover:bg-neutral-100"
+                )}
+                aria-label="Filters"
+                title="Filters"
+              >
+                <SlidersHorizontal className="w-4 h-4" strokeWidth={1.5} />
+                <span>Filters{hasActiveFilters && ` (${(selectedFilters.categories?.length || 0) + (selectedFilters.audiences?.length || 0)})`}</span>
+                <ChevronDown className={cn("w-4 h-4 transition-transform", expandedFilter === "filters" && "rotate-180")} />
+              </button>
+
+              <button
                 onClick={handleSearchButtonClick}
                 disabled={!serviceQuery.trim()}
                 className="ml-2 h-8 px-4 rounded-full border border-black bg-black text-white shadow-sm transition hover:bg-neutral-800 hover:border-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm font-medium shrink-0"
@@ -873,7 +946,7 @@ export default function ServiceNameSearchClient({
             {/* Mobile Layout: Stacked */}
             <div className="sm:hidden space-y-2 bg-transparent">
               {/* Search Input */}
-              <div className="h-8 flex items-center rounded-md border border-black/70 bg-white px-2 shadow-sm">
+              <div className="h-[35px] flex items-center rounded-md border border-black/70 bg-white px-2 shadow-sm">
                 <Search className="w-3.5 h-3.5 text-black mr-1.5 flex-shrink-0" />
                 <input
                   type="text"
@@ -890,7 +963,7 @@ export default function ServiceNameSearchClient({
                     }
                   }}
                   placeholder="Search Services..."
-                  className="w-full bg-transparent outline-none text-xs text-gray-700 placeholder-gray-400"
+                  className="w-full bg-transparent outline-none text-xs text-gray-700 placeholder:text-sm placeholder-gray-400"
                 />
                 {serviceQuery && (
                   <button
@@ -910,61 +983,54 @@ export default function ServiceNameSearchClient({
                 )}
               </div>
 
-              {/* Location Input + Search Button - Same Row */}
+              {/* Location Input */}
+              <div className="h-[35px] flex items-center rounded-md border border-black/70 bg-white px-2 shadow-sm">
+                <LocationSearch
+                  value={selectedLocation?.address || initialLocationLabel}
+                  mapsReady={mapsReady}
+                  onLocationChange={(loc) => {
+                    setSelectedLocation(loc);
+                    setShowServiceDropdown(false);
+                  }}
+                  onLocationFocus={() => setShowServiceDropdown(false)}
+                  placeholder="Location..."
+                  className="w-full"
+                />
+              </div>
+
+              {/* Filters Button + Search */}
               <div className="h-8 flex items-center gap-1.5">
-                {/* Location Input */}
-                <div className="flex-1 flex items-center rounded-md border border-black/70 bg-white px-2 py-1 shadow-sm">
-                  <LocationSearch
-                    value={selectedLocation?.address || initialLocationLabel}
-                    mapsReady={mapsReady}
-                    onLocationChange={(loc) => {
-                      setSelectedLocation(loc);
-                      setShowServiceDropdown(false);
-                    }}
-                    onLocationFocus={() => setShowServiceDropdown(false)}
-                    placeholder="Location..."
-                    className="w-full"
-                  />
-                </div>
+                {/* Filters Button */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter(expandedFilter === "filters" ? null : "filters")}
+                  className={cn(
+                    "h-8 flex-[1] rounded-md border transition-all flex items-center justify-center gap-1.5 text-xs font-normal shrink-0",
+                    hasActiveFilters
+                      ? "border-black text-black bg-neutral-100 hover:bg-neutral-200"
+                      : "border-black/10 text-black bg-neutral-50 hover:bg-neutral-100"
+                  )}
+                  aria-label="Filters"
+                  title="Filters"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>Filters</span>
+                </button>
 
                 {/* Search Button */}
                 <button
                   onClick={handleSearchButtonClick}
                   disabled={!serviceQuery.trim()}
-                  className="h-8 px-3 rounded-md border border-black bg-black text-white transition hover:bg-neutral-800 hover:border-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-xs font-medium shrink-0"
+                  className="h-8 flex-[2] rounded-md border border-black bg-black text-white transition hover:bg-neutral-800 hover:border-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-xs font-medium shrink-0"
                   aria-label="Search"
                 >
                   Search
                 </button>
               </div>
-            </div>
 
-          {/* Dropdown */}
-          {showServiceDropdown && !selectedServiceOrSalon && (
-            <div className="absolute top-full mt-2 w-full bg-white border border-black/10 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
-              {/* Filter toggle — right aligned, same as Hero */}
-              <div className="flex items-center justify-end px-3 py-3 border-b border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setExpandedFilter(expandedFilter === "filters" ? null : "filters")}
-                  className={cn(
-                    "flex items-center gap-2 px-2 py-1 rounded-lg border transition-all",
-                    hasActiveFilters
-                      ? "border-black text-black bg-neutral-100"
-                      : "border-gray-300 text-gray-700 bg-white hover:border-black/40"
-                  )}
-                >
-                  <Filter className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    Filters{hasActiveFilters && ` (${(selectedFilters.categories?.length || 0) + (selectedFilters.audiences?.length || 0)})`}
-                  </span>
-                  <ChevronDown className={cn("w-4 h-4 transition-transform", expandedFilter === "filters" && "rotate-180")} />
-                </button>
-              </div>
-
-              {/* Expandable filter panel */}
+              {/* Mobile filter panel */}
               {expandedFilter === "filters" && (
-                <div className="p-3 border-b border-gray-200">
+                <div className="rounded-md border border-gray-200 bg-white shadow-sm p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filterOptions.categories?.length > 0 && (
                       <div>
@@ -976,8 +1042,19 @@ export default function ServiceNameSearchClient({
                               <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={selectedFilters.categories?.includes(cat.id) || false}
-                                  onChange={() => toggleFilter("categories", cat.id)}
+                                  checked={draftFilters.categories?.includes(cat.id) || false}
+                                  onChange={() => {
+                                    const categoryId = Number(cat.id);
+                                    setDraftFilters((prev) => {
+                                      const current = prev.categories || [];
+                                      return {
+                                        ...prev,
+                                        categories: current.includes(categoryId)
+                                          ? current.filter((id) => id !== categoryId)
+                                          : [...current, categoryId],
+                                      };
+                                    });
+                                  }}
                                   className="w-4 h-4 rounded border-gray-300"
                                 />
                                 {Icon && <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />}
@@ -998,8 +1075,19 @@ export default function ServiceNameSearchClient({
                               <label key={aud.id} className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={selectedFilters.audiences?.includes(aud.id) || false}
-                                  onChange={() => toggleFilter("audiences", aud.id)}
+                                  checked={draftFilters.audiences?.includes(aud.id) || false}
+                                  onChange={() => {
+                                    const audienceId = Number(aud.id);
+                                    setDraftFilters((prev) => {
+                                      const current = prev.audiences || [];
+                                      return {
+                                        ...prev,
+                                        audiences: current.includes(audienceId)
+                                          ? current.filter((id) => id !== audienceId)
+                                          : [...current, audienceId],
+                                      };
+                                    });
+                                  }}
                                   className="w-4 h-4 rounded border-gray-300"
                                 />
                                 {Icon && <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />}
@@ -1018,12 +1106,9 @@ export default function ServiceNameSearchClient({
                         <label key={d} className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
-                            name="sn-distance"
-                            checked={searchDistance === d}
-                            onChange={() => {
-                              setSearchDistance(d);
-                              void fetchVenues({ distance: d });
-                            }}
+                            name="sn-distance-mobile"
+                            checked={draftSearchDistance === d}
+                            onChange={() => setDraftSearchDistance(d)}
                             className="w-4 h-4 text-blue-600 border-gray-300"
                           />
                           <span className="text-sm text-gray-700">{d}</span>
@@ -1035,10 +1120,8 @@ export default function ServiceNameSearchClient({
                     <button
                       type="button"
                       onClick={() => {
-                        clearFilters();
-                        setSearchDistance("10km");
-                        void fetchVenues({ filters: { categories: [], audiences: [] }, distance: "10km" });
-                        setExpandedFilter(null);
+                        setDraftFilters({ categories: [], audiences: [] });
+                        setDraftSearchDistance("10km");
                       }}
                       className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
                     >
@@ -1046,7 +1129,7 @@ export default function ServiceNameSearchClient({
                     </button>
                     <button
                       type="button"
-                      onClick={() => { void fetchVenues(); setExpandedFilter(null); setShowServiceDropdown(false); }}
+                      onClick={handleApplyFilters}
                       className="px-4 py-1.5 bg-black text-white text-xs font-medium rounded-md hover:bg-neutral-800 transition-colors"
                     >
                       Apply
@@ -1054,7 +1137,11 @@ export default function ServiceNameSearchClient({
                   </div>
                 </div>
               )}
+            </div>
 
+          {/* Dropdown */}
+          {showServiceDropdown && !selectedServiceOrSalon && (
+            <div className="absolute top-full mt-2 w-full bg-white border border-black/10 rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
               {/* Service suggestions */}
               {serviceQuery.trim().length === 0 ? (
                 featuredServices.length > 0 ? (
@@ -1148,6 +1235,120 @@ export default function ServiceNameSearchClient({
                   ))}
                 </>
               ) : null}
+            </div>
+          )}
+
+          {expandedFilter === "filters" && (
+            <div
+              className="hidden sm:block absolute bg-white border border-black/10 rounded-md shadow-lg z-[9998] max-h-96 overflow-y-auto"
+              style={filterDropdownStyle || { top: "calc(100% + 8px)", left: 0, right: 0 }}
+            >
+              <div className="p-3 border-b border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filterOptions.categories?.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-900 mb-2">Categories</h4>
+                      <div className="space-y-2">
+                        {filterOptions.categories.map((cat) => {
+                          const Icon = getIcon(cat.icon);
+                          return (
+                            <label key={cat.id} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={draftFilters.categories?.includes(cat.id) || false}
+                                onChange={() => {
+                                  const categoryId = Number(cat.id);
+                                  setDraftFilters((prev) => {
+                                    const current = prev.categories || [];
+                                    return {
+                                      ...prev,
+                                      categories: current.includes(categoryId)
+                                        ? current.filter((id) => id !== categoryId)
+                                        : [...current, categoryId],
+                                    };
+                                  });
+                                }}
+                                className="w-4 h-4 rounded border-gray-300"
+                              />
+                              {Icon && <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />}
+                              <span className="text-sm text-gray-700">{cat.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {filterOptions.audiences?.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-900 mb-2">Audience</h4>
+                      <div className="space-y-2">
+                        {filterOptions.audiences.map((aud) => {
+                          const Icon = getIcon(aud.icon);
+                          return (
+                            <label key={aud.id} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={draftFilters.audiences?.includes(aud.id) || false}
+                                onChange={() => {
+                                  const audienceId = Number(aud.id);
+                                  setDraftFilters((prev) => {
+                                    const current = prev.audiences || [];
+                                    return {
+                                      ...prev,
+                                      audiences: current.includes(audienceId)
+                                        ? current.filter((id) => id !== audienceId)
+                                        : [...current, audienceId],
+                                    };
+                                  });
+                                }}
+                                className="w-4 h-4 rounded border-gray-300"
+                              />
+                              {Icon && <Icon className="w-4 h-4 text-gray-600 flex-shrink-0" />}
+                              <span className="text-sm text-gray-700">{aud.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
+                  <div className="flex flex-wrap gap-4">
+                    {['5km', '10km', '15km', '30km'].map((d) => (
+                      <label key={d} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="sn-distance"
+                          checked={draftSearchDistance === d}
+                          onChange={() => setDraftSearchDistance(d)}
+                          className="w-4 h-4 text-blue-600 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">{d}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200">
+                  <button
+                    type="button"
+                      onClick={() => {
+                        setDraftFilters({ categories: [], audiences: [] });
+                        setDraftSearchDistance("10km");
+                      }}
+                    className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApplyFilters}
+                    className="px-4 py-1.5 bg-black text-white text-xs font-medium rounded-md hover:bg-neutral-800 transition-colors"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
