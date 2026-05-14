@@ -1418,15 +1418,8 @@ export default function ServiceNameSearchClient({
                     if (searchDistance) {
                       params.set('distance', searchDistance);
                     }
-                    if (selectedFilters.categories.length > 0) {
-                      const cats = (filterOptions.categories?.length)
-                        ? filterOptions.categories.filter((c) => selectedFilters.categories.includes(c.id)).map((c) => c.name)
-                        : selectedFilters.categories;
-                      params.set('categories', cats.join(','));
-                    }
-                    if (selectedFilters.audiences.length > 0) {
-                      params.set('audiences', selectedFilters.audiences.join(','));
-                    }
+                    // Popular searches ignore any currently-selected category/audience filters.
+                    // Only forward service name and location/distance so SSR loads broad results.
                     window.location.href = `/search/service?${params.toString()}`;
                   }}
                 />
