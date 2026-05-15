@@ -303,6 +303,10 @@ export default function ServiceNameSearchClient({
         : null
     );
     setIsDefaultLocationLoaded(Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon));
+    // Mark initial page as loaded (avoid re-fetching page 1) and clear fetching state
+    const initialPage = initialVenuesMeta?.current_page ? Number(initialVenuesMeta.current_page) : 1;
+    loadedPagesRef.current = new Set([initialPage]);
+    fetchingPagesRef.current = new Set();
   }, [initialVenues, initialVenuesMeta, initialDistance, initialLocationLat, initialLocationLon, initialLocationLabel]);
 
   // Featured services state
@@ -332,6 +336,10 @@ export default function ServiceNameSearchClient({
   const serviceDebounceRef = React.useRef(null);
   const geocoderRef = React.useRef(null);
   const loadMoreRef = React.useRef(null);
+  // Track which pages we've loaded (avoid refetching the same page)
+  const loadedPagesRef = React.useRef(new Set());
+  // Track pages currently being fetched to prevent duplicate concurrent requests
+  const fetchingPagesRef = React.useRef(new Set());
   const suppressNextFocusRef = React.useRef(false);
   const dropdownLockRef = React.useRef(false);
   const [filterDropdownStyle, setFilterDropdownStyle] = React.useState(null);
@@ -421,13 +429,29 @@ export default function ServiceNameSearchClient({
       if (typeof activeService === 'undefined') activeService = activeServiceName;
       const svc = activeService;
 
-      // If we already have SSR-provided venues for page 1 and the requested
-      // fetch is the same service + page 1 (non-append), skip the redundant call.
-      if (!append && page === 1 && venues.length > 0 && svc && svc === activeServiceName && !forceReload) {
-        // eslint-disable-next-line no-console
-        console.debug('[ServiceNameSearchClient] Skipping redundant fetchVenues for SSR data', { svc, page });
+      // If non-append (fresh load) clear loaded/fetching pages so we can rebuild
+      if (!append) {
+        if (page === 1 && venues.length > 0 && svc && svc === activeServiceName && !forceReload) {
+          // eslint-disable-next-line no-console
+          console.debug('[ServiceNameSearchClient] Skipping redundant fetchVenues for SSR data', { svc, page });
+          return;
+        }
+        loadedPagesRef.current = new Set();
+        fetchingPagesRef.current = new Set();
+      }
+
+      // If this page has already been loaded, skip fetching (prevents duplicate requests when scrolling)
+      if (append && loadedPagesRef.current.has(page) && !forceReload) {
+        console.debug('[ServiceNameSearchClient] Page already loaded, skipping', { page });
         return;
       }
+
+      // If this page is currently being fetched, skip to avoid duplicate concurrent requests
+      if (fetchingPagesRef.current.has(page)) {
+        console.debug('[ServiceNameSearchClient] Page currently being fetched, skipping', { page });
+        return;
+      }
+
       const isInitialLoad = page === 1;
       if (isInitialLoad) {
         setLoading(true);
@@ -435,6 +459,9 @@ export default function ServiceNameSearchClient({
         setIsLoadingMore(true);
       }
       try {
+        // mark as fetching
+        fetchingPagesRef.current.add(page);
+
         // Build params; avoid sending raw numeric IDs for category/audience until filterOptions are loaded
         const params = {
           lat: location?.lat,
@@ -471,19 +498,23 @@ export default function ServiceNameSearchClient({
         }
         const response = await searchVenues(params);
         const newVenues = response?.data || [];
-        
+
         if (append) {
           setVenues(prev => [...prev, ...newVenues]);
+          // mark this page as loaded
+          loadedPagesRef.current.add(page);
         } else {
           setVenues(newVenues);
           setCurrentPage(1);
+          // mark page 1 as loaded
+          loadedPagesRef.current.add(1);
         }
-        
+
         // Check if there are more results
         const totalResults = response?.total || 0;
         const loadedSoFar = append ? venues.length + newVenues.length : newVenues.length;
         setHasMore(loadedSoFar < totalResults);
-        
+
         if (append) {
           setCurrentPage(page);
         }
@@ -493,6 +524,8 @@ export default function ServiceNameSearchClient({
         }
         console.error('[ServiceNameSearchClient] fetchVenues error:', err);
       } finally {
+        // remove fetching mark for this page
+        fetchingPagesRef.current.delete(page);
         if (isInitialLoad) {
           setLoading(false);
         } else {

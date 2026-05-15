@@ -25,12 +25,12 @@ export async function fetchInitialData(distance = '50km') {
     const [venuesResponse, featuredServicesResponse] = await Promise.all([
       laravelApp.get('/client/search/venues', {
         params: {
-          q: '',
-          lat: LONDON_COORDS.lat,
-          lon: LONDON_COORDS.lon,
-          distance,
-          perPage: 5,
-          page: 1,
+            q: '',
+            lat: LONDON_COORDS.lat,
+            lon: LONDON_COORDS.lon,
+            distance,
+            perPage: 4,
+            page: 1,
         },
       }),
       laravelApp.get('/client/search/featured-services', {
