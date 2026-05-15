@@ -2,7 +2,7 @@
 
 import React from "react";
 import Script from "next/script";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, MapPin, Search, Clock, ChevronUp, SlidersHorizontal } from "lucide-react";
 import LocationSearch from "@/components/search/LocationSearch";
 import PillCarousel from "@/components/content/PillCarousel";
@@ -271,6 +271,7 @@ export default function ServiceNameSearchClient({
   initialVenuesMeta = null,
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [venues, setVenues] = React.useState(initialVenues);
   const [loading, setLoading] = React.useState(false);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
@@ -400,13 +401,15 @@ export default function ServiceNameSearchClient({
       page = 1,
       append = false,
     } = {}) => {
+      // allow caller to force reload even if SSR data exists
+      const forceReload = arguments[0]?.forceReload || false;
       // Assign defaults if not provided
       if (typeof activeService === 'undefined') activeService = activeServiceName;
       const svc = activeService;
 
       // If we already have SSR-provided venues for page 1 and the requested
       // fetch is the same service + page 1 (non-append), skip the redundant call.
-      if (!append && page === 1 && venues.length > 0 && svc && svc === activeServiceName) {
+      if (!append && page === 1 && venues.length > 0 && svc && svc === activeServiceName && !forceReload) {
         // eslint-disable-next-line no-console
         console.debug('[ServiceNameSearchClient] Skipping redundant fetchVenues for SSR data', { svc, page });
         return;
@@ -827,6 +830,18 @@ export default function ServiceNameSearchClient({
     // Immediately fetch venues for the first featured service
     void fetchVenues({ activeService: firstFeatured.name });
   }, [showFeaturedPills, isDefaultLocationLoaded, featuredServices, selectedLocation?.address, selectedLocation?.lat, selectedLocation?.lon, searchDistance, router, fetchVenues]);
+
+  // Re-fetch venues when the URL search params change (client-side navigation)
+  const _mountedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!_mountedRef.current) {
+      _mountedRef.current = true;
+      return;
+    }
+
+    // Force reload venues on client-side query changes (distance, filters, loc)
+    void fetchVenues({ page: 1, append: false, forceReload: true });
+  }, [searchParams?.toString(), fetchVenues]);
 
   // Fetch venues when activeServiceName changes (including auto-selected featured service)
   React.useEffect(() => {
