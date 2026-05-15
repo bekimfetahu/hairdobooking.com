@@ -291,6 +291,20 @@ export default function ServiceNameSearchClient({
     Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
   );
 
+  // Keep client state in sync when server props change (route navigation / SSR updates)
+  React.useEffect(() => {
+    setVenues(initialVenues || []);
+    setCurrentPage(initialVenuesMeta?.current_page ? Number(initialVenuesMeta.current_page) : 1);
+    setHasMore(initialVenuesMeta ? (Number(initialVenuesMeta.total || 0) > (initialVenues?.length || 0)) : true);
+    setSearchDistance(initialDistance || '50km');
+    setSelectedLocation(
+      Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
+        ? { lat: initialLocationLat, lon: initialLocationLon, address: initialLocationLabel }
+        : null
+    );
+    setIsDefaultLocationLoaded(Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon));
+  }, [initialVenues, initialVenuesMeta, initialDistance, initialLocationLat, initialLocationLon, initialLocationLabel]);
+
   // Featured services state
   const [featuredServices, setFeaturedServices] = React.useState(initialFeaturedServices);
   const [showFeaturedPills, setShowFeaturedPills] = React.useState(initialFeaturedServices.length > 0);
