@@ -13,7 +13,7 @@ export default async function SalonSearchPage({ searchParams }) {
   
   const lat = query.lat ? Number(query.lat) : null;
   const lon = query.lon ? Number(query.lon) : null;
-  const distance = query.distance || "10km";
+  const distance = query.distance || "50km";
   const loc = query.loc || "";
   const categories = query.categories || null;
   const audiences = query.audiences || null;

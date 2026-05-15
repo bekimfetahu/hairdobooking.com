@@ -43,7 +43,7 @@ export default function Hero({
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [isLocationSearchFocused, setIsLocationSearchFocused] = React.useState(false);
   const [expandedFilter, setExpandedFilter] = React.useState(null);
-  const [searchDistance, setSearchDistance] = React.useState('10km'); // 5km, 10km, or 15km
+  const [searchDistance, setSearchDistance] = React.useState('50km'); // 5km, 10km, 15km, 30km, 50km
   const [isDefaultLocationLoaded, setIsDefaultLocationLoaded] = React.useState(!!initialVenues?.length);
   const [mapsReady, setMapsReady] = React.useState(false);
   const [selectedServiceOrSalon, setSelectedServiceOrSalon] = React.useState(false); // Track if service/salon is selected
@@ -417,7 +417,7 @@ export default function Hero({
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
                 <div className="flex gap-4">
-                  {['5km', '10km', '15km', '30km'].map((distance) => (
+                  {['5km', '10km', '15km', '30km', '50km'].map((distance) => (
                     <label key={distance} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -462,7 +462,7 @@ export default function Hero({
           <button
             onClick={() => {
               clearFilters();
-              setSearchDistance('10km'); // Reset to default
+              setSearchDistance('50km'); // Reset to default
               setExpandedFilter(null);
               // Re-trigger search with cleared filters
               handleSearch(searchQuery);

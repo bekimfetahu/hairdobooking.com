@@ -74,7 +74,7 @@ export async function searchFeaturedServices({ lat, lon, distance } = {}) {
   }
 }
 
-export async function searchVenues({ q, lat, lon, distance = '10km', perPage = 10, page = 1, category, audience, service, professional }) {
+export async function searchVenues({ q, lat, lon, distance = '50km', perPage = 10, page = 1, category, audience, service, professional }) {
   try {
     const params = new URLSearchParams();
 

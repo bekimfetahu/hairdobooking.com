@@ -19,7 +19,7 @@ export default async function ServiceNameSearchPage({ searchParams }) {
 
   const lat = query.lat ? Number(query.lat) : null;
   const lon = query.lon ? Number(query.lon) : null;
-  const distance = query.distance || "10km";
+  const distance = query.distance || "50km";
   const loc = query.loc || "";
   // Support both singular and plural query param names: `category` or `categories`, `audience` or `audiences`.
   const categories = query.categories ?? query.category ?? null;

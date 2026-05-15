@@ -163,7 +163,7 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
             if (mapInstanceRef.current && venues.length > 0) {
               try {
                 // Parse searchDistance (e.g., "10km" -> 10)
-                const distanceMatch = (searchDistance || "10km").match(/(\d+)/);
+                const distanceMatch = (searchDistance || "50km").match(/(\d+)/);
                 const distanceKm = distanceMatch ? parseInt(distanceMatch[1]) : 10;
                 const totalRadiusKm = distanceKm + 5; // Add 5km buffer
 
@@ -265,7 +265,7 @@ export default function ServiceNameSearchClient({
   initialLocationLabel = "",
   initialLocationLat = null,
   initialLocationLon = null,
-  initialDistance = "10km",
+  initialDistance = "50km",
   initialCategories = null,
   initialAudiences = null,
   initialVenuesMeta = null,
@@ -1144,7 +1144,7 @@ export default function ServiceNameSearchClient({
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
                     <div className="flex flex-wrap gap-4">
-                      {['5km', '10km', '15km', '30km'].map((d) => (
+                      {['5km', '10km', '15km', '30km', '50km'].map((d) => (
                         <label key={d} className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
@@ -1163,7 +1163,7 @@ export default function ServiceNameSearchClient({
                       type="button"
                       onClick={() => {
                         clearFilters();
-                        setSearchDistance("10km");
+                        setSearchDistance("50km");
                       }}
                       className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
                     >
@@ -1335,7 +1335,7 @@ export default function ServiceNameSearchClient({
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
                   <div className="flex flex-wrap gap-4">
-                    {['5km', '10km', '15km', '30km'].map((d) => (
+                    {['5km', '10km', '15km', '30km', '50km'].map((d) => (
                       <label key={d} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
@@ -1354,7 +1354,7 @@ export default function ServiceNameSearchClient({
                     type="button"
                       onClick={() => {
                         clearFilters();
-                        setSearchDistance("10km");
+                        setSearchDistance("50km");
                       }}
                     className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
                   >
