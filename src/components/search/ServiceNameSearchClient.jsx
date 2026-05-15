@@ -542,7 +542,7 @@ export default function ServiceNameSearchClient({
     // No draft model: UI checkboxes bind directly to selectedFilters
   }, [expandedFilter]);
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = async () => {
     // Apply current selected filters (already mutated by UI) and distance
     // selectedFilters is managed by useSearchFilters; searchDistance is local state
     setExpandedFilter(null);
@@ -574,7 +574,13 @@ export default function ServiceNameSearchClient({
     }
 
     // Navigate to SSR page to reload results server-side
-    router.push(`/search/service?${params.toString()}`);
+    await router.push(`/search/service?${params.toString()}`);
+    // Force a server-refresh to ensure server components re-run and client state syncs
+    try {
+      router.refresh();
+    } catch (e) {
+      // ignore
+    }
   };
 
   React.useLayoutEffect(() => {
