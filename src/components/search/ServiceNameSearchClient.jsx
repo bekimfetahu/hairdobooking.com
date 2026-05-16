@@ -1517,7 +1517,7 @@ export default function ServiceNameSearchClient({
               <button
                 type="button"
                 onClick={() => setShowMap(!showMap)}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                className="hidden md:flex items-center gap-1.5 h-8 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors border border-gray-200"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 {showMap ? "Hide Map" : "Show Map"}

@@ -41,6 +41,7 @@ function VenueSearchResultCard({
   venue,
   index,
   activeServiceName,
+  hideServices = false,
   selectedFilters,
   filterOptions,
   selectedLocation,
@@ -83,7 +84,7 @@ function VenueSearchResultCard({
     return true;
   });
 
-  if (matched.length === 0) return null;
+  if (!hideServices && matched.length === 0) return null;
 
   const address =
     venue.address?.formatted ||
@@ -215,8 +216,9 @@ function VenueSearchResultCard({
         </div>
       </div>
 
-      <div className="divide-y divide-gray-100 border-t border-gray-100">
-        {groupMatchedServices(matched).map((group) => {
+      {!hideServices && (
+        <div className="divide-y divide-gray-100 border-t border-gray-100">
+          {groupMatchedServices(matched).map((group) => {
           const groupId = `${venueUuid}::${group.key}`;
           const isExpanded = expandedGroups.has(groupId);
 
@@ -319,8 +321,9 @@ function VenueSearchResultCard({
               )}
             </div>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }

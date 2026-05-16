@@ -1,5 +1,5 @@
 import PageShell from "@/components/layouts/PageShell";
-import ServiceNameSearchClient from "@/components/search/ServiceNameSearchClient";
+import SalonSearchClient from "@/components/search/SalonSearchClient";
 import laravelApp from "@/services/laravelApp";
 
 /**
@@ -15,8 +15,8 @@ export default async function SalonSearchPage({ searchParams }) {
   const lon = query.lon ? Number(query.lon) : null;
   const distance = query.distance || "50km";
   const loc = query.loc || "";
-  const categories = query.categories || null;
-  const audiences = query.audiences || null;
+  const categories = null;
+  const audiences = null;
 
   let initialVenues = [];
 
@@ -36,19 +36,17 @@ export default async function SalonSearchPage({ searchParams }) {
   }
 
   return (
-    <PageShell
-      variant="marketing"
-      title="Explore Salons"
-      contentClassName="mt-6"
-    >
+     <PageShell
+       variant="marketing"
+       title="Explore Salons"
+       contentClassName="mt-0"
+     >
       <SalonSearchClient
         initialVenues={initialVenues}
         initialLocationLabel={loc}
         initialLocationLat={lat}
         initialLocationLon={lon}
         initialDistance={distance}
-        initialCategories={categories}
-        initialAudiences={audiences}
       />
     </PageShell>
   );
