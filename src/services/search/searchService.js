@@ -36,7 +36,7 @@
  * Query Parameters:
  * - lat (float): Latitude for distance-based filtering
  * - lon (float): Longitude for distance-based filtering
- * - distance (string): Distance radius like "10km", "30km"
+ * - distance (string): Distance radius like "10mi", "30mi"
  */
 export async function searchFeaturedServices({ lat, lon, distance } = {}) {
   try {
@@ -74,7 +74,7 @@ export async function searchFeaturedServices({ lat, lon, distance } = {}) {
   }
 }
 
-export async function searchVenues({ q, lat, lon, distance = '50km', perPage = 4, page = 1, category, audience, service, professional }) {
+export async function searchVenues({ q, lat, lon, distance = '50mi', perPage = 4, page = 1, category, audience, service, professional }) {
   try {
     const params = new URLSearchParams();
 

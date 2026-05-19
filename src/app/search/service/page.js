@@ -9,7 +9,7 @@ import laravelApp from "@/services/laravelApp";
  * - Without service param: shows service discovery/browsing interface
  * 
  * Examples:
- * - /search/service?service=Hair+Cut&loc=London&lat=51.5&lon=-0.13&distance=10km (from home search)
+ * - /search/service?service=Hair+Cut&loc=London&lat=51.5&lon=-0.13&distance=10mi (from home search)
  * - /search/service (from Browse Services button - no parameters)
  */
 export default async function ServiceNameSearchPage({ searchParams }) {
@@ -19,7 +19,7 @@ export default async function ServiceNameSearchPage({ searchParams }) {
 
   const lat = query.lat ? Number(query.lat) : null;
   const lon = query.lon ? Number(query.lon) : null;
-  const distance = query.distance || "50km";
+  const distance = query.distance || "50mi";
   const loc = query.loc || "";
   // Support both singular and plural query param names: `category` or `categories`, `audience` or `audiences`.
   const categories = query.categories ?? query.category ?? null;

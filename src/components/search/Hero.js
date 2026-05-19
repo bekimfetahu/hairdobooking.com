@@ -15,7 +15,7 @@ import { getIcon } from '@/lib/iconMap';
  * Calculate distance between two coordinates using Haversine formula
  */
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth's radius in km
+  const R = 3958.8; // Earth's radius in miles
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
@@ -43,7 +43,7 @@ export default function Hero({
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [isLocationSearchFocused, setIsLocationSearchFocused] = React.useState(false);
   const [expandedFilter, setExpandedFilter] = React.useState(null);
-  const [searchDistance, setSearchDistance] = React.useState('50km'); // 5km, 10km, 15km, 30km, 50km
+  const [searchDistance, setSearchDistance] = React.useState('50mi'); // 5mi, 10mi, 15mi, 30mi, 50mi
   const [isDefaultLocationLoaded, setIsDefaultLocationLoaded] = React.useState(!!initialVenues?.length);
   const [mapsReady, setMapsReady] = React.useState(false);
   const [selectedServiceOrSalon, setSelectedServiceOrSalon] = React.useState(false); // Track if service/salon is selected
@@ -417,7 +417,7 @@ export default function Hero({
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
                 <div className="flex gap-4">
-                  {['5km', '10km', '15km', '30km', '50km'].map((distance) => (
+                  {['5mi', '10mi', '15mi', '30mi', '50mi'].map((distance) => (
                     <label key={distance} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -462,7 +462,7 @@ export default function Hero({
           <button
             onClick={() => {
               clearFilters();
-              setSearchDistance('50km'); // Reset to default
+              setSearchDistance('50mi'); // Reset to default
               setExpandedFilter(null);
               // Re-trigger search with cleared filters
               handleSearch(searchQuery);
@@ -553,7 +553,7 @@ export default function Hero({
               distanceLabel = distance.toFixed(1);
               
               if (venue.id === venues[0]?.id) {
-                console.log('[Hero] Distance calculated:', distanceLabel, 'km');
+                console.log('[Hero] Distance calculated:', distanceLabel, 'mi');
               }
             } catch (err) {
               console.error('[Hero] Error calculating distance:', err, { selectedLocation, venue });
@@ -594,7 +594,7 @@ export default function Hero({
               {distanceLabel ? (
                 <div className="flex items-center gap-1 flex-shrink-0 px-2 py-1 bg-blue-50 rounded">
                   <span className="text-xs font-semibold text-blue-600">
-                    {distanceLabel} km
+                    {distanceLabel} mi
                   </span>
                 </div>
               ) : selectedLocation && !venue.location ? (

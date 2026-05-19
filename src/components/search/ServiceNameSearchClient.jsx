@@ -162,16 +162,16 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
           setTimeout(() => {
             if (mapInstanceRef.current && venues.length > 0) {
               try {
-                // Parse searchDistance (e.g., "10km" -> 10)
-                const distanceMatch = (searchDistance || "50km").match(/(\d+)/);
-                const distanceKm = distanceMatch ? parseInt(distanceMatch[1]) : 10;
-                const totalRadiusKm = distanceKm + 5; // Add 5km buffer
+                // Parse searchDistance (e.g., "10mi" -> 10)
+                const distanceMatch = (searchDistance || "50mi").match(/(\d+)/);
+                const distanceMiles = distanceMatch ? parseInt(distanceMatch[1]) : 10;
+                const totalRadiusMiles = distanceMiles + 5; // Add 5mi buffer
 
                 // Create a bounds around the search location with the specified radius
-                const R = 6371; // Earth's radius in km
+                const R = 3958.8; // Earth's radius in miles
                 const lat = (selectedLocation.lat * Math.PI) / 180;
                 const lon = (selectedLocation.lon * Math.PI) / 180;
-                const d = totalRadiusKm / R;
+                const d = totalRadiusMiles / R;
 
                 const searchBounds = new window.google.maps.LatLngBounds();
                 
@@ -265,7 +265,7 @@ export default function ServiceNameSearchClient({
   initialLocationLabel = "",
   initialLocationLat = null,
   initialLocationLon = null,
-  initialDistance = "50km",
+  initialDistance = "50mi",
   initialCategories = null,
   initialAudiences = null,
   initialVenuesMeta = null,
@@ -296,7 +296,7 @@ export default function ServiceNameSearchClient({
     setVenues(initialVenues || []);
     setCurrentPage(initialVenuesMeta?.current_page ? Number(initialVenuesMeta.current_page) : 1);
     setHasMore(initialVenuesMeta ? (Number(initialVenuesMeta.total || 0) > (initialVenues?.length || 0)) : true);
-    setSearchDistance(initialDistance || '50km');
+    setSearchDistance(initialDistance || '50mi');
     setSelectedLocation(
       Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
         ? { lat: initialLocationLat, lon: initialLocationLon, address: initialLocationLabel }
@@ -1212,7 +1212,7 @@ export default function ServiceNameSearchClient({
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
                     <div className="flex flex-wrap gap-4">
-                      {['5km', '10km', '15km', '30km', '50km'].map((d) => (
+                      {['5mi', '10mi', '15mi', '30mi', '50mi'].map((d) => (
                         <label key={d} className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
@@ -1231,7 +1231,7 @@ export default function ServiceNameSearchClient({
                       type="button"
                       onClick={() => {
                         clearFilters();
-                        setSearchDistance("50km");
+                        setSearchDistance("50mi");
                       }}
                       className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
                     >
@@ -1403,7 +1403,7 @@ export default function ServiceNameSearchClient({
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <h4 className="text-xs font-semibold text-gray-900 mb-3">Search Distance</h4>
                   <div className="flex flex-wrap gap-4">
-                    {['5km', '10km', '15km', '30km', '50km'].map((d) => (
+                    {['5mi', '10mi', '15mi', '30mi', '50mi'].map((d) => (
                       <label key={d} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
@@ -1422,7 +1422,7 @@ export default function ServiceNameSearchClient({
                     type="button"
                       onClick={() => {
                         clearFilters();
-                        setSearchDistance("50km");
+                        setSearchDistance("50mi");
                       }}
                     className="px-4 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 transition-colors"
                   >

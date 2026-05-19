@@ -105,7 +105,7 @@ export default function SalonSearchClient({
   initialLocationLabel = "",
   initialLocationLat = null,
   initialLocationLon = null,
-  initialDistance = "50km",
+  initialDistance = "50mi",
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -122,7 +122,7 @@ export default function SalonSearchClient({
       ? { lat: initialLocationLat, lon: initialLocationLon, address: initialLocationLabel }
       : null
   );
-  const [distance, setDistance] = React.useState(initialDistance || "50km");
+  const [distance, setDistance] = React.useState(initialDistance || "50mi");
   const [mapsReady, setMapsReady] = React.useState(false);
 
   // Track which venue has opening hours expanded: Set of venueUuid
@@ -150,11 +150,11 @@ export default function SalonSearchClient({
 
   const perPage = 12;
   const distanceOptions = React.useMemo(() => [
-    { value: '5km', label: '5km' },
-    { value: '10km', label: '10km' },
-    { value: '15km', label: '15km' },
-    { value: '30km', label: '30km' },
-    { value: '50km', label: '50km' },
+    { value: '5mi', label: '5mi' },
+    { value: '10mi', label: '10mi' },
+    { value: '15mi', label: '15mi' },
+    { value: '30mi', label: '30mi' },
+    { value: '50mi', label: '50mi' },
   ], []);
 
   const fetchAreaVenues = React.useCallback(async () => {
@@ -319,7 +319,7 @@ export default function SalonSearchClient({
               instanceId="salon-distance"
               options={distanceOptions}
               value={distanceOptions.find((o) => o.value === distance)}
-              onChange={(opt) => setDistance(opt?.value || '50km')}
+              onChange={(opt) => setDistance(opt?.value || '50mi')}
               isSearchable={false}
               classNamePrefix="react-select"
               styles={{

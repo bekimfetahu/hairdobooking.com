@@ -14,7 +14,7 @@ export const metadata = {
 
 export default async function Home() {
   // Fetch initial data for London on the server
-  const { initialLocation, initialVenues, initialServices } = await fetchInitialData('50km');
+  const { initialLocation, initialVenues, initialServices } = await fetchInitialData('50mi');
 
   return (
     <HomeClient 

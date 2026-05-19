@@ -13,7 +13,7 @@ export async function GET(req) {
     const q = searchParams.get('q');
     const lat = searchParams.get('lat');
     const lon = searchParams.get('lon');
-    const distance = searchParams.get('distance') || '50km';
+    const distance = searchParams.get('distance') || '50mi';
     const service = searchParams.get('service');
     const category = searchParams.get('category');
     const audience = searchParams.get('audience');

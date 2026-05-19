@@ -15,7 +15,7 @@ const LONDON_COORDS = {
   country: 'UK',
 };
 
-export async function fetchInitialData(distance = '50km') {
+export async function fetchInitialData(distance = '50mi') {
   try {
     console.log('[InitialDataFetcher] Fetching venues and featured services for London...');
     console.log('[InitialDataFetcher] Using app-to-app authentication (X-App-Token)');

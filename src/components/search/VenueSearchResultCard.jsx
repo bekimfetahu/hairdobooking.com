@@ -11,7 +11,7 @@ function formatMoney(value) {
 }
 
 function calcDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371;
+  const R = 3958.8;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -96,13 +96,13 @@ function VenueSearchResultCard({
   const vLat = venue.address?.location?.lat;
   const vLon = venue.address?.location?.lon;
   if (selectedLocation?.lat && vLat && vLon) {
-    const distanceKm = calcDistance(
+    const computedDistanceMiles = calcDistance(
       selectedLocation.lat,
       selectedLocation.lon,
       vLat,
       vLon
     );
-    distanceMiles = (distanceKm / 1.60934).toFixed(1);
+    distanceMiles = computedDistanceMiles.toFixed(1);
   }
 
   const venueUuid = venue.venue?.uuid || "";

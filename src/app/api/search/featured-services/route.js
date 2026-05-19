@@ -8,7 +8,7 @@
  * Query Parameters:
  * - lat (float): Latitude for distance-based filtering
  * - lon (float): Longitude for distance-based filtering
- * - distance (string): Distance radius like "10km", "30km"
+ * - distance (string): Distance radius like "10mi", "30mi"
  */
 
 export async function GET(request) {
