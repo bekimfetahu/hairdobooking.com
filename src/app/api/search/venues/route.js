@@ -26,7 +26,7 @@ export async function GET(req) {
     if (q) params.q = q;
     if (lat) params.lat = lat;
     if (lon) params.lon = lon;
-    if (distance && lat && lon) params.distance = distance;
+    if (distance) params.distance = distance;
     if (service) params.service = service;
     if (category) params.category = category;
     if (audience) params.audience = audience;

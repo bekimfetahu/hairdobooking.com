@@ -95,6 +95,7 @@ function VenueSearchResultsList({
             venue={venue}
             index={vi}
             activeServiceName={activeServiceName}
+            hideServices={hideServices}
             selectedFilters={selectedFilters}
             selectedLocation={selectedLocation}
             expandedOpeningHours={expandedOpeningHours}

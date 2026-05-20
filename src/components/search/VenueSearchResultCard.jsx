@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Clock, MapPin } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock, MapPin, Navigation2 } from "lucide-react";
 
 function formatMoney(value) {
   if (value == null) return null;
@@ -51,6 +51,14 @@ function VenueSearchResultCard({
   toggleGroup,
   handleServiceClick,
 }) {
+  // Client-side only: calculate today's day name to prevent hydration mismatch
+  const [todayDayName, setTodayDayName] = React.useState(null);
+  
+  React.useEffect(() => {
+    // This only runs on the client after hydration, ensuring consistent date/timezone
+    setTodayDayName(new Date().toLocaleDateString("en-US", { weekday: "long" }));
+  }, []);
+
   // Build selected category names from selectedFilters using filterOptions when available
   const selectedCategoryNames = (selectedFilters.categories || []).map((id) => {
     const found = filterOptions?.categories?.find((c) => Number(c.id) === Number(id));
@@ -93,12 +101,14 @@ function VenueSearchResultCard({
       .join(", ");
 
   let distanceMiles = null;
-  const vLat = venue.address?.location?.lat;
-  const vLon = venue.address?.location?.lon;
-  if (selectedLocation?.lat && vLat && vLon) {
+  const vLat = Number(venue.address?.location?.lat);
+  const vLon = Number(venue.address?.location?.lon);
+  const sLat = Number(selectedLocation?.lat);
+  const sLon = Number(selectedLocation?.lon);
+  if (Number.isFinite(sLat) && Number.isFinite(sLon) && Number.isFinite(vLat) && Number.isFinite(vLon)) {
     const computedDistanceMiles = calcDistance(
-      selectedLocation.lat,
-      selectedLocation.lon,
+      sLat,
+      sLon,
       vLat,
       vLon
     );
@@ -136,21 +146,41 @@ function VenueSearchResultCard({
 
           <div className="flex-1 min-w-0 py-0 md:py-0">
             <p className="font-semibold text-gray-900 truncate">{venue.venue?.name}</p>
-            <div className="flex items-center justify-between gap-2 mt-0.5">
-              <div className="flex items-center gap-1.5 text-sm text-gray-600 min-w-0">
-                <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">{address}</span>
-              </div>
-              {distanceMiles && (
-                <div className="text-sm font-medium text-gray-700 flex-shrink-0">
-                  {distanceMiles} mi
-                </div>
-              )}
+            <div className="flex items-center gap-1.5 text-sm text-gray-600 min-w-0 mt-0.5">
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">{address}</span>
             </div>
+            {distanceMiles && (
+              <button
+                type="button"
+                onClick={() => {
+                  const venueLat = Number(venue.address?.location?.lat);
+                  const venueLon = Number(venue.address?.location?.lon);
+                  const selectedLat = Number(selectedLocation?.lat);
+                  const selectedLon = Number(selectedLocation?.lon);
+                  
+                  if (Number.isFinite(venueLat) && Number.isFinite(venueLon)) {
+                    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${venueLat},${venueLon}${
+                      Number.isFinite(selectedLat) && Number.isFinite(selectedLon)
+                        ? `&origin=${selectedLat},${selectedLon}`
+                        : ''
+                    }`;
+                    window.open(mapsUrl, '_blank');
+                  }
+                }}
+                className="flex items-center justify-between w-full text-sm text-gray-600 mt-1 hover:text-blue-600 transition-colors cursor-pointer"
+                title="Open in Google Maps"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Navigation2 className="w-3.5 h-3.5 flex-shrink-0" style={{ transform: 'rotate(45deg)' }} />
+                  <span className="font-medium text-gray-700">Direction</span>
+                </div>
+                <span className="font-medium text-gray-700">{distanceMiles} mi</span>
+              </button>
+            )}
 
             {venue.opening_hours && venue.opening_hours.length > 0 && (() => {
-              const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-              const todayHours = venue.opening_hours.find((hours) => hours.day === today);
+              const todayHours = todayDayName ? venue.opening_hours.find((hours) => hours.day === todayDayName) : null;
               const isHoursExpanded = expandedOpeningHours.has(venueUuid);
 
               const formatTime = (time) => {

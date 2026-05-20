@@ -11,21 +11,23 @@ import laravelApp from "@/services/laravelApp";
 export default async function SalonSearchPage({ searchParams }) {
   const query = (await searchParams) || {};
   
-  const lat = query.lat ? Number(query.lat) : null;
-  const lon = query.lon ? Number(query.lon) : null;
+  // Default to London, UK if no location provided
+  const lat = query.lat ? Number(query.lat) : 51.5074;
+  const lon = query.lon ? Number(query.lon) : -0.1278;
   const distance = query.distance || "50mi";
-  const loc = query.loc || "";
+  const loc = query.loc || "London, UK";
   const categories = null;
   const audiences = null;
 
   let initialVenues = [];
 
   try {
-    // Fetch venues with optional filters
-    const params = { perPage: 20, page: 1 };
-    if (lat) params.lat = lat;
-    if (lon) params.lon = lon;
-    if (lat && lon) params.distance = distance;
+    // Fetch venues with location and distance filters
+    // Use high perPage to populate the map with all venues in the search radius
+    const params = { perPage: 100, page: 1 };
+    params.lat = lat;
+    params.lon = lon;
+    params.distance = distance;
     if (categories) params.category = categories;
     if (audiences) params.audience = audiences;
 

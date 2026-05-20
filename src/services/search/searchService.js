@@ -81,7 +81,7 @@ export async function searchVenues({ q, lat, lon, distance = '50mi', perPage = 4
     if (q) params.append('q', q);
     if (lat) params.append('lat', lat);
     if (lon) params.append('lon', lon);
-    if (distance && lat && lon) params.append('distance', distance);
+    if (distance) params.append('distance', distance);
     if (category) params.append('category', category);
     if (audience) params.append('audience', audience);
     if (service) params.append('service', service);
