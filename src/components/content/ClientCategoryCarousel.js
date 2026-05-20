@@ -3,8 +3,8 @@ import React from 'react';
 import CategoryCarousel from '@/components/content/CategoryCarousel';
 
 const categories = [
-  { name: 'Hair', image: '/images/category-hair.jpg' },
-  { name: 'Barber', image: '/images/category-barber.jpg' },
+  { name: 'Hair', image: '/images/category-hair.png' },
+  { name: 'Barber', image: '/images/category-barber.png' },
   { name: 'Nails', image: '/images/category-nails.jpg' },
   { name: 'Skin Care', image: '/images/category-skincare.jpg' },
   { name: 'Massage', image: '/images/category-massage.jpg' },
