@@ -76,10 +76,11 @@ const salonData = [
 const categories = [
   { name: 'Hair', image: '/images/category-hair.png' },
   { name: 'Barber', image: '/images/category-barber.png' },
-  { name: 'Nails', image: '/images/category-nails.jpg' },
+  { name: 'Makeup', image: '/images/category-makeup.png' },
+  { name: 'Nails', image: '/images/category-nails.png' },
   { name: 'Skin Care', image: '/images/category-skincare.jpg' },
   { name: 'Massage', image: '/images/category-massage.jpg' },
-  { name: 'Makeup', image: '/images/category-makeup.jpg' },
+
 ];
 
 export default function HomeClient({ initialLocation, initialVenues, initialServices }) {
@@ -114,8 +115,8 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
       />
 
       {/* ===== CATEGORY CAROUSEL SECTION ===== */}
-      <section className="py-12 md:py-16 bg-white" id="categories">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="py-6 md:py-16 bg-white" id="categories">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
           <CategoryCarousel
             title="Popular Categories"
             categories={categories}
@@ -126,8 +127,8 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
       </section>
 
       {/* ===== NEW SALONS CAROUSEL ===== */}
-      <section className="py-12 md:py-16 bg-[#FDFBF8]" id="new-salons">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="py-6 md:py-16 bg-[#FDFBF8]" id="new-salons">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
           <CardCarousel
             title="New to HairdoBooking"
             cards={salonData}
@@ -140,8 +141,8 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
       </section>
 
       {/* ===== POPULAR SALONS CAROUSEL ===== */}
-      <section className="py-12 md:py-16 bg-white" id="popular">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="py-6 md:py-16 bg-white" id="popular">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
           <CardCarousel
             title="Popular Salons"
             cards={salonData.slice(0, 3)}
@@ -154,8 +155,8 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
       </section>
 
       {/* ===== TESTIMONIALS SECTION ===== */}
-      <section className="py-12 md:py-16 bg-[#FDFBF8]" id="testimonials">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="py-6 md:py-16 bg-[#FDFBF8]" id="testimonials">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
           {/* Section Title */}
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-brand-black mb-4">
@@ -182,8 +183,8 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
       </section>
 
       {/* ===== CTA SECTION ===== */}
-      <section className="py-12 md:py-16 bg-white">
-        <div className="max-w-3xl mx-auto px-6 text-center">
+      <section className="py-6 md:py-16 bg-white">
+        <div className="max-w-3xl mx-auto px-4 md:px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-brand-black mb-4">
             Ready to Find Your Perfect Salon?
           </h2>
@@ -205,8 +206,8 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="bg-gray-50 border-t border-gray-200 py-12">
-        <div className="max-w-6xl mx-auto px-6">
+      <footer className="bg-gray-50 border-t border-gray-200 py-6 md:py-12">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             {/* Brand */}
             <div>

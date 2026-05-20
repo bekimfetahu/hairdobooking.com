@@ -72,7 +72,7 @@ export default function CategoryCarousel({
       {/* Carousel Container */}
       <div
         ref={scrollRef}
-        className={`flex gap-5 overflow-x-auto scrollbar-hide scroll-smooth pb-4 ${
+        className={`flex gap-2 overflow-x-auto scrollbar-hide scroll-smooth pb-4 ${
           isMobile ? 'snap-x' : ''
         }`}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -81,18 +81,18 @@ export default function CategoryCarousel({
           categories.map((cat) => (
             <div
               key={cat.name}
-              className="flex-shrink-0"
+              className="flex-shrink-0 rounded-lg overflow-hidden"
               style={{
-                width: isMobile ? 'calc(40% - 10px)' : 'calc(16.67% - 17px)',
+                height: '200px',
+                aspectRatio: '253 / 300',
               }}
             >
               <ImageOverlayCard
                 image={cat.image}
                 title={cat.name}
-                aspectRatio="3/4"
                 overlayColor="from-black/60 via-black/10 to-transparent"
                 onClick={() => onCategoryClick?.(cat)}
-                className="cursor-pointer transition-transform hover:scale-105"
+                className="cursor-pointer transition-transform hover:scale-105 h-full"
               />
             </div>
           ))
