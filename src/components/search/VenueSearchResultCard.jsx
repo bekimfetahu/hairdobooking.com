@@ -31,8 +31,15 @@ function getMatchedServices(venue, serviceName) {
   return all;
 }
 
-function groupMatchedServices(services) {
+function groupMatchedServices(services, activeServiceName, categoryName) {
   if (services.length === 0) return [];
+  
+  // Category browse mode: group all services under "{categoryName} Services"
+  if (!activeServiceName && categoryName) {
+    return [{ key: `${categoryName}_services`, label: `${categoryName} Services`, items: services }];
+  }
+  
+  // Specific service mode: group by service name (original behavior)
   const label = services[0].name || "";
   return [{ key: label, label, items: services }];
 }
@@ -41,6 +48,7 @@ function VenueSearchResultCard({
   venue,
   index,
   activeServiceName,
+  categoryName = "",
   hideServices = false,
   selectedFilters,
   filterOptions,
@@ -71,6 +79,17 @@ function VenueSearchResultCard({
   }).filter(Boolean);
 
   const matched = getMatchedServices(venue, activeServiceName).filter((service) => {
+    // If we're in category browse mode (no specific service, showing all category services)
+    if (!activeServiceName && categoryName) {
+      // Include services that match the category name
+      const catName = service.category || service.category_name || null;
+      if (catName && categoryName.toLowerCase() === String(catName).toLowerCase()) {
+        // Category match
+      } else {
+        return false; // Service not in this category
+      }
+    }
+
     // Category match: accept if service has numeric category_id matching selectedFilters,
     // or if service.category (name) matches any selected category name.
     if (selectedFilters.categories?.length) {
@@ -248,7 +267,7 @@ function VenueSearchResultCard({
 
       {!hideServices && (
         <div className="divide-y divide-gray-100 border-t border-gray-100">
-          {groupMatchedServices(matched).map((group) => {
+          {groupMatchedServices(matched, activeServiceName, categoryName).map((group) => {
           const groupId = `${venueUuid}::${group.key}`;
           const isExpanded = expandedGroups.has(groupId);
 

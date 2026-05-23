@@ -33,6 +33,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
  */
 export default function Hero({
   onSearch = null,
+  onLocationChange = null,
   showSearchInput = true,
   initialLocation = null,
   initialVenues = [],
@@ -262,6 +263,11 @@ export default function Hero({
   const handleLocationChange = (locationData) => {
     // locationData contains: lat, lon, address, placeId, postcode, country
     setSelectedLocation(locationData);
+    
+    // Notify parent component of location change
+    if (onLocationChange) {
+      onLocationChange(locationData);
+    }
     
     // If no search query, fetch featured services for new location
     // Otherwise, re-trigger regular search for the new location

@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import Hero from '@/components/search/Hero';
 import CardCarousel from '@/components/content/CardCarousel';
@@ -74,25 +75,41 @@ const salonData = [
 ];
 
 const categories = [
-  { name: 'Hair', image: '/images/category-hair.png' },
-  { name: 'Barber', image: '/images/category-barber.png' },
-  { name: 'Makeup', image: '/images/category-makeup.png' },
-  { name: 'Nails', image: '/images/category-nails.png' },
-  { name: 'Skin Care', image: '/images/category-skincare.jpg' },
-  { name: 'Massage', image: '/images/category-massage.jpg' },
-
+  { name: 'Hair', slug: 'hair', image: '/images/category-hair.png' },
+  { name: 'Barbering', slug: 'barbering', image: '/images/category-barber.png' },
+  { name: 'Makeup', slug: 'makeup', image: '/images/category-makeup.png' },
+  { name: 'Nails', slug: 'nails', image: '/images/category-nails.png' },
+  { name: 'Skin Care', slug: 'skin-care', image: '/images/category-skincare.png' },
+  { name: 'Face', slug: 'face', image: '/images/category-face.png' },
+  { name: 'Massage', slug: 'massage', image: '/images/category-massage.png' },
+  { name: 'Body', slug: 'body', image: '/images/category-body.png' },
 ];
 
 export default function HomeClient({ initialLocation, initialVenues, initialServices }) {
+  const router = useRouter();
+  const [currentLocation, setCurrentLocation] = React.useState(initialLocation || null);
+
   const handleSearch = (searchData) => {
     console.log('Search query:', searchData.query);
     console.log('Location:', searchData.location);
     // TODO: Implement search logic / API call
   };
 
+  const handleLocationChange = (newLocation) => {
+    setCurrentLocation(newLocation);
+  };
+
   const handleCategoryClick = (cat) => {
-    console.log(`Clicked ${cat.name}`);
-    // TODO: Navigate to category page
+    // Navigate to category search page with category slug and current location
+    const params = new URLSearchParams();
+    params.set('category', cat.slug);
+    
+    // Add location parameters if available
+    if (currentLocation?.lat) params.set('lat', currentLocation.lat);
+    if (currentLocation?.lon) params.set('lon', currentLocation.lon);
+    if (currentLocation?.address) params.set('loc', currentLocation.address);
+    
+    router.push(`/search/category?${params.toString()}`);
   };
 
   const handleNavigate = (direction) => {
@@ -109,6 +126,7 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
       {/* ===== HERO SECTION ===== */}
       <Hero 
         onSearch={handleSearch}
+        onLocationChange={handleLocationChange}
         initialLocation={initialLocation}
         initialVenues={initialVenues}
         initialServices={initialServices}

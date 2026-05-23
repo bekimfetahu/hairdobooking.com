@@ -7,6 +7,7 @@ const categories = [
     { label: "Skin Care", href: "/search?service=Skin+Care" },
     { label: "Massage", href: "/search?service=Massage" },
     { label: "Makeup", href: "/search?service=Makeup" },
+    { label: "Body", href: "/search?service=Body" },
 ];
 
 export default function Categories() {

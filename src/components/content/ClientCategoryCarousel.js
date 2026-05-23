@@ -6,9 +6,11 @@ const categories = [
   { name: 'Hair', image: '/images/category-hair.png' },
   { name: 'Barber', image: '/images/category-barber.png' },
   { name: 'Nails', image: '/images/category-nails.jpg' },
-  { name: 'Skin Care', image: '/images/category-skincare.jpg' },
-  { name: 'Massage', image: '/images/category-massage.jpg' },
   { name: 'Makeup', image: '/images/category-makeup.jpg' },
+  { name: 'Skin Care', image: '/images/category-skincare.png' },
+  { name: 'Massage', image: '/images/category-massage.jpg' },
+  { name: 'Body', image: '/images/category-body.png' },
+
 ];
 
 export default function ClientCategoryCarousel() {

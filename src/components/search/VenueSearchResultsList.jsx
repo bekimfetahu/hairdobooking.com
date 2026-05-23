@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 function VenueSearchResultsList({
   venues = [],
   activeServiceName = "",
+  categoryName = "",
   hideServices = false,
   selectedFilters = {},
   filterOptions = {},
@@ -74,6 +75,7 @@ function VenueSearchResultsList({
             venue={venue}
             index={vi}
             activeServiceName={activeServiceName}
+            categoryName={categoryName}
             hideServices={hideServices}
             selectedFilters={selectedFilters}
             filterOptions={filterOptions}
@@ -95,6 +97,7 @@ function VenueSearchResultsList({
             venue={venue}
             index={vi}
             activeServiceName={activeServiceName}
+            categoryName={categoryName}
             hideServices={hideServices}
             selectedFilters={selectedFilters}
             selectedLocation={selectedLocation}
