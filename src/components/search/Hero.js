@@ -328,10 +328,10 @@ export default function Hero({
   };
 
   const handleVenueSelect = (venue) => {
-    setShowDropdown(false);
-    setSelectedServiceOrSalon(true);
-    suppressNextAutoSearchRef.current = true;
-    setSearchQuery(venue?.name || '');
+    const slug = venue.venue?.slug || venue.slug;
+    if (slug) {
+      router.push(`/salon/${slug}`);
+    }
   };
 
   // Render filter toggle button
