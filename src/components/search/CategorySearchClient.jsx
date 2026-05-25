@@ -3,13 +3,42 @@
 import React, { useState, useEffect } from 'react';
 import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
-import * as LucideIcons from 'lucide-react';
-import { Search, MapPin } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  ChevronDown,
+  Filter,
+  X,
+  Scissors,
+  Wand2,
+  Sparkles,
+  Smile,
+  Zap,
+  Droplet,
+  Hand,
+  Flame,
+  Eye,
+  Palette,
+} from 'lucide-react';
 import Select from 'react-select';
 import LocationSearch from '@/components/search/LocationSearch';
 import VenueSearchResultsList from '@/components/search/VenueSearchResultsList';
 import { searchVenues, searchServices } from '@/services/search/searchService';
 import { cn } from '@/lib/utils';
+
+// Icon mapping for category icons
+const ICON_MAP = {
+  Scissors,
+  Wand2,
+  Sparkles,
+  Smile,
+  Zap,
+  Droplet,
+  Hand,
+  Flame,
+  Eye,
+  Palette,
+};
 
 /**
  * VenueMap Component - Displays all venues on a Google Map
@@ -484,7 +513,7 @@ export default function CategorySearchClient({
 
     // Get icon component
     const getIconComponent = (iconName) => {
-        const IconComponent = LucideIcons[iconName];
+        const IconComponent = ICON_MAP[iconName];
         return IconComponent ? <IconComponent className="w-5 h-5" /> : null;
     };
 

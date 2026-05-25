@@ -78,6 +78,7 @@ const categories = [
   { name: 'Hair', slug: 'hair', image: '/images/category-hair.png' },
   { name: 'Barbering', slug: 'barbering', image: '/images/category-barber.png' },
   { name: 'Makeup', slug: 'makeup', image: '/images/category-makeup.png' },
+  { name: 'Brows & Lashes', slug: 'brows-lashes', image: '/images/category-brows-and-lashes.png' },
   { name: 'Nails', slug: 'nails', image: '/images/category-nails.png' },
   { name: 'Skin Care', slug: 'skin-care', image: '/images/category-skincare.png' },
   { name: 'Face', slug: 'face', image: '/images/category-face.png' },
