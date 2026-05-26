@@ -25,8 +25,26 @@ export async function GET(request) {
 
     return Response.json(response.data);
   } catch (error) {
+    const upstreamStatus = error?.response?.status;
+    const upstreamData = error?.response?.data;
+
+    // QA/production can temporarily run with backend routes not yet deployed.
+    // Return an empty successful payload instead of a 500 for known recoverable cases.
+    if (upstreamStatus === 404 || upstreamStatus === 401 || upstreamStatus === 403) {
+      console.warn('[api/new-salons] Upstream unavailable for new salons:', upstreamStatus);
+      return Response.json({
+        data: [],
+        meta: {
+          current_page: 1,
+          last_page: 1,
+          per_page: Number(perPage) || 12,
+          total: 0,
+        },
+      });
+    }
+
     console.error('Error fetching new salons:', error.message);
-    console.error('Error details:', error.response?.data || error);
+    console.error('Error details:', upstreamData || error);
     return Response.json(
       { 
         error: 'Failed to fetch new salons',

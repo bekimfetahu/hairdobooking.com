@@ -6,6 +6,11 @@
 import { cookies } from 'next/headers';
 import laravelApi from '@/services/laravelApi';
 
+function isExpectedDynamicUsageError(error) {
+  const message = error?.message || '';
+  return message.includes('Dynamic server usage');
+}
+
 /**
  * Fetch the current authenticated user from the server
  * This reads the token from cookies and fetches user data from Laravel API
@@ -29,11 +34,15 @@ export async function getCurrentUserServer() {
 
       return response.data || null;
     } catch (error) {
-      console.debug('[Auth] Failed to fetch user from Laravel API:', error.message);
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[Auth] Failed to fetch user from Laravel API:', error.message);
+      }
       return null;
     }
   } catch (error) {
-    console.debug('[Auth] Error in getCurrentUserServer:', error.message);
+    if (!isExpectedDynamicUsageError(error) && process.env.NODE_ENV !== 'production') {
+      console.debug('[Auth] Error in getCurrentUserServer:', error.message);
+    }
     return null;
   }
 }
