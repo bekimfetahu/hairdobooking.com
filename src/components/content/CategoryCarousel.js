@@ -51,7 +51,7 @@ export default function CategoryCarousel({
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full h-10 w-10"
+            className="rounded-full h-10 w-10 focus:ring-0 focus:ring-offset-0"
             onClick={() => scroll('left')}
             aria-label="Scroll left"
           >
@@ -60,7 +60,7 @@ export default function CategoryCarousel({
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full h-10 w-10"
+            className="rounded-full h-10 w-10 focus:ring-0 focus:ring-offset-0"
             onClick={() => scroll('right')}
             aria-label="Scroll right"
           >

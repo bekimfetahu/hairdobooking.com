@@ -1,10 +1,10 @@
 'use client';
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import Script from 'next/script';
 import { Search, ChevronDown, Filter, X } from 'lucide-react';
 import LocationSearch from '@/components/search/LocationSearch';
 import { cn } from '@/lib/utils';
+import useGoogleMapsReady from '@/hooks/useGoogleMapsReady';
 import { useVenueSearch } from '@/hooks/useVenueSearch';
 import { useServiceSearch } from '@/hooks/useServiceSearch';
 import { useFeaturedServices } from '@/hooks/useFeaturedServices';
@@ -46,7 +46,7 @@ export default function Hero({
   const [expandedFilter, setExpandedFilter] = React.useState(null);
   const [searchDistance, setSearchDistance] = React.useState('50mi'); // 5mi, 10mi, 15mi, 30mi, 50mi
   const [isDefaultLocationLoaded, setIsDefaultLocationLoaded] = React.useState(!!initialVenues?.length);
-  const [mapsReady, setMapsReady] = React.useState(false);
+  const mapsReady = useGoogleMapsReady();
   const [selectedServiceOrSalon, setSelectedServiceOrSalon] = React.useState(false); // Track if service/salon is selected
   const searchRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
@@ -633,11 +633,6 @@ export default function Hero({
 
   return (
     <section className="relative overflow-visible pt-5 pb-0 md:pt-8 md:pb-0">
-      <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
-        strategy="lazyOnload"
-        onLoad={() => setMapsReady(true)}
-      />
       {/* Background gradient */}
       <div
         className="absolute inset-0"
@@ -819,16 +814,16 @@ export default function Hero({
             {/* CTA Buttons */}
             <div className="flex gap-2 sm:gap-3 flex-wrap justify-center">
               <button
-                onClick={() => router.push('/salon/search')}
-                className="px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-base bg-black text-white font-medium rounded-full hover:bg-gray-800 transition-colors"
-              >
-                Explore Salons
-              </button>
-              <button
                 onClick={() => router.push('/search/service')}
                 className="px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-base border-2 border-black text-black font-medium rounded-full hover:bg-gray-50 transition-colors"
               >
                 Browse Services
+              </button>
+              <button
+                onClick={() => router.push('/salon/search')}
+                className="px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-base bg-black text-white font-medium rounded-full hover:bg-gray-800 transition-colors"
+              >
+                Explore Salons
               </button>
             </div>
           </div>

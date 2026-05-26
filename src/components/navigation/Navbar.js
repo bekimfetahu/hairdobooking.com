@@ -1,6 +1,5 @@
 "use client";
-import { logout, loginSuccess } from '@/store/slices/authSlice';
-import PreferredSalonModal from '@/components/modals/PreferredSalonModal';
+import { logout } from '@/store/slices/authSlice';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -22,7 +21,6 @@ import {
 
 const navLinks = [
     { href: '/pricing', label: 'Pricing', icon: CreditCard },
-    { href: '/register', label: 'Book now', icon: CalendarDays },
 ];
 
 const accountLinks = [
@@ -36,7 +34,6 @@ const getBasePath = (href) => href.split('?')[0];
 export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const [isSalonPickerOpen, setIsSalonPickerOpen] = useState(false);
     const user = useSelector((state) => state.auth.user);
     const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
     const pathname = usePathname();
@@ -54,17 +51,14 @@ export default function Navbar() {
 
     const visibleNavLinks = navLinks.filter((link) => {
         if (link.href === '/pricing' && !(isForBusinessPage || isPricingPage)) return false;
-        if (link.href === '/register' && (isForBusinessPage || isPricingPage)) return false;
         return true;
-    }).map((link) => (link.href === '/register' ? { ...link, href: bookNowHref } : link));
+    });
 
     const displayName = useMemo(() => {
         return (
             user?.client?.first_name || user?.first_name || user?.name || user?.email?.split('@')[0] || 'Account'
         );
     }, [user]);
-
-    const primaryVenueUuid = primaryVenue?.uuid ?? null;
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -92,20 +86,17 @@ export default function Navbar() {
     useEffect(() => {
         setIsMobileMenuOpen(false);
         setIsDropdownOpen(false);
-        setIsSalonPickerOpen(false);
     }, [pathname]);
 
     useEffect(() => {
         if (!isAuthenticated) {
             setIsDropdownOpen(false);
-            setIsSalonPickerOpen(false);
         }
     }, [isAuthenticated]);
 
     const handleLogout = async () => {
         setIsMobileMenuOpen(false);
         setIsDropdownOpen(false);
-        setIsSalonPickerOpen(false);
         try {
             const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
             dispatch(logout());
@@ -121,23 +112,19 @@ export default function Navbar() {
     };
 
     const handleGoPreferredSalon = () => {
-        // Open the preferred-salon picker modal from the main nav pill
-        // so users can change their preferred salon.
         setIsDropdownOpen(false);
         setIsMobileMenuOpen(false);
-        setIsSalonPickerOpen(true);
+        if (primaryVenueSlug) {
+            router.push(`/salon/${primaryVenueSlug}`);
+        }
     };
 
     const handleNavigatePreferredSalon = () => {
-        // From dropdown entries, go directly to the preferred salon page
-        // (or open the picker if none is set yet).
         setIsDropdownOpen(false);
         setIsMobileMenuOpen(false);
 
         if (primaryVenueSlug) {
             router.push(`/salon/${primaryVenueSlug}`);
-        } else {
-            setIsSalonPickerOpen(true);
         }
     };
 
@@ -195,7 +182,6 @@ export default function Navbar() {
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setIsSalonPickerOpen(false);
                                             setIsDropdownOpen((open) => !open);
                                         }}
                                         className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-sm font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50"
@@ -318,7 +304,7 @@ export default function Navbar() {
                                         onClick={() => {
                                             setIsMobileMenuOpen(false);
                                             setIsDropdownOpen(false);
-                                            setIsSalonPickerOpen(true);
+                                            handleGoPreferredSalon();
                                         }}
                                         className="flex w-full items-center justify-between rounded-md border border-black/10 bg-white px-4 py-4 text-left transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black hover:bg-neutral-50"
                                     >
@@ -379,17 +365,6 @@ export default function Navbar() {
                     </div>
                 </div>
             )}
-            <PreferredSalonModal
-                open={isSalonPickerOpen}
-                onClose={() => setIsSalonPickerOpen(false)}
-                onPrimaryUpdated={(updatedUser) => {
-                    if (updatedUser) {
-                        dispatch(loginSuccess({ user: updatedUser }));
-                        setIsSalonPickerOpen(false);
-                        setIsMobileMenuOpen(false);
-                    }
-                }}
-            />
         </nav>
     );
 }

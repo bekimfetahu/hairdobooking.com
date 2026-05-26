@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
  * Variants:
  * - simple: Basic white card with border
  * - image-overlay: Image with theme overlay and text at bottom
- * - testimonial: Quote card with rating stars
+ * - testimonial: Quote card with text and author
  * 
  * Usage:
  * <Card variant="image-overlay">
@@ -141,33 +141,23 @@ export function ImageOverlayCard({
 
 /**
  * TestimonialCard - Lovable Style
- * Quote card with star rating
+ * Quote card with testimonial text
  * 
  * Usage:
  * <TestimonialCard
  *   name="John Doe"
  *   text="Great experience!"
- *   rating={5}
  * />
  */
 export function TestimonialCard({
   name,
   text,
-  rating = 5,
   avatar = null,
   role = null,
   className = '',
 }) {
   return (
     <Card variant="testimonial" className={className}>
-      {/* Rating */}
-      <div className="flex gap-1 mb-4">
-        {Array.from({ length: rating }).map((_, i) => (
-          <span key={i} className="text-yellow-400">
-            ★
-          </span>
-        ))}
-      </div>
 
       {/* Quote */}
       <p className="text-sm text-gray-600 leading-relaxed mb-5 italic">

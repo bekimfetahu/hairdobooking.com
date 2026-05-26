@@ -74,3 +74,47 @@ export async function fetchInitialData(distance = '50mi') {
     };
   }
 }
+
+/**
+ * Fetch latest salons added to the marketplace
+ * Used for the "New to Hairdobooking" page
+ * 
+ * @param {number} perPage - Number of results per page (default 12)
+ * @param {number} page - Page number (default 1)
+ * @returns {Promise<Array>} Array of venue/salon objects
+ */
+export async function fetchNewSalons(perPage = 12, page = 1) {
+  try {
+    console.log('[InitialDataFetcher] Fetching new salons...');
+
+    const response = await laravelApp.get('/client/new-salons', {
+      params: {
+        perPage,
+        page,
+      },
+    });
+
+    const rawVenues = response.data?.data || [];
+    const venues = rawVenues.map(transformVenueToSalon);
+
+    console.log('[InitialDataFetcher] Successfully fetched new salons:', venues.length);
+
+    return {
+      venues,
+      meta: response.data?.meta || { total: 0, current_page: 1, last_page: 1 },
+    };
+  } catch (error) {
+    console.error('[InitialDataFetcher] Error fetching new salons:');
+    console.error('[InitialDataFetcher] Message:', error.message);
+    if (error.response) {
+      console.error('[InitialDataFetcher] Status:', error.response.status);
+      console.error('[InitialDataFetcher] Data:', error.response.data);
+    }
+
+    // Return fallback data
+    return {
+      venues: [],
+      meta: { total: 0, current_page: 1, last_page: 1 },
+    };
+  }
+}

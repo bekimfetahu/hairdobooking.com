@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Script from "next/script";
 import { MapPin } from "lucide-react";
 
 import { fetchPrimarySalonLocations, setPrimarySalon } from "@/services/auth/primarySalon";
+import useGoogleMapsReady from '@/hooks/useGoogleMapsReady';
 
 function getCoordsFromSalon(salon) {
     const lat = Number(salon?.latitude ?? salon?.address?.latitude ?? undefined);
@@ -56,6 +56,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
     const [settingPreferredId, setSettingPreferredId] = useState(null);
     const [primaryVenueId, setPrimaryVenueId] = useState(null);
     const [primarySalon, setPrimarySalonState] = useState(null);
+    const mapsReady = useGoogleMapsReady();
 
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
@@ -187,6 +188,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
 
     useEffect(() => {
         if (typeof window === "undefined") return;
+        if (!mapsReady) return;
         if (!window.google || !window.google.maps) return;
         if (!mapRef.current) return;
 
@@ -334,7 +336,7 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
         return () => {
             cancelled = true;
         };
-    }, [salons, center, primaryVenueId, preferredSalon]);
+    }, [salons, center, primaryVenueId, preferredSalon, mapsReady]);
 
     useEffect(() => {
         if (!mapInstanceRef.current) return;
@@ -435,11 +437,6 @@ export default function PreferredSalonSearch({ initialSearch = "", onPrimaryUpda
 
     return (
         <>
-            <Script
-                src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps&v=weekly&loading=async`}
-                strategy="lazyOnload"
-            />
-
             <div className="grid h-full gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)]">
                 <section className="flex h-full flex-col rounded-md bg-white p-4 shadow-sm ring-1 ring-black/5 lg:overflow-hidden">
                     <form onSubmit={onSubmit} className="w-full">

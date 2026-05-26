@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Search,
@@ -25,6 +24,7 @@ import LocationSearch from '@/components/search/LocationSearch';
 import VenueSearchResultsList from '@/components/search/VenueSearchResultsList';
 import { searchVenues, searchServices } from '@/services/search/searchService';
 import { cn } from '@/lib/utils';
+import useGoogleMapsReady from '@/hooks/useGoogleMapsReady';
 
 // Icon mapping for category icons
 const ICON_MAP = {
@@ -43,13 +43,14 @@ const ICON_MAP = {
 /**
  * VenueMap Component - Displays all venues on a Google Map
  */
-function VenueMap({ venues, selectedLocation, router }) {
+function VenueMap({ venues, selectedLocation, router, mapsReady }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
+        if (!mapsReady) return;
     // Calculate center from selected location or first venue
     let center = { lat: 51.5074, lng: -0.1278 }; // London default
     
@@ -203,7 +204,7 @@ function VenueMap({ venues, selectedLocation, router }) {
     } catch (err) {
       console.error('[VenueMap] Error:', err);
     }
-  }, [venues, selectedLocation, router]);
+    }, [venues, selectedLocation, router, mapsReady]);
 
   return <div ref={mapRef} style={{ width: '100%', height: '100%' }} />;
 }
@@ -250,7 +251,7 @@ export default function CategorySearchClient({
     );
     const [distance, setDistance] = useState(initialDistance);
     const [loading, setLoading] = useState(false);
-    const [mapsReady, setMapsReady] = useState(false);
+    const mapsReady = useGoogleMapsReady();
 
     // Service search state
     const [serviceQuery, setServiceQuery] = useState("");
@@ -550,12 +551,6 @@ export default function CategorySearchClient({
 
     return (
         <div className="relative w-full min-h-screen overflow-hidden pt-2 pb-0 md:pt-4">
-            <Script
-                src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
-                strategy="lazyOnload"
-                onLoad={() => setMapsReady(true)}
-            />
-
             {/* Full-width search bar */}
             <div className="relative w-full flex justify-center px-5 sm:px-6 pb-4 z-30">
                 <div className="max-w-4xl w-full">
@@ -929,6 +924,7 @@ export default function CategorySearchClient({
                                     venues={venues}
                                     selectedLocation={selectedLocation}
                                     router={router}
+                                    mapsReady={mapsReady}
                                 />
                             ) : (mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
                                 <div className="w-full h-full flex items-center justify-center text-gray-500">
@@ -957,6 +953,7 @@ export default function CategorySearchClient({
                                     venues={venues}
                                     selectedLocation={selectedLocation}
                                     router={router}
+                                    mapsReady={mapsReady}
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-gray-500">

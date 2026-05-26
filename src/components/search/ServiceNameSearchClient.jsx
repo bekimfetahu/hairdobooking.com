@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Script from "next/script";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, MapPin, Search, Clock, ChevronUp, SlidersHorizontal } from "lucide-react";
 import LocationSearch from "@/components/search/LocationSearch";
@@ -13,6 +12,7 @@ import { useServiceSearch } from "@/hooks/useServiceSearch";
 import { searchVenues } from "@/services/search/searchService";
 import { cn } from "@/lib/utils";
 import { getIcon } from "@/lib/iconMap";
+import useGoogleMapsReady from '@/hooks/useGoogleMapsReady';
 
 function formatMoney(value) {
   if (value == null) return null;
@@ -35,13 +35,14 @@ function calcDistance(lat1, lon1, lat2, lon2) {
  * VenueMap Component - Displays all venues on a Google Map
  * Simplified version based on PreferredSalonSearch pattern
  */
-function VenueMap({ venues, selectedLocation, serviceName, searchDistance, router }) {
+function VenueMap({ venues, selectedLocation, serviceName, searchDistance, router, mapsReady }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!mapsReady) return;
     // Calculate center from selected location or first venue
     let center = { lat: 51.5074, lng: -0.1278 }; // London default
     if (selectedLocation) {
@@ -217,7 +218,7 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
     return () => {
       markersRef.current.forEach(({ marker }) => marker?.setMap(null));
     };
-  }, [venues, selectedLocation]);
+  }, [venues, selectedLocation, mapsReady]);
 
   const handleZoomIn = () => {
     if (mapInstanceRef.current) {
@@ -279,7 +280,7 @@ export default function ServiceNameSearchClient({
   const [hasMore, setHasMore] = React.useState(
     initialVenuesMeta ? (Number(initialVenuesMeta.total || 0) > (initialVenues?.length || 0)) : true
   );
-  const [mapsReady, setMapsReady] = React.useState(false);
+  const mapsReady = useGoogleMapsReady();
   const [expandedFilter, setExpandedFilter] = React.useState(null);
   const [searchDistance, setSearchDistance] = React.useState(initialDistance);
   const [selectedLocation, setSelectedLocation] = React.useState(
@@ -963,24 +964,8 @@ export default function ServiceNameSearchClient({
     });
   };
 
-  React.useEffect(() => {
-    if (mapsReady) return;
-    if (typeof window === 'undefined') return;
-
-    if (window.google?.maps?.importLibrary) {
-      setMapsReady(true);
-    }
-  }, [mapsReady]);
-
   return (
     <div className="relative w-full min-h-screen overflow-hidden pt-2 pb-0 md:pt-4">
-      <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
-        strategy="lazyOnload"
-        onReady={() => setMapsReady(true)}
-        onLoad={() => setMapsReady(true)}
-      />
-
       {/* Full-width search bar */}
       <div className="relative w-full flex justify-center px-5 sm:px-6 pb-4 z-30">
         <div className="max-w-4xl w-full">
@@ -1562,6 +1547,7 @@ export default function ServiceNameSearchClient({
                   selectedLocation={selectedLocation}
                   serviceName={activeServiceName}
                   router={router}
+                  mapsReady={mapsReady}
                 />
               ) : (mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
                 <div className="w-full h-full flex items-center justify-center text-gray-500">
@@ -1597,6 +1583,7 @@ export default function ServiceNameSearchClient({
                 selectedLocation={selectedLocation}
                 serviceName={activeServiceName}
                 router={router}
+                mapsReady={mapsReady}
               />
             ) : null}
           </div>

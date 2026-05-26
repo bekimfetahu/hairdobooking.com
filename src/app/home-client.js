@@ -1,17 +1,14 @@
 'use client';
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight } from 'lucide-react';
 import Hero from '@/components/search/Hero';
 import CardCarousel from '@/components/content/CardCarousel';
 import CategoryCarousel from '@/components/content/CategoryCarousel';
 import { TestimonialCard } from '@/components/content/Card';
-import BlackButton from '@/components/ui/BlackButton';
-import BlueButton from '@/components/ui/BlueButton';
 
 /**
  * Home Page Client Component
- * Marketplace landing page with hero, categories, salons, and testimonials
+ * Marketplace landing page with hero, categories, popular salons, and testimonials
  * Receives initial data from server component
  */
 
@@ -19,19 +16,16 @@ const testimonials = [
   {
     name: 'Sarah M.',
     text: 'Found my perfect salon in seconds! The booking was so easy and my hair looks amazing.',
-    rating: 5,
     role: 'Client',
   },
   {
     name: 'Emma L.',
     text: 'Love how simple it is to discover new salons. Never going anywhere else!',
-    rating: 5,
     role: 'Client',
   },
   {
     name: 'Jessica K.',
     text: 'So many great salons to choose from. The search feature is incredibly helpful!',
-    rating: 5,
     role: 'Client',
   },
 ];
@@ -43,8 +37,6 @@ const salonData = [
     subtitle: '45 Oxford Street, London',
     description: 'Premium haircuts and styling',
     image: '/images/salon-1.jpg',
-    rating: 4.8,
-    badge: 'Top Rated',
   },
   {
     id: '2',
@@ -52,8 +44,6 @@ const salonData = [
     subtitle: '12 Shoreditch, London',
     description: 'Classic barber experience',
     image: '/images/salon-2.jpg',
-    rating: 4.6,
-    badge: 'New',
   },
   {
     id: '3',
@@ -61,8 +51,6 @@ const salonData = [
     subtitle: '88 Kings Road, Chelsea',
     description: 'Skin care and facials',
     image: '/images/salon-3.jpg',
-    rating: 4.9,
-    badge: 'Popular',
   },
   {
     id: '4',
@@ -70,7 +58,6 @@ const salonData = [
     subtitle: '23 Camden High St, London',
     description: 'Nail art and polish',
     image: '/images/salon-4.jpg',
-    rating: 4.7,
   },
 ];
 
@@ -89,6 +76,36 @@ const categories = [
 export default function HomeClient({ initialLocation, initialVenues, initialServices }) {
   const router = useRouter();
   const [currentLocation, setCurrentLocation] = React.useState(initialLocation || null);
+  const [newSalons, setNewSalons] = React.useState([]);
+  const [loadingNewSalons, setLoadingNewSalons] = React.useState(false);
+
+  // Fetch new salons on mount
+  React.useEffect(() => {
+    const fetchNewSalons = async () => {
+      setLoadingNewSalons(true);
+      try {
+        const response = await fetch('/api/new-salons');
+        if (response.ok) {
+          const data = await response.json();
+          // Transform API response to CardCarousel format
+          const transformedSalons = (data.data || []).map(salon => ({
+            id: salon.venue.uuid,
+            name: salon.venue.name,
+            slug: salon.venue.slug,
+            subtitle: salon.address?.formatted || 'Address not available',
+            image: salon.primary_image?.url || '/images/placeholder.jpg',
+          }));
+          setNewSalons(transformedSalons);
+        }
+      } catch (error) {
+        console.error('Failed to fetch new salons:', error);
+      } finally {
+        setLoadingNewSalons(false);
+      }
+    };
+
+    fetchNewSalons();
+  }, []);
 
   const handleSearch = (searchData) => {
     console.log('Search query:', searchData.query);
@@ -118,8 +135,11 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
   };
 
   const handleCardClick = (salon) => {
-    console.log('Clicked salon:', salon.name);
-    // TODO: Navigate to salon detail page
+    if (!salon?.slug) {
+      return;
+    }
+
+    router.push(`/salon/${salon.slug}`);
   };
 
   return (
@@ -145,19 +165,21 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
         </div>
       </section>
 
-      {/* ===== NEW SALONS CAROUSEL ===== */}
-      <section className="py-6 md:py-16 bg-[#FDFBF8]" id="new-salons">
-        <div className="max-w-6xl mx-auto px-4 md:px-6">
-          <CardCarousel
-            title="New to HairdoBooking"
-            cards={salonData}
-            cardWidth={280}
-            showRating={true}
-            onCardClick={handleCardClick}
-            onNavigate={handleNavigate}
-          />
-        </div>
-      </section>
+      {/* ===== NEW TO HAIRDOBOOKING CAROUSEL (REAL DATA) ===== */}
+      {!loadingNewSalons && newSalons.length > 0 && (
+        <section className="py-6 md:py-16 bg-white" id="new-to-hairdobooking">
+          <div className="max-w-6xl mx-auto px-4 md:px-6">
+            <CardCarousel
+              title="New to Hairdobooking"
+              cards={newSalons.slice(0, 6)}
+              cardWidth={280}
+              onCardClick={handleCardClick}
+              onNavigate={handleNavigate}
+              cardButtonClassName="focus:ring-0 focus:ring-offset-0"
+            />
+          </div>
+        </section>
+      )}
 
       {/* ===== POPULAR SALONS CAROUSEL ===== */}
       <section className="py-6 md:py-16 bg-white" id="popular">
@@ -166,7 +188,6 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
             title="Popular Salons"
             cards={salonData.slice(0, 3)}
             cardWidth={280}
-            showRating={true}
             onCardClick={handleCardClick}
             onNavigate={handleNavigate}
           />
@@ -193,33 +214,9 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
                 key={testimonial.name}
                 name={testimonial.name}
                 text={testimonial.text}
-                rating={testimonial.rating}
                 role={testimonial.role}
               />
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== CTA SECTION ===== */}
-      <section className="py-6 md:py-16 bg-white">
-        <div className="max-w-3xl mx-auto px-4 md:px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-brand-black mb-4">
-            Ready to Find Your Perfect Salon?
-          </h2>
-          <p className="text-accent mb-8 max-w-md mx-auto">
-            Search hundreds of salons, compare services, and book your next appointment in
-            seconds.
-          </p>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <BlackButton sizeClass="text-base px-8 py-3" onClick={() => console.log('Explore')}>
-              Explore Salons
-              <ArrowRight className="w-5 h-5" />
-            </BlackButton>
-            <BlueButton sizeClass="text-base px-8 py-3" onClick={() => console.log('Browse')}>
-              Browse Services
-              <ArrowRight className="w-5 h-5" />
-            </BlueButton>
           </div>
         </div>
       </section>

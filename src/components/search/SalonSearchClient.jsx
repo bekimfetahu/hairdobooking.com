@@ -3,13 +3,13 @@
 import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Search, Maximize2 } from "lucide-react";
-import Script from "next/script";
 import LocationSearch from "@/components/search/LocationSearch";
 import VenueSearchResultsList from "@/components/search/VenueSearchResultsList";
 import { searchVenues } from "@/services/search/searchService";
 import Select from 'react-select';
+import useGoogleMapsReady from '@/hooks/useGoogleMapsReady';
 
-function VenueMap({ selectedLocation, searchDistance, router }) {
+function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
   const mapRef = React.useRef(null);
   const mapInstanceRef = React.useRef(null);
   const markersRef = React.useRef([]);
@@ -177,6 +177,7 @@ function VenueMap({ selectedLocation, searchDistance, router }) {
   // Initialize map and set up bounds_changed listener
   React.useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!mapsReady) return;
     let center = { lat: 51.5074, lng: -0.1278 };
     if (selectedLocation) center = { lat: selectedLocation.lat, lng: selectedLocation.lon };
 
@@ -225,7 +226,7 @@ function VenueMap({ selectedLocation, searchDistance, router }) {
         clearTimeout(zoomDebounceRef.current);
       }
     };
-  }, [selectedLocation]);
+  }, [selectedLocation, mapsReady]);
 
   // Separate effect: render markers when map venues change
   React.useEffect(() => {
@@ -348,7 +349,7 @@ export default function SalonSearchClient({
       : null
   );
   const [distance, setDistance] = React.useState(initialDistance || "50mi");
-  const [mapsReady, setMapsReady] = React.useState(false);
+  const mapsReady = useGoogleMapsReady();
   const geocoderRef = React.useRef(null);
   const queryDebounceRef = React.useRef(null);
   const loadMoreRef = React.useRef(null);
@@ -590,12 +591,6 @@ export default function SalonSearchClient({
 
   return (
     <div className="relative w-full min-h-screen overflow-hidden pt-2 pb-0 md:pt-4">
-      <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || ""}&libraries=maps,places&v=weekly&loading=async`}
-        strategy="lazyOnload"
-        onLoad={() => setMapsReady(true)}
-      />
-
       {/* Full-width search bar */}
       <div className="relative w-full flex justify-center px-5 sm:px-6 pb-4 z-30">
         <div className="max-w-4xl w-full">
@@ -731,7 +726,7 @@ export default function SalonSearchClient({
 
             <div className="hidden md:block w-1/2 bg-white border-l border-gray-200 h-full">
               {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
-                <VenueMap selectedLocation={selectedLocation} searchDistance={distance} router={router} />
+                <VenueMap selectedLocation={selectedLocation} searchDistance={distance} router={router} mapsReady={mapsReady} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-500">Loading map...</div>
               )}

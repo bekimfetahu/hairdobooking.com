@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { CreditCard, CalendarDays, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, ChevronDown, Menu, X } from 'lucide-react';
-import PreferredSalonModal from '@/components/modals/PreferredSalonModal';
+import { CreditCard, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, ChevronDown, Menu, X } from 'lucide-react';
 import { loginSuccess, logout } from '@/store/slices/authSlice';
 
 export default function NavbarStatic({ initialUser = null }) {
@@ -16,7 +15,6 @@ export default function NavbarStatic({ initialUser = null }) {
   const [user, setUser] = useState(initialUser || null);
   const [isAuthenticated, setIsAuthenticated] = useState(!!initialUser);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isPreferredModalOpen, setIsPreferredModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const navRef = useRef(null);
@@ -140,8 +138,6 @@ export default function NavbarStatic({ initialUser = null }) {
     return user?.client?.primary_venue?.slug ?? null;
   }, [user]);
 
-  const bookNowHref = isAuthenticated && preferredVenueSlug ? `/salon/${preferredVenueSlug}` : '/register';
-
   const handleLogout = async () => {
     try {
       const res = await fetch('/api/auth/logout', {
@@ -167,22 +163,19 @@ export default function NavbarStatic({ initialUser = null }) {
   };
 
   const handleGoPreferredSalon = () => {
-    // Main nav pill: open the preferred-salon picker modal to change salon.
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
-    setIsPreferredModalOpen(true);
+    if (preferredVenueSlug) {
+      router.push(`/salon/${preferredVenueSlug}`);
+    }
   };
 
   const handleNavigatePreferredSalon = () => {
-    // Dropdown entry: go directly to the preferred salon page
-    // (or open the picker if none is set yet).
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
 
     if (preferredVenueSlug) {
       router.push(`/salon/${preferredVenueSlug}`);
-    } else {
-      setIsPreferredModalOpen(true);
     }
   };
 
@@ -223,13 +216,6 @@ export default function NavbarStatic({ initialUser = null }) {
             <Link href="/pricing" className={navLinkClasses('/pricing')}>
               <CreditCard className="h-4 w-4 text-black" />
               Pricing
-            </Link>
-          )}
-
-          {!(isForBusinessPage || isPricingPage) && (
-            <Link href={bookNowHref} className={navLinkClasses('/register')}>
-              <CalendarDays className="h-4 w-4 text-black" />
-              Book now
             </Link>
           )}
 
@@ -331,16 +317,6 @@ export default function NavbarStatic({ initialUser = null }) {
                 </Link>
               )}
 
-              {!(isForBusinessPage || isPricingPage) && (
-                <Link
-                  href={bookNowHref}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
-                >
-                  <CalendarDays className="h-4 w-4 text-black" />
-                  Book now
-                </Link>
-              )}
             </div>
 
             <div className="mt-4 space-y-3 border-t border-black/10 pt-4">
@@ -427,15 +403,6 @@ export default function NavbarStatic({ initialUser = null }) {
         </div>
       )}
 
-      <PreferredSalonModal
-        open={isPreferredModalOpen}
-        onClose={() => setIsPreferredModalOpen(false)}
-        onPrimaryUpdated={(updatedUser) => {
-          if (updatedUser) {
-            setUser(updatedUser);
-          }
-        }}
-      />
     </header>
   );
 }

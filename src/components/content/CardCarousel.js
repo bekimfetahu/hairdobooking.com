@@ -1,6 +1,6 @@
 'use client';
 import React, { useRef } from 'react';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
@@ -22,10 +22,10 @@ export default function CardCarousel({
   cards = [],
   cardWidth = 280,
   cardHeight = 'auto',
-  showRating = true,
   onCardClick = null,
   onNavigate = null,
   renderCard = null,
+  cardButtonClassName = '',
 }) {
   const scrollRef = useRef(null);
 
@@ -46,7 +46,10 @@ export default function CardCarousel({
     <button
       key={card.id || idx}
       onClick={() => onCardClick?.(card)}
-      className="flex-shrink-0 group text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E62E2E] rounded-md"
+      className={cn(
+        'flex-shrink-0 group text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E62E2E] rounded-md',
+        cardButtonClassName
+      )}
     >
       {/* Card Image Container */}
       <div className="relative rounded-md overflow-hidden border border-black/10 mb-3 bg-white shadow-sm">
@@ -68,13 +71,7 @@ export default function CardCarousel({
           )}
         </div>
 
-        {/* Rating Badge */}
-        {showRating && card.rating && (
-          <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-medium shadow-sm">
-            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-            {card.rating}
-          </div>
-        )}
+
       </div>
 
       {/* Card Content */}
@@ -114,7 +111,7 @@ export default function CardCarousel({
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full h-9 w-9"
+            className="rounded-full h-9 w-9 focus:ring-0 focus:ring-offset-0"
             onClick={() => scroll('left')}
             aria-label="Scroll left"
           >
@@ -123,7 +120,7 @@ export default function CardCarousel({
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full h-9 w-9"
+            className="rounded-full h-9 w-9 focus:ring-0 focus:ring-offset-0"
             onClick={() => scroll('right')}
             aria-label="Scroll right"
           >

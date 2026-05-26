@@ -878,7 +878,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                           className={`overflow-hidden rounded-md border transition-all cursor-pointer ${
                             isSelected
                               ? "border-primary/80 bg-primary/5"
-                              : "border-neutral-300 bg-white hover:border-neutral-600 hover:bg-primary/8 hover:shadow-md"
+                              : "border-neutral-200 bg-white hover:border-primary/40 hover:bg-primary/[0.04] hover:shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
                           }`}
                         >
                           <div className="px-4 py-3">
