@@ -104,6 +104,16 @@ export async function fetchNewSalons(perPage = 12, page = 1) {
       meta: response.data?.meta || { total: 0, current_page: 1, last_page: 1 },
     };
   } catch (error) {
+    // QA/prod can temporarily run frontend ahead of backend route rollout.
+    // Treat 404 as a soft failure and return empty data without noisy error logs.
+    if (error?.response?.status === 404) {
+      console.warn('[InitialDataFetcher] New salons endpoint not available (404). Returning empty data.');
+      return {
+        venues: [],
+        meta: { total: 0, current_page: 1, last_page: 1 },
+      };
+    }
+
     console.error('[InitialDataFetcher] Error fetching new salons:');
     console.error('[InitialDataFetcher] Message:', error.message);
     if (error.response) {

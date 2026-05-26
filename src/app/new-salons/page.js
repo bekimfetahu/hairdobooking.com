@@ -13,6 +13,10 @@ export const metadata = {
   description: 'Discover recently added beauty and hair salons on Hairdobooking',
 };
 
+// Avoid build-time failures/noise in environments where backend routes may lag deployment.
+// Data is fetched on request instead of during static generation.
+export const dynamic = 'force-dynamic';
+
 export default async function NewSalonsPage() {
   // Fetch initial data server-side during SSR
   const { venues, meta } = await fetchNewSalons(12, 1);
