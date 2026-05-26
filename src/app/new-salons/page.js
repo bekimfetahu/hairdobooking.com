@@ -1,4 +1,4 @@
-import fetchNewSalons from '@/services/search/initialDataFetcher';
+import { fetchNewSalons } from '@/services/search/initialDataFetcher';
 import NewSalonsClient from '@/components/new-salons/NewSalonsClient';
 import PageShell from '@/components/layouts/PageShell';
 
