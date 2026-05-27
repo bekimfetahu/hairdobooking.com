@@ -122,3 +122,25 @@ export async function createSalonAppointment(slug, payload) {
 
   return data;
 }
+
+export async function validateSalonVoucher(slug, { code, service_uuid }) {
+  const response = await fetch("/api/vouchers/validate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      slug,
+      code,
+      service_uuid,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to validate voucher");
+  }
+
+  return data;
+}

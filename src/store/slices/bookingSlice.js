@@ -17,6 +17,10 @@ import { createSlice } from "@reduxjs/toolkit";
  *     isProfessionalSectionOpen: false,
  *     isTimeSectionOpen:     false,
  *     isCommentsSectionOpen:  false,
+ *     voucherCode:           "",
+ *     selectedVoucher:       null | { code, discount_type, discount_value, description },
+ *     voucherError:          null | string,
+ *     voucherValidating:     false,
  *   }
  */
 
@@ -33,6 +37,10 @@ const defaultBooking = {
   isProfessionalSectionOpen: false,
   isTimeSectionOpen: false,
   isCommentsSectionOpen: false,
+  voucherCode: "",
+  selectedVoucher: null,
+  voucherError: null,
+  voucherValidating: false,
 };
 
 function getToday() {
@@ -118,6 +126,28 @@ const bookingSlice = createSlice({
       const { slug, open } = action.payload;
       if (state.bySlug[slug]) state.bySlug[slug].isCommentsSectionOpen = open;
     },
+    setVoucherCode(state, action) {
+      const { slug, code } = action.payload;
+      if (state.bySlug[slug]) {
+        state.bySlug[slug].voucherCode = code;
+        state.bySlug[slug].voucherError = null;
+      }
+    },
+    setSelectedVoucher(state, action) {
+      const { slug, voucher } = action.payload;
+      if (state.bySlug[slug]) {
+        state.bySlug[slug].selectedVoucher = voucher;
+        state.bySlug[slug].voucherError = null;
+      }
+    },
+    setVoucherError(state, action) {
+      const { slug, error } = action.payload;
+      if (state.bySlug[slug]) state.bySlug[slug].voucherError = error;
+    },
+    setVoucherValidating(state, action) {
+      const { slug, validating } = action.payload;
+      if (state.bySlug[slug]) state.bySlug[slug].voucherValidating = validating;
+    },
     clearBooking(state, action) {
       const { slug } = action.payload;
       delete state.bySlug[slug];
@@ -146,6 +176,10 @@ export const {
   setIsProfessionalSectionOpen,
   setIsTimeSectionOpen,
   setIsCommentsSectionOpen,
+  setVoucherCode,
+  setSelectedVoucher,
+  setVoucherError,
+  setVoucherValidating,
   clearBooking,
 } = bookingSlice.actions;
 

@@ -12,6 +12,7 @@ import {
   fetchSalonTimeSlots,
   fetchSalonAvailabilityByDateRange,
   createSalonAppointment,
+  validateSalonVoucher,
 } from "@/services/salon/salonService";
 import SalonDatePicker from "@/components/booking/SalonDatePicker";
 import StepSection from "@/components/booking/StepSection";
@@ -33,6 +34,10 @@ import {
   setIsProfessionalSectionOpen as setProfessionalOpen,
   setIsTimeSectionOpen as setTimeOpen,
   setIsCommentsSectionOpen as setCommentsOpen,
+  setVoucherCode,
+  setSelectedVoucher,
+  setVoucherError,
+  setVoucherValidating,
   clearBooking,
 } from "@/store/slices/bookingSlice";
 
@@ -89,6 +94,10 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     isProfessionalSectionOpen,
     isTimeSectionOpen,
     isCommentsSectionOpen,
+    voucherCode,
+    selectedVoucher,
+    voucherError,
+    voucherValidating,
   } = booking;
 
   // Initialize booking state for this slug on first render
@@ -156,11 +165,50 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         if (bookingState.serviceSearch) {
           dispatch(setSearch({ slug, query: bookingState.serviceSearch }));
         }
+        if (bookingState.selectedVoucher) {
+          dispatch(setSelectedVoucher(bookingState.selectedVoucher));
+        }
+        if (bookingState.voucherCode) {
+          dispatch(setVoucherCode(bookingState.voucherCode));
+        }
 
         console.log('✓ Restored booking state for', slug, bookingState);
+        setRestorationComplete(true);
+      } else {
+        // No saved state, restoration is done
+        setRestorationComplete(true);
       }
     } catch (err) {
       console.error('Failed to restore booking state from localStorage:', err);
+      setRestorationComplete(true);
+    }
+  }, [slug, dispatch]);
+
+  // Separate voucher persistence - save selected voucher to localStorage whenever it changes
+  useEffect(() => {
+    if (!slug || !selectedVoucher) return;
+    
+    try {
+      localStorage.setItem(`voucher_${slug}`, JSON.stringify(selectedVoucher));
+      console.log('✓ Saved voucher to localStorage for', slug, selectedVoucher);
+    } catch (err) {
+      console.error('Failed to save voucher to localStorage:', err);
+    }
+  }, [slug, selectedVoucher]);
+
+  // Restore voucher from localStorage on page load
+  useEffect(() => {
+    if (!slug) return;
+
+    try {
+      const savedVoucher = localStorage.getItem(`voucher_${slug}`);
+      if (savedVoucher) {
+        const voucher = JSON.parse(savedVoucher);
+        dispatch(setSelectedVoucher({ slug, voucher }));
+        console.log('✓ Restored voucher from localStorage for', slug, voucher);
+      }
+    } catch (err) {
+      console.error('Failed to restore voucher from localStorage:', err);
     }
   }, [slug, dispatch]);
 
@@ -182,6 +230,8 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
   const [expandedServices, setExpandedServices] = useState({});
   const [expandedFilter, setExpandedFilter] = useState(null);
   const searchInputRef = useRef(null);
+  const justAuthenticatedRef = useRef(false);
+  const [restorationComplete, setRestorationComplete] = useState(false);
 
   const toggleFilter = useCallback(() => {
     setExpandedFilter(expandedFilter === 'filters' ? null : 'filters');
@@ -565,6 +615,32 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     setServiceAvailableDates(result.availableDates || []);
   }, [selectedServiceUuid]);
 
+  const handleApplyVoucher = useCallback(async () => {
+    if (!voucherCode.trim() || !selectedServiceUuid) {
+      return;
+    }
+
+    dispatch(setVoucherValidating({ slug, validating: true }));
+    dispatch(setVoucherError({ slug, error: null }));
+
+    try {
+      const response = await validateSalonVoucher(slug, {
+        code: voucherCode.trim(),
+        service_uuid: selectedServiceUuid,
+      });
+
+      if (response.success && response.voucher) {
+        dispatch(setSelectedVoucher({ slug, voucher: response.voucher }));
+      } else {
+        dispatch(setVoucherError({ slug, error: response.message || "Failed to apply voucher" }));
+      }
+    } catch (error) {
+      dispatch(setVoucherError({ slug, error: error?.message || "Failed to apply voucher" }));
+    } finally {
+      dispatch(setVoucherValidating({ slug, validating: false }));
+    }
+  }, [slug, voucherCode, selectedServiceUuid, dispatch]);
+
   const handleBookNow = useCallback(async () => {
     // Check if user is authenticated
     if (!isAuthenticated) {
@@ -578,6 +654,8 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         selectedTime,
         selectedComments,
         serviceSearch,
+        selectedVoucher,
+        voucherCode,
       };
       localStorage.setItem(`booking_${slug}`, JSON.stringify(bookingState));
       console.log('Saved booking state to localStorage for', slug, bookingState);
@@ -599,6 +677,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         service_uuid: selectedServiceUuid,
         employee_uuid: selectedProfessionalUuid,
         comments: selectedComments,
+        voucher_code: selectedVoucher?.code || null,
       });
 
       const successMessage = response?.message || "Appointment created successfully!";
@@ -609,6 +688,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
       // Clear all booking state from Redux and localStorage after successful booking
       dispatch(clearBooking({ slug }));
       localStorage.removeItem(`booking_${slug}`);
+      localStorage.removeItem(`voucher_${slug}`);
       console.log('Cleared booking state for', slug);
 
       // Show SweetAlert success message - only closes by user clicking button
@@ -642,7 +722,27 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     } finally {
       setBookingSubmitting(false);
     }
-  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, isAuthenticated, dispatch]);
+  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, selectedVoucher, voucherCode, isAuthenticated, dispatch]);
+
+  // Auto-submit booking after successful authentication when booking state is ready
+  useEffect(() => {
+    if (!justAuthenticatedRef.current) return;
+    if (!restorationComplete) return;
+    if (!isAuthenticated) return;
+    if (!selectedServiceUuid || !selectedProfessionalUuid || !selectedTime || !selectedDate) return;
+
+    // Booking state is ready, submit the booking
+    justAuthenticatedRef.current = false;
+    setRestorationComplete(false);
+    console.log('✓ Auto-submitting booking after authentication...');
+    
+    // Small delay to ensure all state updates are processed
+    const timeoutId = setTimeout(() => {
+      handleBookNow();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [isAuthenticated, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, restorationComplete, handleBookNow]);
 
   return (
     <>
@@ -1225,13 +1325,43 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                         <div className="min-w-0 flex-1">
                           {selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null ? (
                             <>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Price</p>
-                              <p className="mt-1 text-sm font-bold text-neutral-950">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">
+                                {selectedVoucher ? "Original Price" : "Price"}
+                              </p>
+                              <p className={`mt-1 text-sm font-bold ${selectedVoucher ? "text-neutral-500 line-through" : "text-neutral-950"}`}>
                                 {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
                                 {typeof selectedProfessional.price === "number"
                                   ? selectedProfessional.price.toFixed(2)
                                   : selectedProfessional.price}
-                              </p>                
+                              </p>
+
+                              {/* Voucher discount breakdown */}
+                              {selectedVoucher && (
+                                <>
+                                  <div className="mt-2 pt-2 border-t border-neutral-200">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Discount</p>
+                                    <p className="mt-1 text-xs text-emerald-700 font-medium">
+                                      -{selectedService.currency?.symbol}
+                                      {selectedVoucher.discount_type === "percent"
+                                        ? ((selectedProfessional.price * selectedVoucher.discount_value) / 100).toFixed(2)
+                                        : parseFloat(selectedVoucher.discount_value).toFixed(2)}
+                                    </p>
+                                  </div>
+
+                                  <div className="mt-2 pt-2 border-t border-neutral-200">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Final Price</p>
+                                    <p className="mt-1 text-sm font-bold text-emerald-700">
+                                      {selectedService.currency?.symbol}
+                                      {(
+                                        selectedProfessional.price -
+                                        (selectedVoucher.discount_type === "percent"
+                                          ? (selectedProfessional.price * selectedVoucher.discount_value) / 100
+                                          : selectedVoucher.discount_value)
+                                      ).toFixed(2)}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
                             </>
                           ) : minProfessionalPrice !== null ? (
                             <>
@@ -1251,7 +1381,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
                     {/* Comments section */}
                     {selectedTime && (
-                      <div className="pt-4 mt-2">
+                      <div className="pt-4 mt-2 space-y-3">
                         <textarea
                           value={selectedComments}
                           onChange={(e) => dispatch(setComments({ slug, comments: e.target.value }))}
@@ -1259,6 +1389,55 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                           rows={3}
                           className="w-full rounded-md border border-black/10 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-black/30 focus:outline-none focus:ring-0"
                         />
+
+                        {/* Voucher section */}
+                        {!selectedVoucher && (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={voucherCode}
+                              onChange={(e) => dispatch(setVoucherCode({ slug, code: e.target.value }))}
+                              placeholder="Have voucher?"
+                              className="flex-1 rounded-md border border-black/10 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-black/30 focus:outline-none focus:ring-0"
+                            />
+                            <button
+                              onClick={handleApplyVoucher}
+                              disabled={voucherValidating || !voucherCode.trim()}
+                              className="px-3 py-2 bg-black text-white rounded-md text-xs font-semibold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {voucherValidating ? "Checking..." : "Apply"}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Selected voucher display */}
+                        {selectedVoucher && (
+                          <div className="border border-emerald-300 bg-emerald-50 rounded-md p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm">
+                                <p className="font-semibold text-emerald-900">{selectedVoucher.code}</p>
+                                <p className="text-xs text-emerald-700 mt-0.5">
+                                  {selectedVoucher.discount_type === "percent"
+                                    ? `${selectedVoucher.discount_value}% off`
+                                    : `$${parseFloat(selectedVoucher.discount_value).toFixed(2)} off`}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => dispatch(setSelectedVoucher({ slug, voucher: null }))}
+                                className="text-emerald-600 hover:text-emerald-800 text-sm font-semibold"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Voucher error */}
+                        {voucherError && (
+                          <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
+                            {voucherError}
+                          </div>
+                        )}
 
                         {bookingSuccess && (
                           <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700 flex items-start gap-2">
@@ -1302,9 +1481,8 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         onClose={() => setShowAuthModal(false)}
         onAuthSuccess={() => {
           setShowAuthModal(false);
-          // After user is authenticated, they can click Book Now again
-          // The booking selections are still in Redux, so just call handleBookNow
-          setTimeout(() => handleBookNow(), 100);
+          // Mark that user just authenticated - will trigger auto-submit when booking state is ready
+          justAuthenticatedRef.current = true;
         }}
         salonName={salon?.venue?.name || "this salon"}
         salonSlug={slug}
