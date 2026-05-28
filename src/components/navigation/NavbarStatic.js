@@ -28,7 +28,10 @@ export default function NavbarStatic({ initialUser = null }) {
     if (initialUser) {
       setUser(initialUser);
       setIsAuthenticated(true);
-      dispatch(loginSuccess({ user: initialUser }));
+      dispatch(loginSuccess({ 
+        user: initialUser,
+        token: initialUser?.token 
+      }));
     }
   }, [initialUser, dispatch]);
 
@@ -61,7 +64,10 @@ export default function NavbarStatic({ initialUser = null }) {
           const data = await res.json();
           setUser(data.user);
           setIsAuthenticated(true);
-          dispatch(loginSuccess({ user: data.user }));
+          dispatch(loginSuccess({ 
+            user: data.user,
+            token: data.token 
+          }));
         } else if (res.status === 401) {
           setUser(null);
           setIsAuthenticated(false);
@@ -81,7 +87,10 @@ export default function NavbarStatic({ initialUser = null }) {
       if (updatedUser) {
         setUser(updatedUser);
         setIsAuthenticated(true);
-        dispatch(loginSuccess({ user: updatedUser }));
+        dispatch(loginSuccess({ 
+          user: updatedUser,
+          token: updatedUser?.token 
+        }));
       }
     };
 

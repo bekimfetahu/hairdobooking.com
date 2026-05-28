@@ -12,12 +12,12 @@ export async function GET(req) {
     }
 
     try {
-        const response = await laravelApi.get('/client/user', {
+        const response = await laravelApi.get('/auth/me', {
             headers: {
                 Authorization: `Bearer ${token.value}`, // Send token to backend for validation
             },
         });
-        console.log('Response from /client/user:', response.data);
+        console.log('Response from /auth/me:', response.data);
         return NextResponse.json({ user: response.data }, { status: response.status });
     } catch (error) {
         return NextResponse.json(

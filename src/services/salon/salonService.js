@@ -103,11 +103,14 @@ export async function fetchSalonAvailabilityByDateRange(slug, { start_date, end_
 
 export async function createSalonAppointment(slug, payload) {
   // Use a dedicated appointments proxy so the client can't supply arbitrary URLs
+  // The proxy automatically handles authentication via HttpOnly cookies
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
   const response = await fetch("/api/appointments", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       slug,
       data: payload,

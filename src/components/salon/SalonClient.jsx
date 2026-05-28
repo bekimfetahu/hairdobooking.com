@@ -16,6 +16,7 @@ import {
 } from "@/services/salon/salonService";
 import SalonDatePicker from "@/components/booking/SalonDatePicker";
 import StepSection from "@/components/booking/StepSection";
+import StripePaymentContainer from "@/components/booking/StripePaymentContainer";
 import ImageSlider from "@/components/ui/ImageSlider";
 import BookingAuthModal from "@/components/modals/BookingAuthModal";
 import { useSelector, useDispatch } from "react-redux";
@@ -232,6 +233,11 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
   const searchInputRef = useRef(null);
   const justAuthenticatedRef = useRef(false);
   const [restorationComplete, setRestorationComplete] = useState(false);
+  
+  // Payment flow state
+  const [paymentRequired, setPaymentRequired] = useState(false);
+  const [appointmentData, setAppointmentData] = useState(null);
+  const [paymentIntentData, setPaymentIntentData] = useState(null);
 
   const toggleFilter = useCallback(() => {
     setExpandedFilter(expandedFilter === 'filters' ? null : 'filters');
@@ -682,9 +688,23 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
       const successMessage = response?.message || "Appointment created successfully!";
       console.log('✓ Booking successful:', successMessage);
+      console.log('Full API response:', JSON.stringify(response, null, 2));
       
       dispatch(setCommentsOpen({ slug, open: false }));
       
+      // Check if payment is required
+      if (response?.payment_intent) {
+        // Payment required - show payment form
+        console.log('Payment required for appointment:', response.appointment.uuid);
+        console.log('Payment intent data:', response.payment_intent);
+        setAppointmentData(response.appointment);
+        setPaymentIntentData(response.payment_intent);
+        setPaymentRequired(true);
+        setBookingSubmitting(false);
+        return;
+      }
+
+      // No payment required - show success
       // Clear all booking state from Redux and localStorage after successful booking
       dispatch(clearBooking({ slug }));
       localStorage.removeItem(`booking_${slug}`);
@@ -743,6 +763,48 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, restorationComplete, handleBookNow]);
+
+  const handlePaymentSuccess = useCallback(async () => {
+    console.log('✓ Payment successful');
+    
+    // Clear all booking state from Redux and localStorage
+    dispatch(clearBooking({ slug }));
+    localStorage.removeItem(`booking_${slug}`);
+    localStorage.removeItem(`voucher_${slug}`);
+    console.log('Cleared booking state for', slug);
+
+    // Reset payment state
+    setPaymentRequired(false);
+    setAppointmentData(null);
+    setPaymentIntentData(null);
+
+    // Show success message
+    await Swal.fire({
+      icon: 'success',
+      title: 'Payment Successful!',
+      text: 'Your appointment has been confirmed and payment processed.',
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#000000',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.getContainer().style.zIndex = '9999';
+      },
+    });
+  }, [slug, dispatch]);
+
+  const handlePaymentError = useCallback((error) => {
+    console.error('✗ Payment failed:', error);
+    // Do NOT close the modal - let the payment form show the error with retry option
+    // User can click "Try Again" in the payment form to retry
+  }, []);
+
+  const handlePaymentCancel = useCallback(() => {
+    console.log('Payment cancelled by user');
+    setPaymentRequired(false);
+    setAppointmentData(null);
+    setPaymentIntentData(null);
+  }, []);
 
   return (
     <>
@@ -1487,6 +1549,37 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         salonName={salon?.venue?.name || "this salon"}
         salonSlug={slug}
       />
+
+      {/* Payment Modal for Marketplace Appointments */}
+      {paymentRequired && appointmentData && paymentIntentData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold">Complete Payment</h2>
+              <button
+                onClick={handlePaymentCancel}
+                className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6">
+              <StripePaymentContainer
+                appointmentId={appointmentData.uuid}
+                amount={paymentIntentData.amount}
+                ownerName={salon?.venue?.name || "Salon"}
+                serviceName={selectedService?.display_name || selectedService?.name || "Service"}
+                clientEmail={localStorage.getItem('user_email') || ''}
+                clientSecret={paymentIntentData.client_secret}
+                paymentIntentId={paymentIntentData.payment_intent_id}
+                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentError={handlePaymentError}
+                onClose={handlePaymentCancel}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

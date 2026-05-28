@@ -37,7 +37,10 @@ export default function SocialCallbackClient() {
                 // This updates NavbarStatic and all connected components without needing a page refresh
                 const user = await fetchCurrentUser();
                 if (user) {
-                    dispatch(loginSuccess({ user }));
+                    dispatch(loginSuccess({ 
+                        user,
+                        token: token // Use the token from the callback URL
+                    }));
                 }
 
                 console.log('Social auth complete, redirecting to:', next);

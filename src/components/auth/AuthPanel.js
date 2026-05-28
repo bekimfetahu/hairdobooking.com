@@ -82,7 +82,10 @@ export default function AuthPanel({
 
       const refreshedUser = await fetchCurrentUser();
       const user = refreshedUser || data.user;
-      dispatch(loginSuccess({ user }));
+      dispatch(loginSuccess({ 
+        user,
+        token: data.token 
+      }));
 
       // If onAuthSuccess callback provided (modal mode), use it
       if (onAuthSuccess) {
@@ -159,7 +162,10 @@ export default function AuthPanel({
 
       const refreshedUser = await fetchCurrentUser();
       const user = refreshedUser || data.user;
-      dispatch(loginSuccess({ user }));
+      dispatch(loginSuccess({ 
+        user,
+        token: data.token 
+      }));
 
       // If onAuthSuccess callback provided (modal mode), use it
       if (onAuthSuccess) {

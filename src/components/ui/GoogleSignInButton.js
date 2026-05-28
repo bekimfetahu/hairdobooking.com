@@ -31,7 +31,10 @@ export default function GoogleSignInButton({ provider = 'google' }) {
             }
 
             const refreshedUser = await fetchCurrentUser();
-            dispatch(loginSuccess({ user: refreshedUser || data.user }));
+            dispatch(loginSuccess({ 
+                user: refreshedUser || data.user,
+                token: data.token 
+            }));
             router.push('/dashboard');
         } catch (err) {
             console.error(`${provider} login failed:`, err);

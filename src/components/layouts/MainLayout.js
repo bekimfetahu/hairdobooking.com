@@ -16,19 +16,25 @@ export default function MainLayout({children}) {
         if (isPartnerRoute) return;
         const restoreSession = async () => {
             try {
+                // Call backend to check if user is authenticated (via HttpOnly cookie)
                 const res = await fetch('/api/auth/me', {
                     method: 'GET',
-                    credentials: 'include',
+                    credentials: 'include', // Include HttpOnly cookie
                 });
 
                 if (res.ok) {
+                    // Backend confirmed user is authenticated
                     const data = await res.json();
-                    dispatch(loginSuccess({user: data.user}));
+                    dispatch(loginSuccess({
+                        user: data.user,
+                        token: data.token
+                    }));
                 } else if (res.status === 401) {
+                    // Backend says not authenticated - logout
                     dispatch(logout());
                 }
             } catch (err) {
-                console.error("Failed to restore session:", err.message);
+                console.error("[MainLayout] Failed to restore session:", err.message);
             }
         };
 

@@ -57,7 +57,10 @@ export default function SalonHeader({ salon }) {
 
     try {
       const updatedUser = isLiked ? await unlikeSalon(venueUuid) : await likeSalon(venueUuid);
-      dispatch(loginSuccess({ user: updatedUser }));
+      dispatch(loginSuccess({ 
+        user: updatedUser,
+        token: updatedUser?.token 
+      }));
     } catch (error) {
       console.error('Failed to update liked salon state:', error);
     } finally {
@@ -74,7 +77,10 @@ export default function SalonHeader({ salon }) {
 
     try {
       const updatedUser = isSaved ? await unsaveSalon(venueUuid) : await saveSalon(venueUuid);
-      dispatch(loginSuccess({ user: updatedUser }));
+      dispatch(loginSuccess({ 
+        user: updatedUser,
+        token: updatedUser?.token 
+      }));
     } catch (error) {
       console.error('Failed to update saved salon state:', error);
     } finally {
@@ -91,7 +97,10 @@ export default function SalonHeader({ salon }) {
 
     try {
       const updatedUser = await setPrimarySalon(venueUuid);
-      dispatch(loginSuccess({ user: updatedUser }));
+      dispatch(loginSuccess({ 
+        user: updatedUser,
+        token: updatedUser?.token 
+      }));
     } catch (error) {
       console.error('Failed to update preferred salon state:', error);
     } finally {
