@@ -313,6 +313,12 @@ export default function Navbar() {
                                     </button>
 
                                     <div className="space-y-2">
+                                        {accountLinks.map((link) => {
+                                            const Icon = link.icon;
+                                            const isActive = pathname === getBasePath(link.href) || pathname.startsWith(`${getBasePath(link.href)}/`);
+                                            return (
+                                                <Link
+                                                    key={link.href}
                                                     href={link.href}
                                                     className={`flex items-center gap-3 rounded-md px-4 py-3 text-sm font-normal transition-colors ${
                                                         isActive ? 'text-black' : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'

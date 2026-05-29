@@ -3,11 +3,14 @@
 import React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Search, Maximize2 } from "lucide-react";
+import { cn } from '@/lib/utils';
 import LocationSearch from "@/components/search/LocationSearch";
 import VenueSearchResultsList from "@/components/search/VenueSearchResultsList";
 import { searchVenues } from "@/services/search/searchService";
 import Select from 'react-select';
 import useGoogleMapsReady from '@/hooks/useGoogleMapsReady';
+import { createPortal } from 'react-dom';
+import SalonMobileMapPortal from '@/components/search/SalonMobileMapPortal';
 
 function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
   const mapRef = React.useRef(null);
@@ -27,19 +30,20 @@ function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
   const createMarkerIcon = (color = '#dc2626') => {
     // Google Maps-style teardrop marker in red brand color - SMALLER and THINNER
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 28 40">
-      <!-- Outer shadow for depth -->
       <defs>
         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-opacity="0.25"/>
         </filter>
       </defs>
-      <!-- Main teardrop shape - thinner stroke -->
-      <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 26 14 26s14-15.5 14-26c0-7.732-6.268-14-14-14z" 
-            fill="${color}" stroke="white" stroke-width="0.8" filter="url(#shadow)"/>
-      <!-- White center circle - smaller -->
+      <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 26 14 26s14-15.5 14-26c0-7.732-6.268-14-14-14z" fill="${color}" stroke="white" stroke-width="0.8"/>
       <circle cx="14" cy="12" r="4.5" fill="white"/>
     </svg>`;
-    return `data:image/svg+xml;base64,${btoa(svg)}`;
+    try {
+      return `data:image/svg+xml;base64,${btoa(svg)}`;
+    } catch (e) {
+      // btoa may be unavailable in some environments; fallback to encodeURI
+      return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
   };
 
   // Helper to show venue info window on marker click
@@ -293,7 +297,7 @@ function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
     <div className="w-full h-full relative" style={{ minHeight: 300 }}>
       <div ref={mapRef} className="w-full h-full" />
 
-      {/* Zoom Controls */}
+      {/* Zoom + Fullscreen Controls */}
       <div className="absolute top-4 right-4 flex flex-col gap-1 z-10">
         <button
           onClick={handleZoomIn}
@@ -342,6 +346,19 @@ export default function SalonSearchClient({
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(false);
   const [showMap, setShowMap] = React.useState(false);
+  const [showMobileMap, setShowMobileMap] = React.useState(false);
+  const [mobilePortalEl, setMobilePortalEl] = React.useState(null);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const el = document.createElement('div');
+    el.setAttribute('id', 'salon-mobile-map-portal');
+    document.body.appendChild(el);
+    setMobilePortalEl(el);
+    return () => {
+      try { document.body.removeChild(el); } catch (e) {}
+    };
+  }, []);
   const [query, setQuery] = React.useState((searchParams?.get("q")) || "");
   const [selectedLocation, setSelectedLocation] = React.useState(
     Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
@@ -686,7 +703,7 @@ export default function SalonSearchClient({
 
           <div className="flex-1" />
 
-          <div>
+          <div className="hidden md:block">
             <button
               type="button"
               onClick={() => setShowMap((s) => !s)}
@@ -704,35 +721,16 @@ export default function SalonSearchClient({
           </p>
         </div>
 
-          {showMap ? (
-          <div className="flex flex-1 overflow-hidden h-[calc(100vh-200px)] relative">
-            <div className="flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-2">
-              <div className="max-w-2xl mx-auto">
-                <VenueSearchResultsList
-                  venues={displayedVenues}
+                <SalonMobileMapPortal
+                  showMobileMap={showMobileMap}
+                  setShowMobileMap={setShowMobileMap}
                   selectedLocation={selectedLocation}
-                  showMap={showMap}
-                  loading={loading}
-                  hasMore={hasMore}
-                  loadMoreRef={loadMoreRef}
-                  hideServices={true}
-                  expandedOpeningHours={expandedOpeningHours}
-                  toggleOpeningHours={toggleOpeningHours}
-                  expandedGroups={expandedGroups}
-                  toggleGroup={toggleGroup}
+                  distance={distance}
+                  router={router}
+                  mapsReady={mapsReady}
+                  VenueMap={VenueMap}
                 />
-              </div>
-            </div>
 
-            <div className="hidden md:block w-1/2 bg-white border-l border-gray-200 h-full">
-              {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
-                <VenueMap selectedLocation={selectedLocation} searchDistance={distance} router={router} mapsReady={mapsReady} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-500">Loading map...</div>
-              )}
-            </div>
-          </div>
-          ) : (
           <div className="w-full overflow-y-auto px-0 py-2">
             <VenueSearchResultsList
               venues={displayedVenues}
@@ -748,7 +746,6 @@ export default function SalonSearchClient({
               toggleGroup={toggleGroup}
             />
           </div>
-        )}
       </div>
     </div>
   );
