@@ -19,8 +19,10 @@ import {
  * - ownerName: string - Name of salon owner
  * - serviceName: string - Service being paid for
  * - clientEmail: string - Client email for Link authentication
+ * - paymentOptional: boolean - Whether payment is optional (user can skip)
  * - onPaymentSuccess: function - Callback when payment confirmed
  * - onPaymentError: function - Callback on error
+ * - onSkipPayment: function - Callback when user skips payment (only for optional)
  */
 export default function StripePaymentForm({
   appointmentId,
@@ -28,8 +30,10 @@ export default function StripePaymentForm({
   ownerName,
   serviceName,
   clientEmail,
+  paymentOptional,
   onPaymentSuccess,
   onPaymentError,
+  onSkipPayment,
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -251,6 +255,18 @@ export default function StripePaymentForm({
               `Pay $${formattedAmount}`
             )}
           </button>
+
+          {/* Skip Payment Button - for optional payments */}
+          {paymentOptional && onSkipPayment && (
+            <button
+              type="button"
+              onClick={onSkipPayment}
+              disabled={isLoading}
+              className="w-full mt-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-800 font-semibold py-3 px-4 rounded-lg transition-colors duration-200 border border-gray-300"
+            >
+              Skip Payment for Now
+            </button>
+          )}
 
           {/* Security Info */}
           <div className="flex items-center justify-center text-xs text-gray-500 space-x-1">

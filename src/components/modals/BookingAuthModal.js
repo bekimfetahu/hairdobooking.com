@@ -20,6 +20,8 @@ export default function BookingAuthModal({
   onAuthSuccess = () => {},
   salonName = '',
   salonSlug = '',
+  title = 'Sign in to book',
+  signupTitle = 'Create account to book',
 }) {
   const [initialTab, setInitialTab] = useState('signin');
 
@@ -61,7 +63,7 @@ export default function BookingAuthModal({
             {/* Header */}
             <div className="mb-6">
               <h2 className="text-2xl sm:text-3xl font-semibold text-neutral-950">
-                {initialTab === 'signin' ? 'Sign in to book' : 'Create account to book'}
+                {initialTab === 'signin' ? title : signupTitle}
               </h2>
               {salonName && (
                 <p className="mt-2 text-sm text-neutral-600">
@@ -84,22 +86,22 @@ export default function BookingAuthModal({
                 {initialTab === 'signin' ? (
                   <>
                     Don't have an account?{' '}
-                    <button
-                      onClick={() => setInitialTab('signup')}
+                    <a
+                      href={`/auth?tab=signup&returnUrl=${encodeURIComponent(`/salon/${salonSlug || ''}`)}`}
                       className="font-semibold text-black hover:underline"
                     >
                       Create one
-                    </button>
+                    </a>
                   </>
                 ) : (
                   <>
                     Already have an account?{' '}
-                    <button
-                      onClick={() => setInitialTab('signin')}
+                    <a
+                      href={`/auth?tab=signin&returnUrl=${encodeURIComponent(`/salon/${salonSlug || ''}`)}`}
                       className="font-semibold text-black hover:underline"
                     >
                       Sign in
-                    </button>
+                    </a>
                   </>
                 )}
               </p>

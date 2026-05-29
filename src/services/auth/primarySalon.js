@@ -58,6 +58,10 @@ export async function fetchPrimarySalonLocations({ search = '', perPage = 20, pa
 }
 
 export async function setPrimarySalon(venueUuid) {
+    if (!venueUuid) {
+        throw new Error('setPrimarySalon called with empty venueUuid');
+    }
+
     const response = await fetch(`/api/primary-salon/${venueUuid}`, {
         method: 'POST',
         credentials: 'include',
@@ -65,7 +69,6 @@ export async function setPrimarySalon(venueUuid) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            method: 'put',
             access_type: 'laravelApi',
             data: {},
         }),
@@ -73,7 +76,9 @@ export async function setPrimarySalon(venueUuid) {
 
     const data = await response.json();
     if (!response.ok) {
-        throw new Error(data?.message || 'Failed to update primary salon');
+        const err = new Error(data?.message || 'Failed to update primary salon');
+        err.status = response.status;
+        throw err;
     }
 
     return data;

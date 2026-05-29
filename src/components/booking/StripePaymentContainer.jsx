@@ -19,8 +19,10 @@ import StripePaymentForm from './StripePaymentForm';
  * - clientEmail: string - Client email
  * - clientSecret: string - Stripe payment intent client secret
  * - paymentIntentId: string - Stripe payment intent ID
+ * - paymentOptional: boolean - Whether payment is optional (user can skip)
  * - onPaymentSuccess: function - Callback on success
  * - onPaymentError: function - Callback on error
+ * - onSkipPayment: function - Callback when user skips payment (only for optional)
  * - onClose: function - Callback to close payment form
  */
 export default function StripePaymentContainer({
@@ -31,8 +33,10 @@ export default function StripePaymentContainer({
   clientEmail,
   clientSecret,
   paymentIntentId,
+  paymentOptional,
   onPaymentSuccess,
   onPaymentError,
+  onSkipPayment,
   onClose,
 }) {
   const [stripePromise, setStripePromise] = useState(null);
@@ -140,8 +144,10 @@ export default function StripePaymentContainer({
         ownerName={ownerName}
         serviceName={serviceName}
         clientEmail={clientEmail}
+        paymentOptional={paymentOptional}
         onPaymentSuccess={onPaymentSuccess}
         onPaymentError={onPaymentError}
+        onSkipPayment={onSkipPayment}
       />
     </Elements>
   );

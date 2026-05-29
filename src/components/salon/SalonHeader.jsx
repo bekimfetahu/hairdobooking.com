@@ -9,6 +9,7 @@ import { likeSalon, unlikeSalon } from "@/services/auth/likedSalons";
 import { setPrimarySalon } from "@/services/auth/primarySalon";
 import { saveSalon, unsaveSalon } from "@/services/auth/savedSalons";
 import { cn } from "@/lib/utils";
+import BookingAuthModal from "@/components/modals/BookingAuthModal";
 
 export default function SalonHeader({ salon }) {
   const venueName = salon?.venue?.name || "Salon";
@@ -23,6 +24,8 @@ export default function SalonHeader({ salon }) {
   const [isLikeSubmitting, setIsLikeSubmitting] = useState(false);
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isPrimarySubmitting, setIsPrimarySubmitting] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [postAuthAction, setPostAuthAction] = useState(null);
 
   const primaryVenue = user?.client?.primary_venue ?? user?.client?.primaryVenue ?? null;
   const likedVenues = user?.client?.liked_venues ?? user?.client?.likedVenues ?? [];
@@ -38,74 +41,99 @@ export default function SalonHeader({ salon }) {
     return Array.isArray(savedVenues) && savedVenues.some((venue) => venue?.uuid === venueUuid);
   }, [savedVenues, venueUuid]);
 
-  const ensureAuthenticated = () => {
-    if (isAuthenticated) {
-      return true;
-    }
-
-    const redirectTarget = pathname || (venueSlug ? `/salon/${venueSlug}` : '/');
-    router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
+  const ensureAuthenticated = (onSuccess) => {
+    if (isAuthenticated) return true;
+    if (onSuccess) setPostAuthAction(() => onSuccess);
+    setShowAuthModal(true);
     return false;
   };
 
+  const handleAuthSuccess = (user) => {
+    dispatch(loginSuccess({ user, token: user?.token }));
+    setShowAuthModal(false);
+    if (typeof postAuthAction === 'function') {
+      try {
+        postAuthAction();
+      } finally {
+        setPostAuthAction(null);
+      }
+    }
+  };
+
   const handleLikeToggle = async () => {
-    if (!venueUuid || !ensureAuthenticated()) {
-      return;
-    }
+    if (!venueUuid) return;
 
-    setIsLikeSubmitting(true);
+    const doToggle = async () => {
+      setIsLikeSubmitting(true);
+      try {
+        const updatedUser = isLiked ? await unlikeSalon(venueUuid) : await likeSalon(venueUuid);
+        dispatch(loginSuccess({ user: updatedUser, token: updatedUser?.token }));
+      } catch (error) {
+        console.error('Failed to update liked salon state:', error);
+        const status = error?.status || null;
+        if (status === 401 || (error?.message || '').toLowerCase().includes('unauth')) {
+          setPostAuthAction(() => doToggle);
+          setShowAuthModal(true);
+          return;
+        }
+      } finally {
+        setIsLikeSubmitting(false);
+      }
+    };
 
-    try {
-      const updatedUser = isLiked ? await unlikeSalon(venueUuid) : await likeSalon(venueUuid);
-      dispatch(loginSuccess({ 
-        user: updatedUser,
-        token: updatedUser?.token 
-      }));
-    } catch (error) {
-      console.error('Failed to update liked salon state:', error);
-    } finally {
-      setIsLikeSubmitting(false);
-    }
+    if (!ensureAuthenticated(doToggle)) return;
+    await doToggle();
   };
 
   const handleSaveToggle = async () => {
-    if (!venueUuid || !ensureAuthenticated()) {
-      return;
-    }
+    if (!venueUuid) return;
 
-    setIsSaveSubmitting(true);
+    const doToggle = async () => {
+      setIsSaveSubmitting(true);
+      try {
+        const updatedUser = isSaved ? await unsaveSalon(venueUuid) : await saveSalon(venueUuid);
+        dispatch(loginSuccess({ user: updatedUser, token: updatedUser?.token }));
+      } catch (error) {
+        console.error('Failed to update saved salon state:', error);
+        const status = error?.status || null;
+        if (status === 401 || (error?.message || '').toLowerCase().includes('unauth')) {
+          setPostAuthAction(() => doToggle);
+          setShowAuthModal(true);
+          return;
+        }
+      } finally {
+        setIsSaveSubmitting(false);
+      }
+    };
 
-    try {
-      const updatedUser = isSaved ? await unsaveSalon(venueUuid) : await saveSalon(venueUuid);
-      dispatch(loginSuccess({ 
-        user: updatedUser,
-        token: updatedUser?.token 
-      }));
-    } catch (error) {
-      console.error('Failed to update saved salon state:', error);
-    } finally {
-      setIsSaveSubmitting(false);
-    }
+    if (!ensureAuthenticated(doToggle)) return;
+    await doToggle();
   };
 
   const handlePreferredToggle = async () => {
-    if (!venueUuid || !ensureAuthenticated() || isPreferred) {
-      return;
-    }
+    if (!venueUuid || isPreferred) return;
 
-    setIsPrimarySubmitting(true);
+    const doSetPrimary = async () => {
+      setIsPrimarySubmitting(true);
+      try {
+        const updatedUser = await setPrimarySalon(venueUuid);
+        dispatch(loginSuccess({ user: updatedUser, token: updatedUser?.token }));
+      } catch (error) {
+        console.error('Failed to update preferred salon state:', error);
+        const message = error?.message || '';
+        const status = error?.status || null;
+        if (status === 401 || message.toLowerCase().includes('unauth')) {
+          setPostAuthAction(() => doSetPrimary);
+          setShowAuthModal(true);
+          return;
+        }
+      } finally {
+        setIsPrimarySubmitting(false);
+      }
+    };
 
-    try {
-      const updatedUser = await setPrimarySalon(venueUuid);
-      dispatch(loginSuccess({ 
-        user: updatedUser,
-        token: updatedUser?.token 
-      }));
-    } catch (error) {
-      console.error('Failed to update preferred salon state:', error);
-    } finally {
-      setIsPrimarySubmitting(false);
-    }
+    if (!ensureAuthenticated(doSetPrimary)) return;
+    await doSetPrimary();
   };
 
   return (
@@ -180,6 +208,15 @@ export default function SalonHeader({ salon }) {
           <span>{isSaved ? "Saved" : "Save"}</span>
         </button>
       </div>
+      <BookingAuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={handleAuthSuccess}
+        salonName={venueName}
+        salonSlug={venueSlug}
+        title="Sign in to continue"
+        signupTitle="Create account to continue"
+      />
     </div>
   );
 }

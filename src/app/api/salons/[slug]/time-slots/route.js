@@ -21,9 +21,10 @@ export async function POST(req, { params }) {
 
     const payload = body?.data || {};
     const method = (body?.method || 'get').toLowerCase();
-    const accessType = body?.access_type || 'laravelApp';
+    const explicitAccess = body?.access_type;
 
     const token = req.cookies.get('token')?.value;
+    const accessType = explicitAccess || (token ? 'laravelApi' : 'laravelApp');
     const service = accessType === 'laravelApp' ? laravelApp : laravelApi;
 
     const clientIp = getClientIp(req);
@@ -34,7 +35,7 @@ export async function POST(req, { params }) {
       },
     };
 
-    const url = `client/salons/${slug}/time-slots`;
+    const url = accessType === 'laravelApp' ? `client/salons/${slug}/time-slots` : `salons/${slug}/time-slots`;
 
     let response;
     if (method === 'get') {

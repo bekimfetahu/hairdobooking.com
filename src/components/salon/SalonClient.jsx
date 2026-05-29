@@ -806,6 +806,35 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     setPaymentIntentData(null);
   }, []);
 
+  const handleSkipPayment = useCallback(async () => {
+    console.log('✓ Payment skipped - proceeding with booking without payment');
+    
+    // For optional payment, booking is already created. Just close the modal and show success.
+    dispatch(clearBooking({ slug }));
+    localStorage.removeItem(`booking_${slug}`);
+    localStorage.removeItem(`voucher_${slug}`);
+    console.log('Cleared booking state for', slug);
+
+    // Reset payment state
+    setPaymentRequired(false);
+    setAppointmentData(null);
+    setPaymentIntentData(null);
+
+    // Show success message
+    await Swal.fire({
+      icon: 'success',
+      title: 'Booking Confirmed!',
+      text: 'Your appointment has been confirmed. You can pay at the salon when you arrive.',
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#000000',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.getContainer().style.zIndex = '9999';
+      },
+    });
+  }, [slug, dispatch]);
+
   return (
     <>
       {loading && (
@@ -1555,7 +1584,9 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold">Complete Payment</h2>
+              <h2 className="text-xl font-bold">
+                {paymentIntentData.payment_optional ? 'Payment (Optional)' : 'Complete Payment'}
+              </h2>
               <button
                 onClick={handlePaymentCancel}
                 className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
@@ -1564,6 +1595,13 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
               </button>
             </div>
             <div className="p-6">
+              {paymentIntentData.payment_optional && (
+                <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-900">
+                    <span className="font-semibold">Payment is optional.</span> You can pay now or at the salon when you arrive.
+                  </p>
+                </div>
+              )}
               <StripePaymentContainer
                 appointmentId={appointmentData.uuid}
                 amount={paymentIntentData.amount}
@@ -1572,8 +1610,10 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                 clientEmail={localStorage.getItem('user_email') || ''}
                 clientSecret={paymentIntentData.client_secret}
                 paymentIntentId={paymentIntentData.payment_intent_id}
+                paymentOptional={paymentIntentData.payment_optional}
                 onPaymentSuccess={handlePaymentSuccess}
                 onPaymentError={handlePaymentError}
+                onSkipPayment={paymentIntentData.payment_optional ? handleSkipPayment : null}
                 onClose={handlePaymentCancel}
               />
             </div>

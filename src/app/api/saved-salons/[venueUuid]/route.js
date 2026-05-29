@@ -34,7 +34,7 @@ async function handleRequest(req, params) {
     const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     const config = { headers: { 'X-Forwarded-For': clientIp, ...(accessType === 'laravelApi' && token ? { Authorization: `Bearer ${token}` } : {}) } };
 
-    const url = `client/saved-salons/${venueUuid}`;
+    const url = accessType === 'laravelApp' ? `client/saved-salons/${venueUuid}` : `saved-salons/${venueUuid}`;
 
     let response;
     if (method === 'get') {

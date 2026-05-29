@@ -30,7 +30,7 @@ export async function POST(req, { params }) {
     const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     const config = { headers: { 'X-Forwarded-For': clientIp, ...(accessType === 'laravelApi' && token ? { Authorization: `Bearer ${token}` } : {}) } };
 
-    const url = `client/liked-salons/${venueUuid}`;
+    const url = accessType === 'laravelApp' ? `client/liked-salons/${venueUuid}` : `liked-salons/${venueUuid}`;
 
     let response;
     if (method === 'get') {
