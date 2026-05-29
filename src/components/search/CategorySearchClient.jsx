@@ -865,8 +865,13 @@ export default function CategorySearchClient({
                                                         indicatorsContainer: (base) => ({ ...base, height: '32px' }),
                                                         singleValue: (base) => ({ ...base, lineHeight: '32px' }),
                                                         placeholder: (base) => ({ ...base, lineHeight: '32px' }),
-                                                        menu: (base) => ({ ...base, zIndex: 60 }),
+                                                        menu: (base) => ({ ...base, zIndex: 9999 }),
+                                                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                                                        menuList: (base) => ({ ...base, padding: 0 }),
+                                                        option: (base, state) => ({ ...base, padding: '4px 8px' }),
                                                     }}
+                                                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                                                    menuPosition="fixed"
                                                 />
                                             </div>
                                             
