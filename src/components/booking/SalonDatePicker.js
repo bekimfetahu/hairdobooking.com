@@ -15,15 +15,24 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
   useEffect(() => {
     const today = dayjs().startOf("day");
     const selected = value ? dayjs(value) : null;
-    setWeekStart((selected || today).startOf("week"));
-    setCurrentMonth((selected || today).startOf("month"));
+    // Compute ISO-week (Monday) start for a given date
+    const isoWeekStart = (d) => {
+      const dd = d.startOf('day');
+      const shift = (dd.day() + 6) % 7; // 0=Sun -> shift 6, 1=Mon -> shift 0
+      return dd.subtract(shift, 'day');
+    };
+
+    const base = selected || today;
+    const week = isoWeekStart(base);
+    setWeekStart(week);
+    setCurrentMonth(week.startOf('month'));
     setIsHydrated(true);
   }, [value]);
 
   useEffect(() => {
     if (!weekStart) return;
     const m = weekStart.startOf("month");
-    if (m.month() !== currentMonth.month() || m.year() !== currentMonth.year()) {
+    if (!currentMonth || m.month() !== currentMonth.month() || m.year() !== currentMonth.year()) {
       setCurrentMonth(m);
     }
   }, [weekStart, currentMonth]);
@@ -65,12 +74,19 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
   const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   // Only week navigation (prev/next week). Month changes automatically when weekStart moves across month boundary.
+  const isoWeekStart = (d) => {
+    const dd = d.startOf('day');
+    const shift = (dd.day() + 6) % 7;
+    return dd.subtract(shift, 'day');
+  };
+
   const goToPrevWeek = () => {
     const prevWeek = weekStart.subtract(7, "day");
-    // Don't allow navigating before today
-    if (prevWeek.isBefore(today, "week")) return;
+    // Don't allow navigating before the ISO-week of today
+    if (prevWeek.isBefore(isoWeekStart(today))) return;
     setWeekStart(prevWeek);
   };
+
   const goToNextWeek = () => setWeekStart((w) => w.add(7, "day"));
 
   return (
@@ -107,11 +123,16 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
 
         <div className="mt-1 border-t border-neutral-100 pt-2 text-center">
           {(() => {
-            const weekDays = Array.from({ length: 7 }).map((_, i) => weekStart.add(i, "day"));
-            const weekHasAvailable = weekDays.some((d) => !isDisabled(d));
+            const weekHasAvailable = Array.from({ length: 7 }).some((_, i) => !isDisabled(weekStart.add(i, 'day')));
             if (weekHasAvailable) return null;
 
             const weekEnd = weekStart.add(6, "day");
+
+            // Find next available within the current week (after today)
+            const weekDays = Array.from({ length: 7 }).map((_, i) => weekStart.add(i, 'day'));
+            const nextInWeek = weekDays.find((d) => !isDisabled(d) && (d.isSame(today, 'day') || d.isAfter(today, 'day')));
+
+            // Find the next available after this week (fallback)
             let next = null;
             if (Array.isArray(availableDates) && availableDates.length > 0) {
               next = availableDates.find((d) => d > weekEnd.format("YYYY-MM-DD")) || availableDates.find((d) => d >= today.format("YYYY-MM-DD"));
@@ -126,17 +147,61 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
               }
             }
 
-            if (!next) return <div className="text-xs text-neutral-500">Closed for the coming weeks.</div>;
+            // Determine messaging
+            // If there's an available day later this week, show "Closed today"
+            if (nextInWeek) {
+              return (
+                <>
+                  <div className="text-xs font-semibold text-neutral-900">Closed today</div>
+                  <div className="mt-1 text-[11px] text-neutral-500">Open next: {nextInWeek.format("dddd, D MMM")}</div>
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          const targetWeek = isoWeekStart(nextInWeek);
+                          setWeekStart(targetWeek);
+                          setCurrentMonth(targetWeek.startOf('month'));
+                        } catch (e) {}
+                        onChange(nextInWeek.format("YYYY-MM-DD"));
+                      }}
+                      className="inline-flex items-center justify-center rounded-full border border-primary/60 bg-white px-2.5 py-1 text-xs font-semibold text-primary shadow-sm hover:bg-primary/5"
+                    >
+                      Go to {nextInWeek.format("ddd, D MMM")}
+                    </button>
+                  </div>
+                </>
+              );
+            }
 
-            return (
-              <>
-                <div className="text-xs font-semibold text-neutral-900">Closed</div>
-                <div className="mt-1 text-[11px] text-neutral-500">Next available: {next.format("dddd, D MMM")}</div>
-                <div className="mt-2">
-                  <button type="button" onClick={() => onChange(next.format("YYYY-MM-DD"))} className="inline-flex items-center justify-center rounded-full border border-primary/60 bg-white px-2.5 py-1 text-xs font-semibold text-primary shadow-sm hover:bg-primary/5">Go to {next.format("ddd, D MMM")}</button>
-                </div>
-              </>
-            );
+            // If no available day this week but there's one later, show "Closed this week"
+            if (next) {
+              return (
+                <>
+                  <div className="text-xs font-semibold text-neutral-900">Closed this week</div>
+                  <div className="mt-1 text-[11px] text-neutral-500">Next available: {next.format("dddd, D MMM")}</div>
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          const targetWeek = isoWeekStart(next);
+                          setWeekStart(targetWeek);
+                          setCurrentMonth(targetWeek.startOf('month'));
+                        } catch (e) {}
+                        onChange(next.format("YYYY-MM-DD"));
+                      }}
+                      className="inline-flex items-center justify-center rounded-full border border-primary/60 bg-white px-2.5 py-1 text-xs font-semibold text-primary shadow-sm hover:bg-primary/5"
+                    >
+                      Go to {next.format("ddd, D MMM")}
+                    </button>
+                  </div>
+                </>
+              );
+            }
+
+            // No availability in the next N days
+            return <div className="text-xs text-neutral-500">No available times in the next 60 days.</div>;
           })()}
         </div>
       </div>

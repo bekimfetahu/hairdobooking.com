@@ -121,7 +121,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     dispatch(setTime({ slug, time: null }));
     dispatch(setComments({ slug, comments: "" }));
     dispatch(setServiceOpen({ slug, open: false }));
-    dispatch(setProfessionalOpen({ slug, open: true }));
+    dispatch(setProfessionalOpen({ slug, open: false }));
     dispatch(setTimeOpen({ slug, open: false }));
     dispatch(setCommentsOpen({ slug, open: false }));
   }, [slug, initialServiceUuid, selectedServiceUuid, dispatch]);
@@ -428,6 +428,15 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
       return;
     }
 
+    // If we have availability data for the service and the selected date is not available,
+    // do not fetch professionals (show closed info in the datepicker instead).
+    if (Array.isArray(serviceAvailableDates) && !serviceAvailableDates.includes(selectedDate)) {
+      setProfessionals([]);
+      setProfessionalsError("");
+      setProfessionalsLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function loadProfessionals() {
@@ -441,7 +450,12 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         });
 
         if (!cancelled) {
-          setProfessionals(Array.isArray(data.professionals) ? data.professionals : []);
+          const profs = Array.isArray(data.professionals) ? data.professionals : [];
+          setProfessionals(profs);
+          // Open professionals selection once fetch completes and there are professionals
+          if (profs.length > 0) {
+            dispatch(setProfessionalOpen({ slug, open: true }));
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -460,7 +474,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     return () => {
       cancelled = true;
     };
-  }, [slug, selectedDate, selectedServiceUuid]);
+  }, [slug, selectedDate, selectedServiceUuid, serviceAvailableDates, dispatch]);
 
   useEffect(() => {
     if (!slug || !selectedDate || !selectedServiceUuid || !selectedProfessionalUuid) {
@@ -925,10 +939,12 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                       <p className="truncate text-xs font-medium text-neutral-900">
                         {selectedService.display_name || selectedService.service_name || selectedService.name}
                       </p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        <span className="text-[11px] text-neutral-500">
-                          {selectedService.duration || selectedService.display_duration || `${selectedService.duration} min`}
-                        </span>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        {selectedDate && selectedProfessionalUuid ? (
+                          <span className="text-[11px] text-neutral-500">
+                            {selectedService.duration || selectedService.display_duration || `${selectedService.duration} min`}
+                          </span>
+                        ) : null}
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-900">
                           <span className="text-[11px] font-normal text-neutral-500">from</span>
                           <span>
@@ -1122,12 +1138,16 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                               {/* Service info - clickable to select */}
                               <div
                                 onClick={() => {
+                                  const todayIso = dayjs().format('YYYY-MM-DD');
                                   dispatch(setService({ slug, uuid: service.uuid }));
+                                  // Ensure date is set to today so professionals are fetched for today immediately
+                                  dispatch(setDate({ slug, date: todayIso }));
                                   dispatch(setProfessional({ slug, uuid: null }));
                                   dispatch(setTime({ slug, time: null }));
                                   dispatch(setComments({ slug, comments: "" }));
                                   dispatch(setServiceOpen({ slug, open: false }));
-                                  dispatch(setProfessionalOpen({ slug, open: true }));
+                                  // Do not auto-open professionals UI; we only fetch them
+                                  dispatch(setProfessionalOpen({ slug, open: false }));
                                   dispatch(setTimeOpen({ slug, open: false }));
                                   dispatch(setCommentsOpen({ slug, open: false }));
                                 }}
@@ -1184,33 +1204,59 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
               </StepSection>
 
               {/* Step 2: Select Date */}
-              <SalonDatePicker
-                value={selectedDate}
-                onChange={(val) => {
-                  dispatch(setDate({ slug, date: val }));
-                  dispatch(setProfessional({ slug, uuid: null }));
-                  dispatch(setTime({ slug, time: null }));
-                  dispatch(setComments({ slug, comments: "" }));
-                  dispatch(setTimeOpen({ slug, open: false }));
-                  dispatch(setCommentsOpen({ slug, open: false }));
-                  if (selectedServiceUuid) {
+              <StepSection
+                stepNumber={2}
+                title={selectedDate && !isTimeSectionOpen ? "Date" : "Select Date"}
+                isOpen={true}
+                headerSummary={
+                  selectedDate && !isTimeSectionOpen ? (
+                    <p className="text-xs text-neutral-700">{dayjs(selectedDate).format('dddd, D MMM YYYY')}</p>
+                  ) : null
+                }
+                headerRight={
+                  selectedDate ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // allow user to change the date section
+                        // keep other sections closed
+                      }}
+                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
+                    >
+                      Change
+                    </button>
+                  ) : null
+                }
+              >
+                <SalonDatePicker
+                  value={selectedDate}
+                  onChange={(val) => {
+                    dispatch(setDate({ slug, date: val }));
+                    dispatch(setProfessional({ slug, uuid: null }));
+                    dispatch(setTime({ slug, time: null }));
+                    dispatch(setComments({ slug, comments: "" }));
+                    dispatch(setTimeOpen({ slug, open: false }));
+                    dispatch(setCommentsOpen({ slug, open: false }));
+                    // show professionals once a date has been selected
                     dispatch(setProfessionalOpen({ slug, open: true }));
-                  }
-                }}
-                unavailableDates={unavailableDates}
-                availableDates={serviceAvailableDates}
-                onMonthChange={handleDatepickerMonthChange}
-                isLoading={availabilityLoading}
-              />
+                  }}
+                  unavailableDates={unavailableDates}
+                  availableDates={serviceAvailableDates}
+                  onMonthChange={handleDatepickerMonthChange}
+                  isLoading={availabilityLoading}
+                />
+              </StepSection>
 
               {/* Step 3: Choose a professional (collapsible, placeholder for now) */}
               <StepSection
                 stepNumber={3}
                 title={selectedProfessional && !isProfessionalSectionOpen ? "Professional" : "Choose Professional"}
-                isOpen={!!selectedService && isProfessionalSectionOpen}
+                isOpen={!!selectedService && !!selectedDate && isProfessionalSectionOpen}
                 headerSummary={
                   !selectedService ? (
                     <p className="text-xs text-neutral-600">First select a service to see available professionals.</p>
+                  ) : !selectedDate ? (
+                    <p className="text-xs text-neutral-600">Select a date to see available professionals.</p>
                   ) : selectedProfessional ? (
                     <div className="flex items-center gap-2">
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-200 text-[10px] font-semibold text-neutral-700">
@@ -1231,7 +1277,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                   )
                 }
                 headerRight={
-                  selectedService ? (
+                  selectedService && selectedDate ? (
                     <button
                       type="button"
                       onClick={() => dispatch(setProfessionalOpen({ slug, open: !isProfessionalSectionOpen }))}
@@ -1245,7 +1291,17 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                 {selectedService && (
                   <div className="space-y-3">
                     {professionalsLoading && (
-                      <div className="rounded-lg border border-dashed border-black/15 bg-neutral-50 p-3 text-xs text-neutral-600">Loading professionals...</div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-3 rounded-xl border border-black/10 bg-white p-3">
+                            <div className="h-10 w-10 rounded-full bg-neutral-200 animate-pulse" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-3 w-3/4 bg-neutral-200 rounded animate-pulse" />
+                              <div className="h-3 w-1/2 bg-neutral-200 rounded animate-pulse" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
 
                     {professionalsError && !professionalsLoading && (
@@ -1388,7 +1444,22 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
                 {!selectedService && (
                   <div className="p-5">
-                    <p className="text-xs text-neutral-500">Choose a date and a service to start your booking.</p>
+                    {selectedDate ? (
+                      <div className="flex items-start gap-4">
+                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                          <Calendar size={18} strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Date</p>
+                          <p className="mt-1 text-sm font-semibold text-neutral-950">
+                            {dayjs(selectedDate).format('dddd, D MMMM YYYY')}
+                          </p>
+                          <p className="mt-1 text-xs text-neutral-500">Choose a service to start your booking.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-neutral-500">Choose a service to start your booking.</p>
+                    )}
                   </div>
                 )}
 

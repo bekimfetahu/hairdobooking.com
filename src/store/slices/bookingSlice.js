@@ -167,8 +167,8 @@ const bookingSlice = createSlice({
     clearBooking(state, action) {
       const { slug } = action.payload;
       // Reset booking state for the slug instead of deleting the key.
-      // This avoids missing-key edge cases in components that expect the slug entry to exist.
-      state.bySlug[slug] = { ...defaultBooking, selectedDate: getToday() };
+      // Keep `selectedDate` null so today's date is not auto-selected.
+      state.bySlug[slug] = { ...defaultBooking };
     },
   },
 });
