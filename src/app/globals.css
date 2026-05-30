@@ -19,6 +19,31 @@
   --radius: 0.75rem;
 }
 
+/* iOS / Safari fixes: ensure form controls and headings use the intended foreground color
+   Some iOS versions apply different rendering for inputs and text-fill causing very light
+   appearing text; force inheritance and WebKit text-fill to the site's foreground color. */
+@supports (-webkit-overflow-scrolling: touch) {
+  input, textarea, select, button, [role="button"], [contenteditable] {
+    color: inherit !important;
+    -webkit-text-fill-color: inherit !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+  }
+
+  /* Make sure placeholders remain readable (not overly faint) */
+  input::placeholder, textarea::placeholder {
+    color: rgba(17,17,17,0.45) !important; /* ~neutral-400 but darker */
+    opacity: 1 !important;
+  }
+
+  /* Force headings and prominent titles to the foreground color on iOS */
+  h1, h2, h3, h4, h5, h6,
+  .card-title, .carousel-title, .section-title {
+    color: var(--foreground) !important;
+    -webkit-text-fill-color: var(--foreground) !important;
+  }
+}
+
 /* Smooth scrolling for anchor links */
 html {
   scroll-behavior: smooth;
@@ -37,6 +62,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Improve text rendering on WebKit (iOS) */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* Make all enabled interactive controls feel clickable by default */
