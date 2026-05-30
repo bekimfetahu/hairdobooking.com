@@ -29,7 +29,7 @@ function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
   // Helper to create Google Maps-style marker icon
   const createMarkerIcon = (color = '#dc2626') => {
     // Google Maps-style teardrop marker in red brand color - SMALLER and THINNER
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="20" viewBox="0 0 28 40">
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 28 40">
       <defs>
         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-opacity="0.25"/>
@@ -156,8 +156,8 @@ function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
         title: venue.name,
         icon: {
           url: createMarkerIcon(),
-          scaledSize: new window.google.maps.Size(14, 20),
-          anchor: new window.google.maps.Point(7, 20),
+          scaledSize: new window.google.maps.Size(20, 28),
+          anchor: new window.google.maps.Point(10, 28),
         }
       });
       marker.addListener("click", () => {
