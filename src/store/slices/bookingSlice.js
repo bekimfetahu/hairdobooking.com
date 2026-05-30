@@ -41,6 +41,8 @@ const defaultBooking = {
   selectedVoucher: null,
   voucherError: null,
   voucherValidating: false,
+  pendingAppointment: null,
+  pendingPaymentIntent: null,
 };
 
 function getToday() {
@@ -148,15 +150,33 @@ const bookingSlice = createSlice({
       const { slug, validating } = action.payload;
       if (state.bySlug[slug]) state.bySlug[slug].voucherValidating = validating;
     },
+    setPendingAppointment(state, action) {
+      const { slug, appointment, payment_intent } = action.payload;
+      if (state.bySlug[slug]) {
+        state.bySlug[slug].pendingAppointment = appointment || null;
+        state.bySlug[slug].pendingPaymentIntent = payment_intent || null;
+      }
+    },
+    clearPendingAppointment(state, action) {
+      const { slug } = action.payload;
+      if (state.bySlug[slug]) {
+        state.bySlug[slug].pendingAppointment = null;
+        state.bySlug[slug].pendingPaymentIntent = null;
+      }
+    },
     clearBooking(state, action) {
       const { slug } = action.payload;
-      delete state.bySlug[slug];
+      // Reset booking state for the slug instead of deleting the key.
+      // This avoids missing-key edge cases in components that expect the slug entry to exist.
+      state.bySlug[slug] = { ...defaultBooking, selectedDate: getToday() };
     },
   },
 });
 
 // Stable fallback so the selector doesn't create a new object every call
 const fallbackBooking = { ...defaultBooking, selectedDate: null };
+fallbackBooking.pendingAppointment = null;
+fallbackBooking.pendingPaymentIntent = null;
 
 // Selector: get booking state for a given slug (returns stable default if missing)
 export const selectBooking = (slug) => (state) =>
@@ -180,6 +200,8 @@ export const {
   setSelectedVoucher,
   setVoucherError,
   setVoucherValidating,
+  setPendingAppointment,
+  clearPendingAppointment,
   clearBooking,
 } = bookingSlice.actions;
 

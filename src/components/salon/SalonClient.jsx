@@ -39,6 +39,8 @@ import {
   setSelectedVoucher,
   setVoucherError,
   setVoucherValidating,
+  setPendingAppointment,
+  clearPendingAppointment,
   clearBooking,
 } from "@/store/slices/bookingSlice";
 
@@ -105,6 +107,8 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
   useEffect(() => {
     if (slug) dispatch(initBooking({ slug }));
   }, [slug, dispatch]);
+
+  
 
   useEffect(() => {
     if (!slug || !initialServiceUuid) return;
@@ -236,8 +240,21 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
   
   // Payment flow state
   const [paymentRequired, setPaymentRequired] = useState(false);
-  const [appointmentData, setAppointmentData] = useState(null);
-  const [paymentIntentData, setPaymentIntentData] = useState(null);
+
+  // Restore pending appointment/payment intent from localStorage into Redux so users can retry payment
+  useEffect(() => {
+    if (!slug) return;
+    try {
+      const saved = localStorage.getItem(`pending_appointment_${slug}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.appointment || parsed?.payment_intent) {
+          dispatch(setPendingAppointment({ slug, appointment: parsed.appointment || null, payment_intent: parsed.payment_intent || null }));
+          console.log('Restored pending appointment into store for', slug, parsed.appointment?.uuid || null);
+        }
+      }
+    } catch (e) {}
+  }, [slug, dispatch]);
 
   const toggleFilter = useCallback(() => {
     setExpandedFilter(expandedFilter === 'filters' ? null : 'filters');
@@ -673,6 +690,32 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
       return;
     }
 
+    // LocalStore/Redux fallback: if there is a pending appointment stored in Redux, reopen payment modal
+    const pendingAppointment = booking?.pendingAppointment;
+    const pendingPaymentIntent = booking?.pendingPaymentIntent;
+
+    if ((!pendingAppointment || !pendingPaymentIntent) && typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`pending_appointment_${slug}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.appointment && parsed?.payment_intent) {
+            dispatch(setPendingAppointment({ slug, appointment: parsed.appointment, payment_intent: parsed.payment_intent }));
+            console.log('Restored pending appointment from localStorage into store, opening payment modal', parsed.appointment.uuid);
+            setPaymentRequired(true);
+            setBookingSubmitting(false);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (pendingAppointment && pendingPaymentIntent) {
+      console.log('Found existing pending appointment in store, reopening payment modal', pendingAppointment.uuid);
+      setPaymentRequired(true);
+      return;
+    }
+
     setBookingSubmitting(true);
     setBookingError("");
     setBookingSuccess("");
@@ -697,8 +740,11 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         // Payment required - show payment form
         console.log('Payment required for appointment:', response.appointment.uuid);
         console.log('Payment intent data:', response.payment_intent);
-        setAppointmentData(response.appointment);
-        setPaymentIntentData(response.payment_intent);
+        // Persist pending appointment + payment intent into Redux and localStorage so retries reopen the same intent
+        dispatch(setPendingAppointment({ slug, appointment: response.appointment, payment_intent: response.payment_intent }));
+        try {
+          localStorage.setItem(`pending_appointment_${slug}`, JSON.stringify({ appointment: response.appointment, payment_intent: response.payment_intent }));
+        } catch (e) {}
         setPaymentRequired(true);
         setBookingSubmitting(false);
         return;
@@ -742,7 +788,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     } finally {
       setBookingSubmitting(false);
     }
-  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, selectedVoucher, voucherCode, isAuthenticated, dispatch]);
+  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, selectedVoucher, voucherCode, isAuthenticated, booking?.pendingAppointment, booking?.pendingPaymentIntent, dispatch]);
 
   // Auto-submit booking after successful authentication when booking state is ready
   useEffect(() => {
@@ -775,8 +821,8 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
     // Reset payment state
     setPaymentRequired(false);
-    setAppointmentData(null);
-    setPaymentIntentData(null);
+    dispatch(clearPendingAppointment({ slug }));
+    try { localStorage.removeItem(`pending_appointment_${slug}`); } catch (e) {}
 
     // Show success message
     await Swal.fire({
@@ -801,9 +847,9 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
   const handlePaymentCancel = useCallback(() => {
     console.log('Payment cancelled by user');
+    // Close the payment modal but keep the pending appointment/payment intent so user can retry
     setPaymentRequired(false);
-    setAppointmentData(null);
-    setPaymentIntentData(null);
+    // pending appointment stored in Redux/localStorage remains so user can retry
   }, []);
 
   const handleSkipPayment = useCallback(async () => {
@@ -817,8 +863,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
     // Reset payment state
     setPaymentRequired(false);
-    setAppointmentData(null);
-    setPaymentIntentData(null);
+    dispatch(clearPendingAppointment({ slug }));
 
     // Show success message
     await Swal.fire({
@@ -1580,12 +1625,12 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
       />
 
       {/* Payment Modal for Marketplace Appointments */}
-      {paymentRequired && appointmentData && paymentIntentData && (
+      {paymentRequired && booking?.pendingAppointment && booking?.pendingPaymentIntent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-bold">
-                {paymentIntentData.payment_optional ? 'Payment (Optional)' : 'Complete Payment'}
+                {booking.pendingPaymentIntent.payment_optional ? 'Payment (Optional)' : 'Complete Payment'}
               </h2>
               <button
                 onClick={handlePaymentCancel}
@@ -1595,7 +1640,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
               </button>
             </div>
             <div className="p-6">
-              {paymentIntentData.payment_optional && (
+              {booking.pendingPaymentIntent.payment_optional && (
                 <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-900">
                     <span className="font-semibold">Payment is optional.</span> You can pay now or at the salon when you arrive.
@@ -1603,17 +1648,17 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                 </div>
               )}
               <StripePaymentContainer
-                appointmentId={appointmentData.uuid}
-                amount={paymentIntentData.amount}
+                appointmentId={booking.pendingAppointment.uuid}
+                amount={booking.pendingPaymentIntent.amount}
                 ownerName={salon?.venue?.name || "Salon"}
                 serviceName={selectedService?.display_name || selectedService?.name || "Service"}
                 clientEmail={localStorage.getItem('user_email') || ''}
-                clientSecret={paymentIntentData.client_secret}
-                paymentIntentId={paymentIntentData.payment_intent_id}
-                paymentOptional={paymentIntentData.payment_optional}
+                clientSecret={booking.pendingPaymentIntent.client_secret}
+                paymentIntentId={booking.pendingPaymentIntent.payment_intent_id}
+                paymentOptional={booking.pendingPaymentIntent.payment_optional}
                 onPaymentSuccess={handlePaymentSuccess}
                 onPaymentError={handlePaymentError}
-                onSkipPayment={paymentIntentData.payment_optional ? handleSkipPayment : null}
+                onSkipPayment={booking.pendingPaymentIntent.payment_optional ? handleSkipPayment : null}
                 onClose={handlePaymentCancel}
               />
             </div>
