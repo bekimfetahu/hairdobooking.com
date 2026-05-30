@@ -132,12 +132,16 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
             const weekDays = Array.from({ length: 7 }).map((_, i) => weekStart.add(i, 'day'));
             const nextInWeek = weekDays.find((d) => !isDisabled(d) && (d.isSame(today, 'day') || d.isAfter(today, 'day')));
 
-            // Find the next available after this week (fallback)
+            // Find the next available after this week (first try `availableDates` list, then fallback to scanning)
             let next = null;
             if (Array.isArray(availableDates) && availableDates.length > 0) {
               next = availableDates.find((d) => d > weekEnd.format("YYYY-MM-DD")) || availableDates.find((d) => d >= today.format("YYYY-MM-DD"));
               if (next) next = dayjs(next);
-            } else {
+            }
+
+            // If `availableDates` was provided but didn't contain a suitable next date,
+            // fall back to scanning the calendar up to 60 days ahead to find the next non-disabled day.
+            if (!next) {
               for (let i = 1; i <= 60; i++) {
                 const cand = weekEnd.add(i, "day");
                 if (!isDisabled(cand)) {
