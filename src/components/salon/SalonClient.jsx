@@ -1721,6 +1721,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
               <StripePaymentContainer
                 appointmentId={booking.pendingAppointment.uuid}
                 amount={booking.pendingPaymentIntent.amount}
+                currency={booking.pendingPaymentIntent.currency || booking.pendingPaymentIntent.currency_code}
                 ownerName={salon?.venue?.name || "Salon"}
                 serviceName={selectedService?.display_name || selectedService?.name || "Service"}
                 clientEmail={localStorage.getItem('user_email') || ''}

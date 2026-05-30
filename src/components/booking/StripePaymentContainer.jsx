@@ -34,6 +34,7 @@ export default function StripePaymentContainer({
   clientSecret,
   paymentIntentId,
   paymentOptional,
+  currency,
   onPaymentSuccess,
   onPaymentError,
   onSkipPayment,
@@ -141,6 +142,7 @@ export default function StripePaymentContainer({
       <StripePaymentForm
         appointmentId={appointmentId}
         amount={amount}
+        currency={currency}
         ownerName={ownerName}
         serviceName={serviceName}
         clientEmail={clientEmail}

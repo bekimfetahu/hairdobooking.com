@@ -27,6 +27,7 @@ import {
 export default function StripePaymentForm({
   appointmentId,
   amount,
+  currency,
   ownerName,
   serviceName,
   clientEmail,
@@ -160,9 +161,20 @@ export default function StripePaymentForm({
     }
   };
 
-  // Format amount for display
+  // Format amount for display using currency when available.
   // Backend returns amount in major units (dollars/pounds), not cents
-  const formattedAmount = parseFloat(amount).toFixed(2);
+  const fmt = (value) => {
+    const num = Number.parseFloat(value || 0);
+    try {
+      if (currency) {
+        return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(num);
+      }
+    } catch (e) {
+      // fall through to simple formatting
+    }
+    return num.toFixed(2);
+  };
+  const formattedAmount = fmt(amount);
 
   return (
     <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow">
@@ -176,7 +188,7 @@ export default function StripePaymentForm({
       <div className="bg-gray-50 p-4 rounded-md mb-6">
         <div className="flex justify-between items-center mb-2">
           <span className="text-gray-700">{serviceName}</span>
-          <span className="font-semibold text-gray-900">${formattedAmount}</span>
+          <span className="font-semibold text-gray-900">{formattedAmount}</span>
         </div>
         <div className="text-sm text-gray-500">
           <p>At: {ownerName}</p>
@@ -252,7 +264,7 @@ export default function StripePaymentForm({
                 Processing...
               </div>
             ) : (
-              `Pay $${formattedAmount}`
+              `Pay ${formattedAmount}`
             )}
           </button>
 

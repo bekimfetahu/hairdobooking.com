@@ -54,6 +54,7 @@ export default function CheckoutPage({ appointmentUuid }) {
         <StripePaymentContainer
           appointmentId={appointment.uuid}
           amount={paymentIntent.amount}
+          currency={paymentIntent.currency || paymentIntent.currency_code}
           ownerName={appointment.owner_name}
           serviceName={appointment.service_name}
           clientEmail={appointment.client_email}
