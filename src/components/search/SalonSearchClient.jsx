@@ -29,7 +29,7 @@ function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
   // Helper to create Google Maps-style marker icon
   const createMarkerIcon = (color = '#dc2626') => {
     // Google Maps-style teardrop marker in red brand color - SMALLER and THINNER
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 28 40">
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="20" viewBox="0 0 28 40">
       <defs>
         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-opacity="0.25"/>
@@ -156,8 +156,8 @@ function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
         title: venue.name,
         icon: {
           url: createMarkerIcon(),
-          scaledSize: new window.google.maps.Size(28, 40),
-          anchor: new window.google.maps.Point(14, 40),
+          scaledSize: new window.google.maps.Size(14, 20),
+          anchor: new window.google.maps.Point(7, 20),
         }
       });
       marker.addListener("click", () => {
@@ -731,21 +731,46 @@ export default function SalonSearchClient({
                   VenueMap={VenueMap}
                 />
 
-          <div className="w-full overflow-y-auto px-0 py-2">
-            <VenueSearchResultsList
-              venues={displayedVenues}
-              selectedLocation={selectedLocation}
-              showMap={showMap}
-              loading={loading}
-              hasMore={hasMore}
-              loadMoreRef={loadMoreRef}
-              hideServices={true}
-              expandedOpeningHours={expandedOpeningHours}
-              toggleOpeningHours={toggleOpeningHours}
-              expandedGroups={expandedGroups}
-              toggleGroup={toggleGroup}
-            />
-          </div>
+                <section className="flex flex-1 overflow-hidden h-[calc(100vh-280px)] relative">
+                  <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-4" : "w-full overflow-y-auto px-0 py-4"}>
+                    <div className={showMap ? "max-w-2xl mx-auto" : ""}>
+                      <VenueSearchResultsList
+                        venues={displayedVenues}
+                        selectedLocation={selectedLocation}
+                        showMap={showMap}
+                        loading={loading}
+                        hasMore={hasMore}
+                        loadMoreRef={loadMoreRef}
+                        hideServices={true}
+                        expandedOpeningHours={expandedOpeningHours}
+                        toggleOpeningHours={toggleOpeningHours}
+                        expandedGroups={expandedGroups}
+                        toggleGroup={toggleGroup}
+                      />
+                    </div>
+                  </div>
+
+                  {showMap && (
+                    <div className="hidden md:block w-1/2 bg-white border-l border-gray-200 h-full overflow-hidden">
+                      {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) && areaVenues.length > 0 ? (
+                        <VenueMap
+                          selectedLocation={selectedLocation}
+                          searchDistance={distance}
+                          router={router}
+                          mapsReady={mapsReady}
+                        />
+                      ) : (mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">
+                          No venues to display
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">
+                          Loading map...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
       </div>
     </div>
   );
