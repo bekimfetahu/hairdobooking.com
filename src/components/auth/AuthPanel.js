@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '@/store/slices/authSlice';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import BlackButton from '@/components/ui/BlackButton';
 import InputField from '@/components/ui/InputField';
@@ -28,7 +28,20 @@ export default function AuthPanel({
   showHeader = true,
   socialReturnUrl = null,
 }) {
+  const [mode, setMode] = useState(initialTab === 'signup' ? 'signup' : 'signin');
   const [activeTab, setActiveTab] = useState(initialTab);
+  
+  // Query parameters for token-based password reset
+  const searchParams = useSearchParams();
+  const tokenFromUrl = searchParams?.get('token');
+  const emailFromUrl = searchParams?.get('email');
+  
+  // Initialize mode to 'reset-token' if token is in URL
+  useEffect(() => {
+    if (tokenFromUrl && emailFromUrl) {
+      setMode('reset-token');
+    }
+  }, [tokenFromUrl, emailFromUrl]);
   
   // Sign in state
   const [signInData, setSignInData] = useState({
@@ -46,6 +59,16 @@ export default function AuthPanel({
     password: '',
     confirmPassword: '',
     termsAccepted: false
+  });
+
+  // Password reset state
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+
+  // Password reset with token state
+  const [resetTokenData, setResetTokenData] = useState({
+    password: '',
+    confirmPassword: '',
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -111,6 +134,108 @@ export default function AuthPanel({
     }
   };
 
+  // Password reset handler
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    setError('');
+    setResetSuccess('');
+    setLoading(true);
+
+    if (!resetEmail || !/\S+@\S+\.\S+/.test(resetEmail)) {
+      setError('Please enter a valid email address.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 422 && data.errors) {
+          const errorMessages = Object.values(data.errors).flat().join('; ');
+          setError(errorMessages || data.message || 'Reset failed');
+        } else {
+          setError(data.message || 'Password reset failed');
+        }
+        return;
+      }
+
+      setResetSuccess('Check your email for a password reset link. It should arrive in the next few minutes.');
+      setResetEmail('');
+    } catch (err) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Password reset with token handler (from email link)
+  const handleResetPasswordWithToken = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    if (!resetTokenData.password || !resetTokenData.confirmPassword) {
+      setError('Both password fields are required.');
+      setLoading(false);
+      return;
+    }
+
+    if (resetTokenData.password !== resetTokenData.confirmPassword) {
+      setError('Passwords do not match.');
+      setLoading(false);
+      return;
+    }
+
+    if (resetTokenData.password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailFromUrl,
+          token: tokenFromUrl,
+          password: resetTokenData.password,
+          password_confirmation: resetTokenData.confirmPassword,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 422 && data.errors) {
+          const errorMessages = Object.values(data.errors).flat().join('; ');
+          setError(errorMessages || data.message || 'Reset failed');
+        } else {
+          setError(data.message || 'Password reset failed');
+        }
+        return;
+      }
+
+      setResetSuccess('Password reset successful! Redirecting to sign in...');
+      setResetTokenData({ password: '', confirmPassword: '' });
+      
+      // Redirect to sign in after a short delay
+      setTimeout(() => {
+        setMode('signin');
+        setResetSuccess('');
+      }, 2000);
+    } catch (err) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Sign up handler
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -146,7 +271,14 @@ export default function AuthPanel({
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(signUpData),
+        body: JSON.stringify({
+          first_name: signUpData.firstName,
+          last_name: signUpData.lastName,
+          email: signUpData.email,
+          phone: signUpData.phone,
+          password: signUpData.password,
+          password_confirmation: signUpData.confirmPassword,
+        }),
       });
 
       const data = await response.json();
@@ -193,14 +325,14 @@ export default function AuthPanel({
 
   return (
     <div className="w-full">
-      {/* Tab Navigation */}
-      {showHeader && (
+      {/* Tab Navigation - Only show when not in reset mode */}
+      {showHeader && mode !== 'reset' && (
         <div className="mb-6 border-b border-gray-200">
           <div className="flex gap-8">
             <button
-              onClick={() => { setActiveTab('signin'); setError(''); }}
+              onClick={() => { setMode('signin'); setError(''); }}
               className={`pb-4 text-sm font-semibold transition-colors ${
-                activeTab === 'signin'
+                mode === 'signin'
                   ? 'border-b-2 border-black text-black'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
@@ -208,9 +340,9 @@ export default function AuthPanel({
               Sign In
             </button>
             <button
-              onClick={() => { setActiveTab('signup'); setError(''); }}
+              onClick={() => { setMode('signup'); setError(''); }}
               className={`pb-4 text-sm font-semibold transition-colors ${
-                activeTab === 'signup'
+                mode === 'signup'
                   ? 'border-b-2 border-black text-black'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
@@ -222,13 +354,13 @@ export default function AuthPanel({
       )}
 
       {/* Sign In Tab */}
-      {activeTab === 'signin' && (
-        <div>
+      {mode === 'signin' && (
+        <div className="transition-all duration-300">
           {showHeader && (
             <div className="mb-6">
               <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Sign in</p>
               <h3 className="mt-2 text-2xl font-semibold text-neutral-950">Access your account</h3>
-              <p className="mt-2 text-sm leading-7 text-neutral-600">Use your email and password, or continue with Google.</p>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">Sign in with your email or a social account.</p>
             </div>
           )}
 
@@ -266,12 +398,13 @@ export default function AuthPanel({
                 label="Remember me"
               />
 
-              <Link
-                href="/forgot-password"
+              <button
+                type="button"
+                onClick={() => { setMode('reset'); setError(''); }}
                 className="text-sm text-neutral-600 underline-offset-4 hover:text-black hover:underline"
               >
                 Forgot your password?
-              </Link>
+              </button>
             </div>
 
             <BlackButton type="submit" className="w-full py-3 text-lg" disabled={loading}>
@@ -289,7 +422,7 @@ export default function AuthPanel({
             <p className="mt-6 text-center text-sm text-neutral-600">
               Don't have an account?{' '}
               <button
-                onClick={() => { setActiveTab('signup'); setError(''); }}
+                onClick={() => { setMode('signup'); setError(''); }}
                 className="font-semibold text-black hover:underline"
               >
                 Create one
@@ -300,13 +433,13 @@ export default function AuthPanel({
       )}
 
       {/* Sign Up Tab */}
-      {activeTab === 'signup' && (
-        <div>
+      {mode === 'signup' && (
+        <div className="transition-all duration-300">
           {showHeader && (
             <div className="mb-6">
               <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Client signup</p>
               <h3 className="mt-2 text-2xl font-semibold text-neutral-950">Create your account</h3>
-              <p className="mt-2 text-sm leading-7 text-neutral-600">Start with Google or fill in your details below.</p>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">Create your account with your email or a social account.</p>
             </div>
           )}
 
@@ -315,12 +448,6 @@ export default function AuthPanel({
               {error}
             </div>
           )}
-
-          {/* Social Sign-up Options */}
-          <div className="space-y-4 mb-6">
-            <SocialSSOButtons returnUrl={socialReturnUrl || returnUrl} />
-          </div>
-          <div className="my-6 border-t border-black/10" />
 
           <form onSubmit={handleSignUp} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -421,12 +548,170 @@ export default function AuthPanel({
             <p className="mt-6 text-center text-sm text-neutral-600">
               Already have an account?{' '}
               <button
-                onClick={() => { setActiveTab('signin'); setError(''); }}
+                onClick={() => { setMode('signin'); setError(''); }}
                 className="font-semibold text-black hover:underline"
               >
                 Sign in
               </button>
             </p>
+          )}
+
+          {/* Social Sign-up Options */}
+          <div className="my-6 border-t border-black/10" />
+          <div className="space-y-4">
+            <SocialSSOButtons returnUrl={socialReturnUrl || returnUrl} />
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Tab */}
+      {mode === 'reset' && (
+        <div className="transition-all duration-300">
+          {showHeader && (
+            <div className="mb-6">
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Reset Password</p>
+              <h3 className="mt-2 text-2xl font-semibold text-neutral-950">Get a new password</h3>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">Enter your email and we'll send you a link to reset your password.</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {resetSuccess && (
+            <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              {resetSuccess}
+            </div>
+          )}
+
+          {!resetSuccess ? (
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <InputField
+                id="reset-email"
+                label="Email Address"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+              />
+
+              <BlackButton type="submit" className="w-full py-3 text-lg" disabled={loading}>
+                {loading ? 'Sending link...' : 'Send reset link'}
+              </BlackButton>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <BlackButton
+                onClick={() => { setMode('signin'); setResetSuccess(''); setResetEmail(''); }}
+                className="w-full py-3 text-lg"
+              >
+                Back to sign in
+              </BlackButton>
+            </div>
+          )}
+
+          {!resetSuccess && (
+            <p className="mt-6 text-center text-sm text-neutral-600">
+              Remember your password?{' '}
+              <button
+                onClick={() => { setMode('signin'); setError(''); }}
+                className="font-semibold text-black hover:underline"
+              >
+                Sign in here
+              </button>
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Password Reset with Token Tab (from email link) */}
+      {mode === 'reset-token' && (
+        <div className="transition-all duration-300">
+          {showHeader && (
+            <div className="mb-6">
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Reset Password</p>
+              <h3 className="mt-2 text-2xl font-semibold text-neutral-950">Create a new password</h3>
+              <p className="mt-2 text-sm leading-7 text-neutral-600">Enter your new password below to reset access to your account.</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {resetSuccess && (
+            <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              {resetSuccess}
+            </div>
+          )}
+
+          {!resetSuccess ? (
+            <form onSubmit={handleResetPasswordWithToken} className="space-y-4">
+              <div>
+                <label htmlFor="new-password" className="block text-sm font-medium text-neutral-900 mb-2">
+                  New Password
+                </label>
+                <div className="relative">
+                  <InputField
+                    id="new-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={resetTokenData.password}
+                    onChange={(e) => setResetTokenData({ ...resetTokenData, password: e.target.value })}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700"
+                  >
+                    {showPassword ? <EyeIcon /> : <EyeSlashIcon />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-neutral-900 mb-2">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <InputField
+                    id="confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={resetTokenData.confirmPassword}
+                    onChange={(e) => setResetTokenData({ ...resetTokenData, confirmPassword: e.target.value })}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700"
+                  >
+                    {showConfirmPassword ? <EyeIcon /> : <EyeSlashIcon />}
+                  </button>
+                </div>
+              </div>
+
+              <BlackButton type="submit" className="w-full py-3 text-lg" disabled={loading}>
+                {loading ? 'Resetting password...' : 'Reset password'}
+              </BlackButton>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <BlackButton
+                onClick={() => { setMode('signin'); setResetSuccess(''); setResetTokenData({ password: '', confirmPassword: '' }); }}
+                className="w-full py-3 text-lg"
+              >
+                Go to sign in
+              </BlackButton>
+            </div>
           )}
         </div>
       )}

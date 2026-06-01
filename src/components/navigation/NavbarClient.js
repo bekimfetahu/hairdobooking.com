@@ -116,6 +116,8 @@ export default function NavbarClient() {
         setIsMobileMenuOpen(false);
         if (primaryVenueSlug) {
             router.push(`/salon/${primaryVenueSlug}`);
+        } else {
+            router.push('/salon/search');
         }
     };
 
@@ -125,6 +127,8 @@ export default function NavbarClient() {
 
         if (primaryVenueSlug) {
             router.push(`/salon/${primaryVenueSlug}`);
+        } else {
+            router.push('/salon/search');
         }
     };
 

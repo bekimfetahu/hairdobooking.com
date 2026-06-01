@@ -172,10 +172,17 @@ export default function NavbarStatic({ initialUser = null }) {
   };
 
   const handleGoPreferredSalon = () => {
+    console.log('handleGoPreferredSalon clicked!');
+    console.log('preferredVenueSlug:', preferredVenueSlug);
+    console.log('isAuthenticated:', isAuthenticated);
     setIsUserMenuOpen(false);
     setIsMobileMenuOpen(false);
     if (preferredVenueSlug) {
+      console.log('Navigating to salon:', `/salon/${preferredVenueSlug}`);
       router.push(`/salon/${preferredVenueSlug}`);
+    } else {
+      console.log('Navigating to salon search');
+      router.push('/salon/search');
     }
   };
 
@@ -208,17 +215,15 @@ export default function NavbarStatic({ initialUser = null }) {
 
         <nav className="hidden md:flex items-center gap-3">
           {isAuthenticated && (
-            <button
-              type="button"
-              onClick={handleGoPreferredSalon}
+            <Link
+              href={preferredVenueSlug ? `/salon/${preferredVenueSlug}` : '/salon/search'}
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50"
-              aria-label="Go to your preferred salon"
             >
               <MapPin className="h-4 w-4 text-black" />
-              <span className="max-w-[180px] truncate text-xs text-primary">
+              <span className="max-w-[180px] truncate text-xs text-black">
                 {preferredVenueLabel}
               </span>
-            </button>
+            </Link>
           )}
 
           {(isForBusinessPage || isPricingPage) && (
@@ -337,14 +342,13 @@ export default function NavbarStatic({ initialUser = null }) {
                     <p className="text-sm text-neutral-500">Quick access to your dashboard</p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleGoPreferredSalon}
-                    className="flex w-full items-center justify-between rounded-md border border-black/10 bg-white px-4 py-4 text-left text-sm font-semibold text-primary transition-colors transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black hover:bg-neutral-50"
+                  <Link
+                    href={preferredVenueSlug ? `/salon/${preferredVenueSlug}` : '/salon/search'}
+                    className="flex w-full items-center justify-between rounded-md border border-black/10 bg-white px-4 py-4 text-left text-sm font-semibold text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black hover:bg-neutral-50"
                   >
                     <span className="block max-w-[200px] truncate">{preferredVenueLabel}</span>
                     <MapPin className="h-5 w-5 text-black" />
-                  </button>
+                  </Link>
 
                   <div className="space-y-2">
                     <button

@@ -32,6 +32,7 @@ const accountLinks = [
 const getBasePath = (href) => href.split('?')[0];
 
 export default function Navbar() {
+    console.log('Navbar component rendering');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const user = useSelector((state) => state.auth.user);
@@ -48,6 +49,8 @@ export default function Navbar() {
     const primaryVenueSlug = primaryVenue?.slug ?? null;
     const primaryVenueLabel = primaryVenue?.name || 'Choose preferred salon';
     const bookNowHref = isAuthenticated && primaryVenueSlug ? `/salon/${primaryVenueSlug}` : '/register';
+
+    console.log('Navbar state:', { isAuthenticated, primaryVenueSlug, primaryVenueLabel });
 
     const visibleNavLinks = navLinks.filter((link) => {
         if (link.href === '/pricing' && !(isForBusinessPage || isPricingPage)) return false;
@@ -112,19 +115,17 @@ export default function Navbar() {
     };
 
     const handleGoPreferredSalon = () => {
+        console.log('handleGoPreferredSalon clicked!');
+        console.log('primaryVenueSlug:', primaryVenueSlug);
+        console.log('isAuthenticated:', isAuthenticated);
         setIsDropdownOpen(false);
         setIsMobileMenuOpen(false);
         if (primaryVenueSlug) {
+            console.log('Navigating to salon:', `/salon/${primaryVenueSlug}`);
             router.push(`/salon/${primaryVenueSlug}`);
-        }
-    };
-
-    const handleNavigatePreferredSalon = () => {
-        setIsDropdownOpen(false);
-        setIsMobileMenuOpen(false);
-
-        if (primaryVenueSlug) {
-            router.push(`/salon/${primaryVenueSlug}`);
+        } else {
+            console.log('Navigating to salon search');
+            router.push('/salon/search');
         }
     };
 
@@ -163,10 +164,9 @@ export default function Navbar() {
                                 type="button"
                                 onClick={handleGoPreferredSalon}
                                 className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50"
-                                aria-label="Go to your preferred salon"
                             >
                                 <MapPin className="h-4 w-4 text-black" />
-                                <span className="max-w-[180px] truncate text-xs text-primary">
+                                <span className="max-w-[180px] truncate text-xs text-black">
                                     {primaryVenueLabel}
                                 </span>
                             </button>
@@ -201,19 +201,17 @@ export default function Navbar() {
                                                 <p className="text-xs text-neutral-500">Manage your bookings and profile</p>
                                             </div>
                                             <div className="p-2">
-                                                {primaryVenueSlug && (
-                                                    <Link
-                                                        href={`/salon/${primaryVenueSlug}`}
-                                                        className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal transition-colors ${
-                                                            pathname === `/salon/${primaryVenueSlug}` || pathname.startsWith(`/salon/${primaryVenueSlug}/`)
-                                                                ? 'text-black'
-                                                                : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
-                                                        }`}
-                                                    >
-                                                        <MapPin className="h-4 w-4 shrink-0 text-black" />
-                                                        <span className="truncate">Preferred salon</span>
-                                                    </Link>
-                                                )}
+                                                <Link
+                                                    href={primaryVenueSlug ? `/salon/${primaryVenueSlug}` : '/salon/search'}
+                                                    className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal transition-colors ${
+                                                        pathname === `/salon/${primaryVenueSlug}` || pathname === '/salon/search'
+                                                            ? 'text-black'
+                                                            : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
+                                                    }`}
+                                                >
+                                                    <MapPin className="h-4 w-4 shrink-0 text-black" />
+                                                    <span className="truncate">{primaryVenueLabel}</span>
+                                                </Link>
                                                 {accountLinks.map((link) => {
                                                     const Icon = link.icon;
                                                     const isActive = pathname === getBasePath(link.href) || pathname.startsWith(`${getBasePath(link.href)}/`);
@@ -301,14 +299,10 @@ export default function Navbar() {
 
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            setIsMobileMenuOpen(false);
-                                            setIsDropdownOpen(false);
-                                            handleGoPreferredSalon();
-                                        }}
-                                        className="flex w-full items-center justify-between rounded-md border border-black/10 bg-white px-4 py-4 text-left transition-colors transform transition-transform duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black hover:bg-neutral-50"
+                                        onClick={handleGoPreferredSalon}
+                                        className="flex w-full items-center justify-between rounded-md border border-black/10 bg-white px-4 py-4 text-left transition-colors duration-150 ease-out hover:-translate-y-0.5 hover:shadow-sm hover:border-black hover:bg-neutral-50"
                                     >
-                                        <span className="block max-w-[200px] truncate text-sm font-semibold text-primary">{primaryVenueLabel}</span>
+                                        <span className="block max-w-[200px] truncate text-sm font-semibold text-black">{primaryVenueLabel}</span>
                                         <MapPin className="h-5 w-5 text-black" />
                                     </button>
 
