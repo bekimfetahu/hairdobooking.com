@@ -46,23 +46,24 @@ export default function CardCarousel({
     <button
       key={card.id || idx}
       onClick={() => onCardClick?.(card)}
+      style={{ width: cardWidth }}
       className={cn(
         'flex-shrink-0 group text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E62E2E] rounded-md',
         cardButtonClassName
       )}
     >
       {/* Card Image Container */}
-      <div className="relative rounded-md overflow-hidden border border-black/10 mb-3 bg-white shadow-sm">
+      <div className="relative rounded-md overflow-hidden border border-black/10 mb-3 bg-white shadow-sm w-full">
         <div
-          className="bg-gray-200 aspect-[3/2] md:aspect-video overflow-hidden"
-          style={{ width: cardWidth }}
+          className="bg-gray-200 aspect-[3/2] md:aspect-video overflow-hidden w-full h-full flex items-center justify-center"
+          style={{ maxWidth: cardWidth }}
         >
           {card.image ? (
             <img
               src={card.image}
               alt={card.name || card.title}
               loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
@@ -70,8 +71,6 @@ export default function CardCarousel({
             </div>
           )}
         </div>
-
-
       </div>
 
       {/* Card Content */}
@@ -132,7 +131,7 @@ export default function CardCarousel({
       {/* Carousel Container */}
       <div
         ref={scrollRef}
-        className="flex items-start gap-5 overflow-x-auto scrollbar-hide scroll-smooth pb-2 -mx-6 px-6"
+        className="flex items-start gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2 -mx-6 px-6"
         style={{ scrollbarWidth: 'none' }}
       >
         {cards.length > 0 ? (

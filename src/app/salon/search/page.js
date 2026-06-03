@@ -5,8 +5,8 @@ import laravelApp from "@/services/laravelApp";
 /**
  * /salon/search?loc=London&lat=51.5&lon=-0.13&distance=10mi&categories=1,2&audiences=3
  *
- * SSR: fetches venues from ES with optional filters
- * The client component allows browsing and filtering salons
+ * SSR: fetches venues from ES with optional filters (page 1 only)
+ * The client component allows browsing and filtering salons with infinite scroll
  */
 export default async function SalonSearchPage({ searchParams }) {
   const query = (await searchParams) || {};
@@ -20,11 +20,11 @@ export default async function SalonSearchPage({ searchParams }) {
   const audiences = null;
 
   let initialVenues = [];
+  let initialMeta = null;
 
   try {
-    // Fetch venues with location and distance filters
-    // Use high perPage to populate the map with all venues in the search radius
-    const params = { perPage: 100, page: 1 };
+    // Fetch first page of venues (backend controls page size = 6)
+    const params = { page: 1 };
     params.lat = lat;
     params.lon = lon;
     params.distance = distance;
@@ -33,6 +33,7 @@ export default async function SalonSearchPage({ searchParams }) {
 
     const response = await laravelApp.get("/client/search/venues", { params });
     initialVenues = response.data?.data || [];
+    initialMeta = response.data?.meta || null;
   } catch {
     // Page still renders; client will retry
   }
@@ -45,6 +46,7 @@ export default async function SalonSearchPage({ searchParams }) {
      >
       <SalonSearchClient
         initialVenues={initialVenues}
+        initialMeta={initialMeta}
         initialLocationLabel={loc}
         initialLocationLat={lat}
         initialLocationLon={lon}

@@ -833,9 +833,9 @@ export default function CategorySearchClient({
             {/* ===== SEARCH RESULTS SECTION ===== */}
             {selectedCategory ? (
                 <>
-                    <section className="flex flex-1 overflow-hidden h-[calc(100vh-280px)] relative">
+                    <section className="flex flex-1 overflow-y-auto hide-scrollbar h-[calc(100vh-280px)] relative">
                     {/* Results Column */}
-                    <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-4" : "w-full overflow-y-auto px-0 py-4"}>
+                    <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto hide-scrollbar pl-0 pr-4 py-4" : "w-full overflow-y-auto hide-scrollbar px-0 py-4"}>
                         <div className={showMap ? "max-w-2xl mx-auto" : ""}>
                             {/* Loading State */}
                             {loading && (
@@ -877,7 +877,7 @@ export default function CategorySearchClient({
                                             
                                             {/* Info Text */}
                                             <p className="text-sm text-gray-700 font-medium">
-                                                {venues.length} {venues.length === 1 ? 'salon' : 'salons'} provide{selectedService?.name ? ` ${selectedService.name}` : ' services'} in {selectedCategory?.name}
+                                                Showing {venues.length}/{venuesMeta?.total || venues.length} {venues.length === 1 ? 'salon' : 'salons'} provide{selectedService?.name ? ` ${selectedService.name}` : ' services'} in {selectedCategory?.name}
                                             </p>
                                         </div>
                                         

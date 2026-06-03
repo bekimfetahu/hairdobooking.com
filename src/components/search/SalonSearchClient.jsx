@@ -6,6 +6,7 @@ import { MapPin, Search, Maximize2 } from "lucide-react";
 import { cn } from '@/lib/utils';
 import LocationSearch from "@/components/search/LocationSearch";
 import VenueSearchResultsList from "@/components/search/VenueSearchResultsList";
+import VenueSearchResultCardSkeleton from "@/components/search/VenueSearchResultCardSkeleton";
 import { searchVenues } from "@/services/search/searchService";
 import Select from 'react-select';
 import useGoogleMapsReady from '@/hooks/useGoogleMapsReady';
@@ -294,7 +295,7 @@ function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
   };
 
   return (
-    <div className="w-full h-full relative" style={{ minHeight: 300 }}>
+    <div className="w-full h-full relative">
       <div ref={mapRef} className="w-full h-full" />
 
       {/* Zoom + Fullscreen Controls */}
@@ -332,6 +333,7 @@ function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
 
 export default function SalonSearchClient({
   initialVenues = [],
+  initialMeta = null,
   initialLocationLabel = "",
   initialLocationLat = null,
   initialLocationLon = null,
@@ -342,9 +344,29 @@ export default function SalonSearchClient({
 
   const [areaVenues, setAreaVenues] = React.useState(initialVenues || []); // all salons within selected distance
   const [displayedVenues, setDisplayedVenues] = React.useState(initialVenues || []); // filtered list shown
+  const [totalVenues, setTotalVenues] = React.useState(initialMeta?.total ?? 0); // total count from API
   const [loading, setLoading] = React.useState(false);
-  const [page, setPage] = React.useState(1);
-  const [hasMore, setHasMore] = React.useState(false);
+  const [page, setPage] = React.useState(initialMeta?.current_page ?? 1);
+  const [hasMore, setHasMore] = React.useState((initialMeta?.current_page ?? 1) < (initialMeta?.last_page ?? 1));
+  
+  // Refs to track current pagination state (for loadMore callback)
+  const pageRef = React.useRef(initialMeta?.current_page ?? 1);
+  const hasMoreRef = React.useRef((initialMeta?.current_page ?? 1) < (initialMeta?.last_page ?? 1));
+  const loadingRef = React.useRef(false);
+  
+  // Keep refs in sync with state
+  React.useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
+  
+  React.useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+  
+  React.useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+  
   const [showMap, setShowMap] = React.useState(false);
   const [showMobileMap, setShowMobileMap] = React.useState(false);
   const [mobilePortalEl, setMobilePortalEl] = React.useState(null);
@@ -370,6 +392,12 @@ export default function SalonSearchClient({
   const geocoderRef = React.useRef(null);
   const queryDebounceRef = React.useRef(null);
   const loadMoreRef = React.useRef(null);
+  
+  // Throttle ref to prevent duplicate rapid loadMore calls from observer
+  const lastLoadMoreTimeRef = React.useRef(0);
+  
+  // Flag to prevent observer from firing during initial render
+  const allowObserverRef = React.useRef(false);
 
   // Track which venue has opening hours expanded: Set of venueUuid
   const [expandedOpeningHours, setExpandedOpeningHours] = React.useState(new Set());
@@ -406,7 +434,7 @@ export default function SalonSearchClient({
   const fetchAreaVenues = React.useCallback(async () => {
     setLoading(true);
     try {
-      const params = { perPage: 200, page: 1 };
+      const params = { page: 1 };
       if (selectedLocation?.lat) params.lat = selectedLocation.lat;
       if (selectedLocation?.lon) params.lon = selectedLocation.lon;
       if (distance) params.distance = distance;
@@ -414,14 +442,16 @@ export default function SalonSearchClient({
       const res = await searchVenues(params);
       const data = res.data || [];
       setAreaVenues(data);
-      setDisplayedVenues(data.slice(0, perPage));
-      const total = (res.meta?.total || res.pagination?.total) ?? data.length;
-      setHasMore(data.length < total);
+      setDisplayedVenues(data);
+      const total = res.meta?.total ?? 0;
+      setTotalVenues(total);
+      setHasMore((res.meta?.current_page ?? 0) < (res.meta?.last_page ?? 0));
       setPage(1);
     } catch (e) {
       console.error("Salon area fetch failed", e);
       setAreaVenues([]);
       setDisplayedVenues([]);
+      setTotalVenues(0);
       setHasMore(false);
     } finally {
       setLoading(false);
@@ -433,7 +463,7 @@ export default function SalonSearchClient({
     async (fetchLocation, fetchDistance, searchQuery = "") => {
       setLoading(true);
       try {
-        const params = { perPage: 200, page: 1 };
+        const params = { page: 1 };
         if (fetchLocation?.lat) params.lat = fetchLocation.lat;
         if (fetchLocation?.lon) params.lon = fetchLocation.lon;
         if (fetchDistance) params.distance = fetchDistance;
@@ -442,14 +472,16 @@ export default function SalonSearchClient({
         const res = await searchVenues(params);
         const data = res.data || [];
         setAreaVenues(data);
-        setDisplayedVenues(data.slice(0, perPage));
-        const total = (res.meta?.total || res.pagination?.total) ?? data.length;
-        setHasMore(data.length < total);
+        setDisplayedVenues(data);
+        const total = res.meta?.total ?? 0;
+        setTotalVenues(total);
+        setHasMore((res.meta?.current_page ?? 0) < (res.meta?.last_page ?? 0));
         setPage(1);
       } catch (e) {
         console.error("Salon area fetch failed", e);
         setAreaVenues([]);
         setDisplayedVenues([]);
+        setTotalVenues(0);
         setHasMore(false);
       } finally {
         setLoading(false);
@@ -562,22 +594,60 @@ export default function SalonSearchClient({
   }, [isDefaultLocationLoaded, initialLocationLabel, initialLocationLat, initialLocationLon]);
 
   // Define loadMore before intersection observer effect
-  const loadMore = React.useCallback(() => {
-    if (loading || !hasMore) return;
-    const start = page * perPage;
-    const next = areaVenues.slice(start, start + perPage);
-    if (next.length === 0) return;
-    setDisplayedVenues((prev) => [...prev, ...next]);
-    setPage((p) => p + 1);
-    setHasMore(areaVenues.length > (start + next.length));
-  }, [loading, hasMore, page, areaVenues, perPage]);
+  // NOTE: Page 1 is already fetched via SSR and passed as initialVenues
+  // loadMore only fetches pages 2+ when user scrolls past initial results
+  const loadMore = React.useCallback(async () => {
+    if (loadingRef.current || !hasMoreRef.current) return;
+    
+    const nextPage = pageRef.current + 1;
+    // Safety check: never refetch page 1 (already loaded from SSR)
+    if (nextPage <= 1) {
+      console.warn('[loadMore] Attempted to fetch page', nextPage, '- skipping (page 1 is from SSR)');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const params = { page: nextPage };
+      if (selectedLocation?.lat) params.lat = selectedLocation.lat;
+      if (selectedLocation?.lon) params.lon = selectedLocation.lon;
+      if (distance) params.distance = distance;
+      if (query) params.q = query;
+
+      const res = await searchVenues(params);
+      const data = res.data || [];
+      
+      // Deduplicate venues by UUID
+      setDisplayedVenues((prev) => {
+        // Create a Set of existing UUIDs for quick lookup
+        const existingUuids = new Set(prev.map(v => v.uuid));
+        // Filter out any new venues that already exist in the list
+        const newUnique = data.filter(v => !existingUuids.has(v.uuid));
+        return [...prev, ...newUnique];
+      });
+      
+      setPage(nextPage);
+      setHasMore((res.meta?.current_page ?? 0) < (res.meta?.last_page ?? 0));
+    } catch (e) {
+      console.error("Failed to load more venues", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedLocation, distance, query]);
 
   // Intersection observer for infinite scroll
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          loadMore();
+        // Only trigger on user scroll request, not during initial render
+        if (entries[0].isIntersecting && hasMoreRef.current && !loadingRef.current && allowObserverRef.current) {
+          // Throttle: prevent more than one loadMore call per second
+          const now = Date.now();
+          if (now - lastLoadMoreTimeRef.current > 1000) {
+            lastLoadMoreTimeRef.current = now;
+            console.log('[Observer] User scrolled to bottom, fetching page', pageRef.current + 1);
+            loadMore();
+          }
         }
       },
       { threshold: 0.1 }
@@ -592,7 +662,17 @@ export default function SalonSearchClient({
         observer.unobserve(loadMoreRef.current);
       }
     };
-  }, [hasMore, loading, loadMore]);
+  }, [loadMore]);
+  
+  // Enable observer after initial render to prevent premature page 2 fetch
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      allowObserverRef.current = true;
+      console.log('[Observer] Enabled after initial render');
+    }, 500); // Wait 500ms after component mounts
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // queryDebounceRef used in handleQueryChange
 
@@ -607,9 +687,9 @@ export default function SalonSearchClient({
   };
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden pt-2 pb-0 md:pt-4">
+    <div className="relative w-full h-screen overflow-hidden pt-2 pb-0 md:pt-4 flex flex-col">
       {/* Full-width search bar */}
-      <div className="relative w-full flex justify-center px-5 sm:px-6 pb-4 z-30">
+      <div className="relative w-full flex justify-center px-5 sm:px-6 pb-4 z-30 flex-shrink-0">
         <div className="max-w-4xl w-full">
           <div className="relative">
             <div className="hidden sm:flex h-11 items-center rounded-full border border-black/80 bg-white/95 px-2 shadow-[0_18px_45px_rgba(0,0,0,0.14)] ring-2 ring-black/10 backdrop-blur-xl">
@@ -679,7 +759,9 @@ export default function SalonSearchClient({
           </div>
         </div>
       </div>
-      <div className="container mx-auto px-1 sm:px-1 mt-5">
+
+      {/* Controls and stats (non-flex, shrink naturally) */}
+      <div className="w-full mx-auto pl-4 pr-4 mt-5 flex-shrink-0">
         {/* Controls row: distance select (left) and Show Map (right) */}
         <div className="flex items-center justify-between gap-3 mb-2 mt-0">
           <div className="w-40">
@@ -703,75 +785,101 @@ export default function SalonSearchClient({
 
           <div className="flex-1" />
 
-          <div className="hidden md:block">
+          <div className="hidden md:block flex-shrink-0">
             <button
               type="button"
               onClick={() => setShowMap((s) => !s)}
-              className="h-8 px-3 border border-gray-200 rounded-md flex items-center gap-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="h-8 px-3 border border-gray-200 rounded-md flex items-center gap-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors whitespace-nowrap"
             >
-              <MapPin className="w-3.5 h-3.5" />
-              {showMap ? 'Hide Map' : 'Show Map'}
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+              {showMap ? 'Close Map' : 'Show Map'}
             </button>
           </div>
         </div>
 
-        <div className="py-2 px-3 mb-2 rounded-md border border-gray-200 bg-white/80 backdrop-blur-sm">
-          <p className="text-sm text-gray-700 font-medium">
-            Showing {displayedVenues.length} {displayedVenues.length === 1 ? 'salon' : 'salons'} within {distance} of {selectedLocation?.address || initialLocationLabel || 'selected location'}
-          </p>
-        </div>
+        {!showMap && (
+          <div className="py-2 pl-0 pr-3 mb-2 flex-shrink-0">
+            <p className="text-sm text-gray-700 font-normal">
+              Showing {displayedVenues.length}/{totalVenues} {totalVenues === 1 ? 'salon' : 'salons'} within {distance} of {selectedLocation?.address || initialLocationLabel || 'selected location'}
+            </p>
+          </div>
+        )}
 
-                <SalonMobileMapPortal
-                  showMobileMap={showMobileMap}
-                  setShowMobileMap={setShowMobileMap}
-                  selectedLocation={selectedLocation}
-                  distance={distance}
-                  router={router}
-                  mapsReady={mapsReady}
-                  VenueMap={VenueMap}
-                />
+        <SalonMobileMapPortal
+          showMobileMap={showMobileMap}
+          setShowMobileMap={setShowMobileMap}
+          selectedLocation={selectedLocation}
+          distance={distance}
+          router={router}
+          mapsReady={mapsReady}
+          VenueMap={VenueMap}
+        />
+      </div>
 
-                <section className="flex flex-1 overflow-hidden h-[calc(100vh-280px)] relative">
-                  <div className={showMap ? "flex-1 md:flex-none md:w-1/2 overflow-y-auto pl-0 pr-4 py-4" : "w-full overflow-y-auto px-0 py-4"}>
-                    <div className={showMap ? "max-w-2xl mx-auto" : ""}>
-                      <VenueSearchResultsList
-                        venues={displayedVenues}
-                        selectedLocation={selectedLocation}
-                        showMap={showMap}
-                        loading={loading}
-                        hasMore={hasMore}
-                        loadMoreRef={loadMoreRef}
-                        hideServices={true}
-                        expandedOpeningHours={expandedOpeningHours}
-                        toggleOpeningHours={toggleOpeningHours}
-                        expandedGroups={expandedGroups}
-                        toggleGroup={toggleGroup}
-                      />
-                    </div>
-                  </div>
-
-                  {showMap && (
-                    <div className="hidden md:block w-1/2 bg-white border-l border-gray-200 h-full overflow-hidden">
-                      {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) && areaVenues.length > 0 ? (
-                        <VenueMap
-                          selectedLocation={selectedLocation}
-                          searchDistance={distance}
-                          router={router}
-                          mapsReady={mapsReady}
-                        />
-                      ) : (mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                          No venues to display
-                        </div>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                          Loading map...
-                        </div>
-                      )}
+      {/* Main content section - takes remaining space */}
+      <section className="flex flex-1 overflow-hidden relative w-full">
+        {/* Salons Results View - Full width when map is hidden */}
+        {!showMap && (
+          <div className="w-full h-full overflow-y-auto relative show-scrollbar">
+            <div className="container mx-auto pl-0 pr-0 sm:pr-1 py-4">
+              {/* Show skeletons while loading and no venues yet */}
+              {loading && displayedVenues.length === 0 ? (
+                <div className="md:grid md:grid-cols-2 gap-4 hidden">
+                  {[...Array(6)].map((_, i) => (
+                    <VenueSearchResultCardSkeleton key={`skeleton-${i}`} />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <VenueSearchResultsList
+                    venues={displayedVenues}
+                    selectedLocation={selectedLocation}
+                    showMap={showMap}
+                    loading={loading}
+                    hasMore={hasMore}
+                    loadMoreRef={loadMoreRef}
+                    hideServices={true}
+                    expandedOpeningHours={expandedOpeningHours}
+                    toggleOpeningHours={toggleOpeningHours}
+                    expandedGroups={expandedGroups}
+                    toggleGroup={toggleGroup}
+                  />
+                  {/* Show loading indicator at bottom while fetching more */}
+                  {loading && displayedVenues.length > 0 && hasMore && (
+                    <div className="py-4 flex justify-center">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-sm text-gray-600">Loading more salons...</span>
+                      </div>
                     </div>
                   )}
-                </section>
-      </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Map View - Full screen when map is shown */}
+        {showMap && (
+          <div className="container mx-auto pl-0 pr-1 sm:pr-1 w-full h-full overflow-hidden flex flex-col">
+            {/* Map Container */}
+            {(mapsReady || (typeof window !== 'undefined' && window?.google?.maps)) ? (
+              <div className="flex-1 w-full overflow-hidden border border-gray-200 rounded-md">
+                <VenueMap
+                  selectedLocation={selectedLocation}
+                  searchDistance={distance}
+                  router={router}
+                  mapsReady={mapsReady}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 w-full flex items-center justify-center text-gray-500">
+                Loading map...
+              </div>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

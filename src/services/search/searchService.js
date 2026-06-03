@@ -74,7 +74,7 @@ export async function searchFeaturedServices({ lat, lon, distance } = {}) {
   }
 }
 
-export async function searchVenues({ q, lat, lon, distance = '50mi', perPage = 4, page = 1, category, audience, service, professional }) {
+export async function searchVenues({ q, lat, lon, distance = '50mi', page = 1, category, audience, service, professional }) {
   try {
     const params = new URLSearchParams();
 
@@ -86,7 +86,6 @@ export async function searchVenues({ q, lat, lon, distance = '50mi', perPage = 4
     if (audience) params.append('audience', audience);
     if (service) params.append('service', service);
     if (professional) params.append('professional', professional);
-    params.append('perPage', perPage);
     params.append('page', page);
 
     const url = `/api/search/venues?${params}`;
@@ -129,7 +128,7 @@ export async function searchVenues({ q, lat, lon, distance = '50mi', perPage = 4
  * - category: Comma-separated numeric category IDs (OR logic)
  * - audience: Comma-separated numeric audience IDs
  */
-export async function searchServices({ q, category, audience, lat, lon, distance, perPage = 10, page = 1 }) {
+export async function searchServices({ q, category, audience, lat, lon, distance, page = 1 }) {
   try {
     const params = new URLSearchParams();
 
@@ -139,7 +138,6 @@ export async function searchServices({ q, category, audience, lat, lon, distance
     if (lat) params.append('lat', lat);
     if (lon) params.append('lon', lon);
     if (distance && lat && lon) params.append('distance', distance);
-    params.append('perPage', perPage);
     params.append('page', page);
 
     const url = `/api/search/services?${params}`;

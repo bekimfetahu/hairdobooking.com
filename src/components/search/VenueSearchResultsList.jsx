@@ -21,7 +21,6 @@ function VenueSearchResultsList({
   showMap = false,
   loading = false,
   hasMore = false,
-  isLoadingMore = false,
   expandedOpeningHours = new Set(),
   toggleOpeningHours = () => {},
   expandedGroups = new Set(),
@@ -71,7 +70,7 @@ function VenueSearchResultsList({
       <div className={cn("hidden", showMap ? "md:block space-y-4" : "md:grid md:grid-cols-2 gap-4") }>
         {venues.map((venue, vi) => (
           <VenueSearchResultCard
-            key={venue.venue?.uuid || vi}
+            key={venue.uuid || venue.venue?.uuid || vi}
             venue={venue}
             index={vi}
             activeServiceName={activeServiceName}
@@ -93,7 +92,7 @@ function VenueSearchResultsList({
       <div className="md:hidden space-y-4">
         {venues.map((venue, vi) => (
           <VenueSearchResultCard
-            key={venue.venue?.uuid || vi}
+            key={venue.uuid || venue.venue?.uuid || vi}
             venue={venue}
             index={vi}
             activeServiceName={activeServiceName}
@@ -110,16 +109,9 @@ function VenueSearchResultsList({
         ))}
       </div>
 
-      {/* Load More Section */}
-      {hasMore && !loading && venues.length > 0 && (
-        <div ref={loadMoreRef} className="py-6 text-center">
-          {isLoadingMore && (
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              Loading more venues...
-            </div>
-          )}
-        </div>
+      {/* Load More Section - for scroll detection */}
+      {hasMore && venues.length > 0 && (
+        <div ref={loadMoreRef} className="py-4" />
       )}
     </div>
   );

@@ -49,6 +49,60 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Shimmer animation for skeleton loaders */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0px,
+    #e5e7eb 40px,
+    #f3f4f6 80px
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Hide scrollbar while allowing scrolling */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Show scrollbar with custom styling */
+.show-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+.show-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.show-scrollbar::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.show-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.show-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
 /* Optional: dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
