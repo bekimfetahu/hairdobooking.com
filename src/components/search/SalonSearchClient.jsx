@@ -7,11 +7,11 @@ import { cn } from '@/lib/utils';
 import LocationSearch from "@/components/search/LocationSearch";
 import VenueSearchResultsList from "@/components/search/VenueSearchResultsList";
 import VenueSearchResultCardSkeleton from "@/components/search/VenueSearchResultCardSkeleton";
-import { searchVenues } from "@/services/search/searchService";
 import Select from 'react-select';
 import useGoogleMapsReady from '@/hooks/useGoogleMapsReady';
 import { createPortal } from 'react-dom';
 import SalonMobileMapPortal from '@/components/search/SalonMobileMapPortal';
+import useSalonSearch from '@/components/search/useSalonSearch';
 
 function VenueMap({ selectedLocation, searchDistance, router, mapsReady }) {
   const mapRef = React.useRef(null);
@@ -342,31 +342,32 @@ export default function SalonSearchClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [areaVenues, setAreaVenues] = React.useState(initialVenues || []); // all salons within selected distance
-  const [displayedVenues, setDisplayedVenues] = React.useState(initialVenues || []); // filtered list shown
-  const [totalVenues, setTotalVenues] = React.useState(initialMeta?.total ?? 0); // total count from API
-  const [loading, setLoading] = React.useState(false);
-  const [page, setPage] = React.useState(initialMeta?.current_page ?? 1);
-  const [hasMore, setHasMore] = React.useState((initialMeta?.current_page ?? 1) < (initialMeta?.last_page ?? 1));
-  
-  // Refs to track current pagination state (for loadMore callback)
-  const pageRef = React.useRef(initialMeta?.current_page ?? 1);
-  const hasMoreRef = React.useRef((initialMeta?.current_page ?? 1) < (initialMeta?.last_page ?? 1));
-  const loadingRef = React.useRef(false);
-  
-  // Keep refs in sync with state
-  React.useEffect(() => {
-    pageRef.current = page;
-  }, [page]);
-  
-  React.useEffect(() => {
-    hasMoreRef.current = hasMore;
-  }, [hasMore]);
-  
-  React.useEffect(() => {
-    loadingRef.current = loading;
-  }, [loading]);
-  
+  const scrollContainerRef = React.useRef(null);
+
+  const {
+    displayedVenues,
+    totalVenues,
+    page,
+    hasMore,
+    loading,
+    query,
+    distance,
+    selectedLocation,
+    loadMoreRef,
+    handleDistanceChange,
+    handleLocationChange,
+    handleQueryChange,
+  } = useSalonSearch({
+    initialVenues,
+    initialMeta,
+    initialLocationLabel,
+    initialLocationLat,
+    initialLocationLon,
+    initialDistance,
+    initialQuery: searchParams?.get('q') || '',
+    scrollContainerRef,
+  });
+
   const [showMap, setShowMap] = React.useState(false);
   const [showMobileMap, setShowMobileMap] = React.useState(false);
   const [mobilePortalEl, setMobilePortalEl] = React.useState(null);
@@ -381,25 +382,7 @@ export default function SalonSearchClient({
       try { document.body.removeChild(el); } catch (e) {}
     };
   }, []);
-  const [query, setQuery] = React.useState((searchParams?.get("q")) || "");
-  const [selectedLocation, setSelectedLocation] = React.useState(
-    Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
-      ? { lat: initialLocationLat, lon: initialLocationLon, address: initialLocationLabel }
-      : null
-  );
-  const [distance, setDistance] = React.useState(initialDistance || "50mi");
-  const mapsReady = useGoogleMapsReady();
-  const geocoderRef = React.useRef(null);
-  const queryDebounceRef = React.useRef(null);
-  const loadMoreRef = React.useRef(null);
-  
-  // Throttle ref to prevent duplicate rapid loadMore calls from observer
-  const lastLoadMoreTimeRef = React.useRef(0);
-  
-  // Flag to prevent observer from firing during initial render
-  const allowObserverRef = React.useRef(false);
 
-  // Track which venue has opening hours expanded: Set of venueUuid
   const [expandedOpeningHours, setExpandedOpeningHours] = React.useState(new Set());
   const toggleOpeningHours = (venueUuid) => {
     setExpandedOpeningHours((prev) => {
@@ -410,7 +393,6 @@ export default function SalonSearchClient({
     });
   };
 
-  // Track which service groups are expanded: Set of "venueUuid::groupKey"
   const [expandedGroups, setExpandedGroups] = React.useState(new Set());
   const toggleGroup = (venueUuid, groupKey) => {
     const id = `${venueUuid}::${groupKey}`;
@@ -431,250 +413,13 @@ export default function SalonSearchClient({
     { value: '50mi', label: '50mi' },
   ], []);
 
-  const fetchAreaVenues = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = { page: 1 };
-      if (selectedLocation?.lat) params.lat = selectedLocation.lat;
-      if (selectedLocation?.lon) params.lon = selectedLocation.lon;
-      if (distance) params.distance = distance;
-
-      const res = await searchVenues(params);
-      const data = res.data || [];
-      setAreaVenues(data);
-      setDisplayedVenues(data);
-      const total = res.meta?.total ?? 0;
-      setTotalVenues(total);
-      setHasMore((res.meta?.current_page ?? 0) < (res.meta?.last_page ?? 0));
-      setPage(1);
-    } catch (e) {
-      console.error("Salon area fetch failed", e);
-      setAreaVenues([]);
-      setDisplayedVenues([]);
-      setTotalVenues(0);
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedLocation, distance]);
-
-  // Helper to fetch with custom location and distance
-  const performFetchWithParams = React.useCallback(
-    async (fetchLocation, fetchDistance, searchQuery = "") => {
-      setLoading(true);
-      try {
-        const params = { page: 1 };
-        if (fetchLocation?.lat) params.lat = fetchLocation.lat;
-        if (fetchLocation?.lon) params.lon = fetchLocation.lon;
-        if (fetchDistance) params.distance = fetchDistance;
-        if (searchQuery) params.q = searchQuery;
-
-        const res = await searchVenues(params);
-        const data = res.data || [];
-        setAreaVenues(data);
-        setDisplayedVenues(data);
-        const total = res.meta?.total ?? 0;
-        setTotalVenues(total);
-        setHasMore((res.meta?.current_page ?? 0) < (res.meta?.last_page ?? 0));
-        setPage(1);
-      } catch (e) {
-        console.error("Salon area fetch failed", e);
-        setAreaVenues([]);
-        setDisplayedVenues([]);
-        setTotalVenues(0);
-        setHasMore(false);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+  const mapsReady = useGoogleMapsReady();
 
   React.useEffect(() => {
     const sp = searchParams;
     const q = sp?.get("q") || "";
-    if (q && q !== query) setQuery(q);
+    if (q && q !== query) handleQueryChange(q);
   }, [searchParams]);
-
-  // Fetch on user location change (not initialization)
-  const handleLocationChange = React.useCallback(
-    (loc) => {
-      setSelectedLocation(loc);
-      // Trigger fetch with new location
-      performFetchWithParams(loc, distance, query);
-    },
-    [distance, query, performFetchWithParams]
-  );
-
-  // Fetch on user distance change (not initialization)
-  const handleDistanceChange = React.useCallback(
-    (newDistance) => {
-      setDistance(newDistance);
-      // Use selectedLocation or fallback to SSR-provided initial location
-      const locationToUse = selectedLocation || 
-        (Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon) 
-          ? { lat: initialLocationLat, lon: initialLocationLon, address: initialLocationLabel }
-          : null);
-      // Trigger fetch with new distance
-      performFetchWithParams(locationToUse, newDistance, query);
-    },
-    [selectedLocation, query, performFetchWithParams, initialLocationLat, initialLocationLon, initialLocationLabel]
-  );
-
-  // Fetch on user query/venue name change (with debounce)
-  const handleQueryChange = React.useCallback((searchQuery) => {
-    setQuery(searchQuery);
-    clearTimeout(queryDebounceRef.current);
-    
-    queryDebounceRef.current = setTimeout(() => {
-      // Use selectedLocation or fallback to SSR-provided initial location
-      const locationToUse = selectedLocation || 
-        (Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon) 
-          ? { lat: initialLocationLat, lon: initialLocationLon, address: initialLocationLabel }
-          : null);
-      // Trigger fetch with search query
-      performFetchWithParams(locationToUse, distance, searchQuery);
-    }, 300); // 300ms debounce
-  }, [selectedLocation, distance, performFetchWithParams, initialLocationLat, initialLocationLon, initialLocationLabel]);
-
-  // Initialize location: if no lat/lon, geocode location label or default to "London, UK"
-  const [isDefaultLocationLoaded, setIsDefaultLocationLoaded] = React.useState(
-    Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
-  );
-
-  React.useEffect(() => {
-    if (isDefaultLocationLoaded) return; // Only run once
-
-    const initializeLocation = async () => {
-      try {
-        // If we already have lat/lon, we're done
-        if (Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)) {
-          setIsDefaultLocationLoaded(true);
-          return;
-        }
-
-        // If Google Maps not ready yet, wait and try again
-        if (!window.google?.maps || typeof window.google.maps.Geocoder !== 'function') {
-          setTimeout(initializeLocation, 100);
-          return;
-        }
-
-        // Default to London, UK
-        const addressToGeocode = initialLocationLabel || "London, UK";
-
-        geocoderRef.current = new window.google.maps.Geocoder();
-
-        const results = await new Promise((resolve, reject) => {
-          geocoderRef.current.geocode({ address: addressToGeocode }, (results, status) => {
-            if (status === "OK" && results.length > 0) {
-              resolve(results[0]);
-            } else {
-              reject(new Error(`Geocoding failed: ${status}`));
-            }
-          });
-        });
-
-        const { lat, lng } = results.geometry.location;
-        const defaultLocation = {
-          lat: lat(),
-          lon: lng(),
-          address: addressToGeocode,
-        };
-
-        setSelectedLocation(defaultLocation);
-        setIsDefaultLocationLoaded(true);
-      } catch (err) {
-        // Error - mark as loaded anyway to avoid infinite loop
-        console.error("[SalonSearchClient] Location initialization error:", err);
-        setIsDefaultLocationLoaded(true);
-      }
-    };
-
-    initializeLocation();
-  }, [isDefaultLocationLoaded, initialLocationLabel, initialLocationLat, initialLocationLon]);
-
-  // Define loadMore before intersection observer effect
-  // NOTE: Page 1 is already fetched via SSR and passed as initialVenues
-  // loadMore only fetches pages 2+ when user scrolls past initial results
-  const loadMore = React.useCallback(async () => {
-    if (loadingRef.current || !hasMoreRef.current) return;
-    
-    const nextPage = pageRef.current + 1;
-    // Safety check: never refetch page 1 (already loaded from SSR)
-    if (nextPage <= 1) {
-      console.warn('[loadMore] Attempted to fetch page', nextPage, '- skipping (page 1 is from SSR)');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      const params = { page: nextPage };
-      if (selectedLocation?.lat) params.lat = selectedLocation.lat;
-      if (selectedLocation?.lon) params.lon = selectedLocation.lon;
-      if (distance) params.distance = distance;
-      if (query) params.q = query;
-
-      const res = await searchVenues(params);
-      const data = res.data || [];
-      
-      // Deduplicate venues by UUID
-      setDisplayedVenues((prev) => {
-        // Create a Set of existing UUIDs for quick lookup
-        const existingUuids = new Set(prev.map(v => v.uuid));
-        // Filter out any new venues that already exist in the list
-        const newUnique = data.filter(v => !existingUuids.has(v.uuid));
-        return [...prev, ...newUnique];
-      });
-      
-      setPage(nextPage);
-      setHasMore((res.meta?.current_page ?? 0) < (res.meta?.last_page ?? 0));
-    } catch (e) {
-      console.error("Failed to load more venues", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedLocation, distance, query]);
-
-  // Intersection observer for infinite scroll
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Only trigger on user scroll request, not during initial render
-        if (entries[0].isIntersecting && hasMoreRef.current && !loadingRef.current && allowObserverRef.current) {
-          // Throttle: prevent more than one loadMore call per second
-          const now = Date.now();
-          if (now - lastLoadMoreTimeRef.current > 1000) {
-            lastLoadMoreTimeRef.current = now;
-            console.log('[Observer] User scrolled to bottom, fetching page', pageRef.current + 1);
-            loadMore();
-          }
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
-      }
-    };
-  }, [loadMore]);
-  
-  // Enable observer after initial render to prevent premature page 2 fetch
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      allowObserverRef.current = true;
-      console.log('[Observer] Enabled after initial render');
-    }, 500); // Wait 500ms after component mounts
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  // queryDebounceRef used in handleQueryChange
 
   const handleSearchNavigate = async () => {
     const params = new URLSearchParams();
@@ -820,7 +565,7 @@ export default function SalonSearchClient({
       <section className="flex flex-1 overflow-hidden relative w-full">
         {/* Salons Results View - Full width when map is hidden */}
         {!showMap && (
-          <div className="w-full h-full overflow-y-auto relative show-scrollbar">
+          <div ref={scrollContainerRef} className="w-full h-full overflow-y-auto relative show-scrollbar">
             <div className="container mx-auto pl-0 pr-0 sm:pr-1 py-4">
               {/* Show skeletons while loading and no venues yet */}
               {loading && displayedVenues.length === 0 ? (

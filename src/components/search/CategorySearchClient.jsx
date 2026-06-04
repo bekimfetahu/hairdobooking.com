@@ -802,9 +802,9 @@ export default function CategorySearchClient({
 
 
             {/* ===== CATEGORY SELECTOR SECTION ===== */}
-            <section className="bg-white border-b border-gray-200 py-8 md:py-12">
+            <section className="bg-white border-b border-gray-200 py-4 md:py-6">
                 <div className="max-w-6xl mx-auto px-4 md:px-6">
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8">
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
                         Categories
                     </h2>
 
@@ -814,15 +814,15 @@ export default function CategorySearchClient({
                                 <button
                                     key={category.uuid}
                                     onClick={() => handleCategorySelect(category)}
-                                    className={`flex-shrink-0 w-24 p-2 rounded-lg transition-all duration-200 flex flex-col items-center gap-1 border-2 ${selectedCategory?.uuid === category.uuid
+                                    className={`flex-shrink-0 px-3 py-1 rounded-lg transition-all duration-200 flex flex-row items-center gap-2 border-2 whitespace-nowrap ${selectedCategory?.uuid === category.uuid
                                             ? 'bg-red-600 border-red-600 text-white shadow-lg'
                                             : 'bg-white border-black text-black hover:bg-gray-50'
                                         }`}
                                 >
-                                    <div className="flex justify-center">
+                                    <div className="flex-shrink-0">
                                         {getIconComponent(category.icon)}
                                     </div>
-                                    <span className="text-xs font-medium text-center leading-tight">{category.name}</span>
+                                    <span className="text-xs font-medium leading-tight">{category.name}</span>
                                 </button>
                             ))}
                         </div>

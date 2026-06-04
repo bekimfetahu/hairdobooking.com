@@ -154,7 +154,7 @@ export default function NavbarClient() {
     };
 
     return (
-        <nav ref={navRef} className="fixed top-0 z-50 w-full border-b border-black/10 bg-white/95 backdrop-blur-xl">
+        <nav ref={navRef} className="fixed top-0 z-50 w-full border-b border-black/10 bg-white">
             <div className="mx-auto max-w-[1200px]">
                 <div className="flex h-16 items-center justify-between gap-4">
                     <Link href="/" className="flex items-center gap-3">
