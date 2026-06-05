@@ -280,6 +280,7 @@ export default function ServiceNameSearchClient({
   const [hasMore, setHasMore] = React.useState(
     initialVenuesMeta ? (Number(initialVenuesMeta.total || 0) > (initialVenues?.length || 0)) : true
   );
+  const [totalResults, setTotalResults] = React.useState(initialVenuesMeta?.total ?? (initialVenues?.length ?? 0));
   const mapsReady = useGoogleMapsReady();
   const [expandedFilter, setExpandedFilter] = React.useState(null);
   const [searchDistance, setSearchDistance] = React.useState(initialDistance);
@@ -297,6 +298,7 @@ export default function ServiceNameSearchClient({
     setVenues(initialVenues || []);
     setCurrentPage(initialVenuesMeta?.current_page ? Number(initialVenuesMeta.current_page) : 1);
     setHasMore(initialVenuesMeta ? (Number(initialVenuesMeta.total || 0) > (initialVenues?.length || 0)) : true);
+    setTotalResults(initialVenuesMeta?.total ?? (initialVenues?.length ?? 0));
     setSearchDistance(initialDistance || '50mi');
     setSelectedLocation(
       Number.isFinite(initialLocationLat) && Number.isFinite(initialLocationLon)
@@ -500,6 +502,32 @@ export default function ServiceNameSearchClient({
         const response = await searchVenues(params);
         const newVenues = response?.data || [];
 
+        // Inspect pagination meta if present to avoid requesting beyond last page
+        const meta = response?.meta || {};
+        // Dev debug: log meta to help trace SSR vs client responses
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
+          console.debug('[ServiceNameSearchClient] response.meta:', meta);
+        }
+        const respCurrent = Number.isFinite(Number(meta.current_page)) ? Number(meta.current_page) : null;
+        const respLast = Number.isFinite(Number(meta.last_page)) ? Number(meta.last_page) : null;
+
+        // If API reports current_page > last_page, treat as no-more-results and skip appending further pages
+        if (respCurrent !== null && respLast !== null && respCurrent > respLast) {
+          console.warn('[ServiceNameSearchClient] API returned current_page > last_page, aborting append', { respCurrent, respLast, page });
+          // Update totals if provided
+          if (typeof response.total === 'number') setTotalResults(response.total);
+          // Mark no more results
+          setHasMore(false);
+          // If this was an initial load, replace; otherwise do not append
+          if (!append) {
+            setVenues(newVenues);
+            setCurrentPage(1);
+            loadedPagesRef.current.add(1);
+          }
+          return;
+        }
+
         if (append) {
           setVenues(prev => [...prev, ...newVenues]);
           // mark this page as loaded
@@ -511,10 +539,16 @@ export default function ServiceNameSearchClient({
           loadedPagesRef.current.add(1);
         }
 
-        // Check if there are more results
-        const totalResults = response?.total || 0;
+        // Check if the API returned a total count in meta. If it did, update totals/hasMore.
+        const respTotal = (response && response.meta && typeof response.meta.total === 'number') ? response.meta.total : null;
+        if (respTotal !== null) {
+          setTotalResults(respTotal);
+        }
+
         const loadedSoFar = append ? venues.length + newVenues.length : newVenues.length;
-        setHasMore(loadedSoFar < totalResults);
+        if (respTotal !== null) {
+          setHasMore(loadedSoFar < respTotal);
+        }
 
         if (append) {
           setCurrentPage(page);
@@ -1497,7 +1531,7 @@ export default function ServiceNameSearchClient({
           <div className="py-2 px-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-700 font-medium">
-                Showing {venuesWithMatch.length} {venuesWithMatch.length === 1 ? "salon" : "salons"} offering &quot;{activeServiceName}&quot;
+                Showing {venuesWithMatch.length}/{totalResults} {totalResults === 1 ? "salon" : "salons"} offering &quot;{activeServiceName}&quot;
               </p>
               <button
                 type="button"

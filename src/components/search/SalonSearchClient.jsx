@@ -354,6 +354,7 @@ export default function SalonSearchClient({
     distance,
     selectedLocation,
     loadMoreRef,
+    loadMore,
     handleDistanceChange,
     handleLocationChange,
     handleQueryChange,
@@ -367,6 +368,85 @@ export default function SalonSearchClient({
     initialQuery: searchParams?.get('q') || '',
     scrollContainerRef,
   });
+
+  // Infinite-scroll observer: observe sentinel within the scroll container and trigger loadMore
+  React.useEffect(() => {
+    if (!hasMore || loading) return;
+    const sentinel = loadMoreRef?.current;
+    const rootEl = scrollContainerRef?.current || null;
+    if (!sentinel) return;
+    // Defer observing until user intent (scroll/wheel/touch) to avoid
+    // auto-loading page 2 immediately after SSR hydration.
+    let observer = null;
+    let scrollListener = null;
+    const startObserving = () => {
+      if (observer) return;
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && hasMore && !loading) {
+            // eslint-disable-next-line no-console
+            console.debug('[SalonSearchClient] sentinel intersecting, loading more');
+            void loadMore();
+          }
+        },
+        { threshold: 0.1, root: rootEl }
+      );
+      try { observer.observe(sentinel); } catch (e) {}
+    };
+
+    // If root exists, wait for user intent: scroll, wheel, or touchstart.
+    // Also start immediately if container is already scrolled (user previously scrolled).
+    let intentListener = null;
+    if (rootEl) {
+      const onIntent = () => {
+        startObserving();
+        try { rootEl.removeEventListener('scroll', onIntent); } catch (e) {}
+        try { rootEl.removeEventListener('wheel', onIntent); } catch (e) {}
+        try { rootEl.removeEventListener('touchstart', onIntent); } catch (e) {}
+      };
+
+      // If user already scrolled the container before effect ran, start observing now
+      try {
+        if (rootEl.scrollTop && rootEl.scrollTop > 0) {
+          startObserving();
+        } else {
+          rootEl.addEventListener('scroll', onIntent, { passive: true });
+          rootEl.addEventListener('wheel', onIntent, { passive: true });
+          rootEl.addEventListener('touchstart', onIntent, { passive: true });
+          intentListener = onIntent;
+        }
+      } catch (e) {
+        // Fallback: start observing
+        startObserving();
+      }
+    } else {
+      // No root (fallback to viewport) — start observing only after wheel/touch on window
+      const onWindowIntent = () => {
+        startObserving();
+        try { window.removeEventListener('wheel', onWindowIntent); } catch (e) {}
+        try { window.removeEventListener('touchstart', onWindowIntent); } catch (e) {}
+      };
+      window.addEventListener('wheel', onWindowIntent, { passive: true });
+      window.addEventListener('touchstart', onWindowIntent, { passive: true });
+      intentListener = onWindowIntent;
+    }
+
+    return () => {
+      if (rootEl && intentListener) {
+        try { rootEl.removeEventListener('scroll', intentListener); } catch (e) {}
+        try { rootEl.removeEventListener('wheel', intentListener); } catch (e) {}
+        try { rootEl.removeEventListener('touchstart', intentListener); } catch (e) {}
+      }
+      if (!rootEl && intentListener) {
+        try { window.removeEventListener('wheel', intentListener); } catch (e) {}
+        try { window.removeEventListener('touchstart', intentListener); } catch (e) {}
+      }
+      if (observer) {
+        try { observer.unobserve(sentinel); } catch (e) {}
+        try { observer.disconnect(); } catch (e) {}
+      }
+    };
+  }, [hasMore, loading, loadMoreRef, scrollContainerRef, loadMore]);
 
   const [showMap, setShowMap] = React.useState(false);
   const [showMobileMap, setShowMobileMap] = React.useState(false);
@@ -589,6 +669,7 @@ export default function SalonSearchClient({
                     expandedGroups={expandedGroups}
                     toggleGroup={toggleGroup}
                   />
+                  {/* Infinite-scroll sentinel handled by VenueSearchResultsList when `loadMoreRef` is provided */}
                   {/* Show loading indicator at bottom while fetching more */}
                   {loading && displayedVenues.length > 0 && hasMore && (
                     <div className="py-4 flex justify-center">

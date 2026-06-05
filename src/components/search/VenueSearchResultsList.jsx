@@ -109,8 +109,8 @@ function VenueSearchResultsList({
         ))}
       </div>
 
-      {/* Load More Section - for scroll detection */}
-      {hasMore && venues.length > 0 && (
+      {/* Load More sentinel only when observer ref provided */}
+      {hasMore && venues.length > 0 && loadMoreRef && (
         <div ref={loadMoreRef} className="py-4" />
       )}
     </div>

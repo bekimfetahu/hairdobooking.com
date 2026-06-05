@@ -26,6 +26,7 @@ export default function useSalonSearch({
   );
 
   const pageRef = React.useRef(page);
+  const loadedPagesRef = React.useRef(new Set([initialMeta?.current_page ?? 1]));
   const hasMoreRef = React.useRef(hasMore);
   const loadingRef = React.useRef(loading);
   const distanceRef = React.useRef(distance);
@@ -60,6 +61,12 @@ export default function useSalonSearch({
 
   const fetchPage = React.useCallback(async (pageNum, { replace = true } = {}) => {
     if (loadingRef.current) return null;
+    // Skip fetching a page we've already loaded from SSR or earlier
+    if (!replace && loadedPagesRef.current.has(pageNum)) {
+      // eslint-disable-next-line no-console
+      console.debug('[useSalonSearch] Skipping fetch for already-loaded page', pageNum);
+      return null;
+    }
     setLoading(true);
     try {
       const params = buildParamsForPage(pageNum);
@@ -67,17 +74,47 @@ export default function useSalonSearch({
       const data = res.data || [];
       if (replace) {
         setDisplayedVenues(data);
+        // reset loaded pages to the new initial page (1)
+        loadedPagesRef.current = new Set([1]);
       } else {
         setDisplayedVenues((prev) => {
           const existing = new Set(prev.map(v => v.uuid));
           const newUnique = data.filter(v => !existing.has(v.uuid));
           return [...prev, ...newUnique];
         });
+        // mark this page as loaded
+        loadedPagesRef.current.add(pageNum);
       }
-      setTotalVenues(res.meta?.total ?? 0);
-      const cur = res.meta?.current_page ?? pageNum;
-      const last = res.meta?.last_page ?? cur;
-      setHasMore(cur < last);
+      const meta = res.meta || {};
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.debug('[useSalonSearch] response.meta:', meta);
+      }
+
+      // If meta present, use it to update totals/hasMore safely
+      const respTotal = (meta && typeof meta.total === 'number') ? meta.total : null;
+      const respCurrent = (meta && Number.isFinite(Number(meta.current_page))) ? Number(meta.current_page) : null;
+      const respLast = (meta && Number.isFinite(Number(meta.last_page))) ? Number(meta.last_page) : null;
+
+      // If API reports current_page > last_page, treat as no-more-results
+      if (respCurrent !== null && respLast !== null && respCurrent > respLast) {
+        if (respTotal !== null) setTotalVenues(respTotal);
+        setHasMore(false);
+        if (replace) {
+          setDisplayedVenues(data);
+          setPage(1);
+        }
+        return res;
+      }
+
+      if (respTotal !== null) {
+        setTotalVenues(respTotal);
+      }
+
+      if (respCurrent !== null && respLast !== null) {
+        setHasMore(respCurrent < respLast);
+      }
+
       setPage(pageNum);
       return res;
     } catch (e) {
@@ -124,23 +161,7 @@ export default function useSalonSearch({
     await fetchPage(nextPage, { replace: false });
   }, [fetchPage]);
 
-  // Intersection observer
-  React.useEffect(() => {
-    if (!loadMoreRef.current) return;
-    const root = (scrollContainerRef && scrollContainerRef.current) || null;
-    const obs = new IntersectionObserver((entries) => {
-      if (!(entries && entries[0])) return;
-      if (entries[0].isIntersecting && !loadingRef.current && hasMoreRef.current) {
-        if (isFreshSearchRef.current) {
-          isFreshSearchRef.current = false;
-          return;
-        }
-        loadMore();
-      }
-    }, { root, threshold: 0.1 });
-    obs.observe(loadMoreRef.current);
-    return () => obs.disconnect();
-  }, [loadMoreRef.current]);
+  // NOTE: Infinite-scroll observer removed — loading more is now manual via `loadMore()`
 
   return {
     displayedVenues,
