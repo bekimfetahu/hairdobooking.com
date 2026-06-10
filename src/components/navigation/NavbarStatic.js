@@ -219,7 +219,7 @@ export default function NavbarStatic({ initialUser = null }) {
               href={preferredVenueSlug ? `/salon/${preferredVenueSlug}` : '/salon/search'}
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50"
             >
-              <MapPin className="h-4 w-4 text-black" />
+              <MapPin className="h-4 w-4 text-red-500" />
               <span className="max-w-[180px] truncate text-xs text-black">
                 {preferredVenueLabel}
               </span>
