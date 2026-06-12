@@ -77,6 +77,16 @@ export default function CheckoutPage({ appointmentUuid: propAppointmentUuid }) {
   const fromTime = appointment.from_time ? dayjs(appointment.from_time).format('dddd, D MMMM') : '';
   const timeRange = appointment.from_time ? (appointment.to_time ? `${dayjs(appointment.from_time).format('HH:mm')} → ${dayjs(appointment.to_time).format('HH:mm')}` : dayjs(appointment.from_time).format('HH:mm')) : '';
 
+  // Determine whether the appointment has already been paid.
+  // Accept common paid status labels returned by backend/Stripe.
+  const paidStatuses = ['succeeded', 'confirmed', 'paid'];
+  const intentStatus = paymentIntent?.stripe_status || paymentIntent?.status || null;
+  const isPaid = (
+    paidStatuses.includes(String(appointment?.payment?.status ?? '').toLowerCase()) ||
+    (intentStatus && paidStatuses.includes(String(intentStatus).toLowerCase())) ||
+    appointment?.is_paid === true
+  );
+
   return (
     <div className="max-w-2xl mx-auto p-6">
       <div className="rounded-md border border-black/10 bg-white p-4 shadow-sm">
@@ -140,34 +150,40 @@ export default function CheckoutPage({ appointmentUuid: propAppointmentUuid }) {
         <div className="p-5">
           {paymentIntent && (
             <div className="space-y-3">
-              <p className="text-sm text-neutral-700">To complete your booking, pay now to confirm your appointment. Payments are processed securely through Stripe.</p>
+              {!isPaid ? (
+                <>
+                  <p className="text-sm text-neutral-700">To complete your booking, pay now to confirm your appointment. Payments are processed securely through Stripe.</p>
 
-              {/* Show Pay now when payment is required/optional, when a client_secret is present,
-                  or when a payment intent ID / pending stripe status exists (server returned intent id only) */}
-              {(
-                paymentIntent.payment_required ||
-                paymentIntent.payment_optional ||
-                paymentIntent.client_secret ||
-                paymentIntent.payment_intent_id ||
-                paymentIntent.stripe_status === 'pending'
-              ) ? (
-                <div className="flex flex-col gap-2">
-                  <button
-                    className="w-full inline-flex items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-neutral-800"
-                    onClick={() => setShowPaymentModal(true)}
-                  >
-                    Pay now
-                  </button>
-                  {paymentIntent.payment_optional && (
-                    <button
-                      className="w-full mt-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg border border-gray-300"
-                      onClick={() => window.location.href = `/checkout/${appointment.uuid}/success`}
-                    >
-                      Pay at Salon
-                    </button>
+                  {/* Show Pay now when payment is required/optional, when a client_secret is present,
+                      or when a payment intent ID / pending stripe status exists (server returned intent id only) */}
+                  {(paymentIntent.payment_required || paymentIntent.payment_optional || paymentIntent.client_secret || paymentIntent.payment_intent_id || paymentIntent.stripe_status === 'pending') ? (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        className="w-full inline-flex items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-neutral-800"
+                        onClick={() => { if (!isPaid) setShowPaymentModal(true); }}
+                      >
+                        Pay now
+                      </button>
+                      {paymentIntent.payment_optional && (
+                        <button
+                          className="w-full mt-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg border border-gray-300"
+                          onClick={() => window.location.href = `/checkout/${appointment.uuid}/success`}
+                        >
+                          Pay at Salon
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <div className="rounded-md border border-emerald-100 bg-emerald-50 p-4">
+                  <p className="text-sm font-semibold text-emerald-800">Payment received</p>
+                  <p className="mt-1 text-sm text-emerald-700">Thank you — we’ve received your payment and your appointment is confirmed. A receipt has been sent to <span className="font-medium text-emerald-900">{appointment.client?.email || 'your email'}</span>.</p>
+                  {paymentIntent?.amount && (
+                    <p className="mt-2 text-xs text-emerald-700">Amount paid: {paymentIntent.currency ? `${paymentIntent.currency} ` : ''}{paymentIntent.amount}</p>
                   )}
                 </div>
-              ) : null}
+              )}
             </div>
           )}
 
