@@ -92,7 +92,8 @@ export default function StripePaymentForm({
         paymentIntent.status === 'succeeded' ||
         paymentIntent.status === 'processing'
       ) {
-        // Confirm payment with backend
+        onClose,
+      }) {
         console.log('Stripe payment succeeded/processing - appointmentId:', appointmentId, 'paymentIntent.id:', paymentIntent.id);
         await confirmPaymentWithBackend(appointmentId, paymentIntent.id);
       } else {
@@ -197,10 +198,11 @@ export default function StripePaymentForm({
 
       {/* Timeout Warning */}
       {timeoutWarning && (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-md mb-4">
-          <p className="text-sm">
-            ⚠️ Your payment session will expire in 3 minutes. Please complete payment now.
-          </p>
+              console.error('Payment confirm failed:', response.status, data);
+              setErrorMessage(data.message || 'Failed to confirm payment');
+              setPaymentStatus('confirmation_failed');
+              onPaymentError?.(data);
+              return;
         </div>
       )}
 

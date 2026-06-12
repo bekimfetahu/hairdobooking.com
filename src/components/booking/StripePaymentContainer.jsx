@@ -150,6 +150,7 @@ export default function StripePaymentContainer({
         onPaymentSuccess={onPaymentSuccess}
         onPaymentError={onPaymentError}
         onSkipPayment={onSkipPayment}
+        onClose={onClose}
       />
     </Elements>
   );
