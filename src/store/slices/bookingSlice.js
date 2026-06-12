@@ -43,6 +43,9 @@ const defaultBooking = {
   voucherValidating: false,
   pendingAppointment: null,
   pendingPaymentIntent: null,
+  pendingAppointmentSnapshot: null,
+  reservationUuid: null,
+  hasUserModifiedSelection: false,
 };
 
 function getToday() {
@@ -69,10 +72,12 @@ const bookingSlice = createSlice({
     setSelectedDate(state, action) {
       const { slug, date } = action.payload;
       if (state.bySlug[slug]) state.bySlug[slug].selectedDate = date;
+      if (state.bySlug[slug]) state.bySlug[slug].hasUserModifiedSelection = true;
     },
     setSelectedServiceUuid(state, action) {
       const { slug, uuid } = action.payload;
       if (state.bySlug[slug]) state.bySlug[slug].selectedServiceUuid = uuid;
+      if (state.bySlug[slug]) state.bySlug[slug].hasUserModifiedSelection = true;
     },
     setSelectedCategoryUuid(state, action) {
       const { slug, uuid } = action.payload;
@@ -83,6 +88,7 @@ const bookingSlice = createSlice({
         } else {
           state.bySlug[slug].selectedCategoryUuids = [...uuids, uuid];
         }
+        state.bySlug[slug].hasUserModifiedSelection = true;
       }
     },
     setSelectedAudienceUuid(state, action) {
@@ -94,23 +100,28 @@ const bookingSlice = createSlice({
         } else {
           state.bySlug[slug].selectedAudienceUuids = [...uuids, uuid];
         }
+        state.bySlug[slug].hasUserModifiedSelection = true;
       }
     },
     setSelectedProfessionalUuid(state, action) {
       const { slug, uuid } = action.payload;
       if (state.bySlug[slug]) state.bySlug[slug].selectedProfessionalUuid = uuid;
+      if (state.bySlug[slug]) state.bySlug[slug].hasUserModifiedSelection = true;
     },
     setSelectedTime(state, action) {
       const { slug, time } = action.payload;
       if (state.bySlug[slug]) state.bySlug[slug].selectedTime = time;
+      if (state.bySlug[slug]) state.bySlug[slug].hasUserModifiedSelection = true;
     },
     setSelectedComments(state, action) {
       const { slug, comments } = action.payload;
       if (state.bySlug[slug]) state.bySlug[slug].selectedComments = comments;
+      if (state.bySlug[slug]) state.bySlug[slug].hasUserModifiedSelection = true;
     },
     setServiceSearch(state, action) {
       const { slug, query } = action.payload;
       if (state.bySlug[slug]) state.bySlug[slug].serviceSearch = query;
+      if (state.bySlug[slug]) state.bySlug[slug].hasUserModifiedSelection = true;
     },
     setIsServiceSectionOpen(state, action) {
       const { slug, open } = action.payload;
@@ -151,17 +162,23 @@ const bookingSlice = createSlice({
       if (state.bySlug[slug]) state.bySlug[slug].voucherValidating = validating;
     },
     setPendingAppointment(state, action) {
-      const { slug, appointment, payment_intent } = action.payload;
-      if (state.bySlug[slug]) {
-        state.bySlug[slug].pendingAppointment = appointment || null;
-        state.bySlug[slug].pendingPaymentIntent = payment_intent || null;
-      }
+        const { slug, appointment, payment_intent, snapshot } = action.payload;
+        if (state.bySlug[slug]) {
+          state.bySlug[slug].pendingAppointment = appointment || null;
+          state.bySlug[slug].pendingPaymentIntent = payment_intent || null;
+          state.bySlug[slug].pendingAppointmentSnapshot = snapshot || null;
+          state.bySlug[slug].reservationUuid = appointment?.uuid || null;
+          state.bySlug[slug].hasUserModifiedSelection = false;
+        }
     },
     clearPendingAppointment(state, action) {
       const { slug } = action.payload;
       if (state.bySlug[slug]) {
         state.bySlug[slug].pendingAppointment = null;
         state.bySlug[slug].pendingPaymentIntent = null;
+          state.bySlug[slug].pendingAppointmentSnapshot = null;
+        state.bySlug[slug].reservationUuid = null;
+        state.bySlug[slug].hasUserModifiedSelection = false;
       }
     },
     clearBooking(state, action) {
@@ -177,6 +194,7 @@ const bookingSlice = createSlice({
 const fallbackBooking = { ...defaultBooking, selectedDate: null };
 fallbackBooking.pendingAppointment = null;
 fallbackBooking.pendingPaymentIntent = null;
+fallbackBooking.pendingAppointmentSnapshot = null;
 
 // Selector: get booking state for a given slug (returns stable default if missing)
 export const selectBooking = (slug) => (state) =>

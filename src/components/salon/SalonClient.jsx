@@ -13,6 +13,7 @@ import {
   fetchSalonAvailabilityByDateRange,
   createSalonAppointment,
   validateSalonVoucher,
+  fetchAppointmentPaymentStatus,
 } from "@/services/salon/salonService";
 import SalonDatePicker from "@/components/booking/SalonDatePicker";
 import StepSection from "@/components/booking/StepSection";
@@ -96,7 +97,6 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     isServiceSectionOpen,
     isProfessionalSectionOpen,
     isTimeSectionOpen,
-    isCommentsSectionOpen,
     voucherCode,
     selectedVoucher,
     voucherError,
@@ -241,20 +241,9 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
   // Payment flow state
   const [paymentRequired, setPaymentRequired] = useState(false);
 
-  // Restore pending appointment/payment intent from localStorage into Redux so users can retry payment
-  useEffect(() => {
-    if (!slug) return;
-    try {
-      const saved = localStorage.getItem(`pending_appointment_${slug}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.appointment || parsed?.payment_intent) {
-          dispatch(setPendingAppointment({ slug, appointment: parsed.appointment || null, payment_intent: parsed.payment_intent || null }));
-          console.log('Restored pending appointment into store for', slug, parsed.appointment?.uuid || null);
-        }
-      }
-    } catch (e) {}
-  }, [slug, dispatch]);
+  // NOTE: We intentionally do NOT persist pending appointment/payment intent
+  // to localStorage to avoid stale client_secret/payment_intent loops.
+  // Pending appointments live in Redux for the lifetime of the page.
 
   const toggleFilter = useCallback(() => {
     setExpandedFilter(expandedFilter === 'filters' ? null : 'filters');
@@ -264,17 +253,98 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
 
   const handleCategoryToggle = useCallback(
     (categoryUuid) => {
-      dispatch(setCategory({ slug, uuid: categoryUuid }));
+      ensureCanModify(() => dispatch(setCategory({ slug, uuid: categoryUuid })));
     },
     [slug, dispatch]
   );
 
   const handleAudienceToggle = useCallback(
     (audienceUuid) => {
-      dispatch(setAudience({ slug, uuid: audienceUuid }));
+      ensureCanModify(() => dispatch(setAudience({ slug, uuid: audienceUuid })));
     },
     [slug, dispatch]
   );
+
+  // Prevent multiple simultaneous decision prompts
+  const decisionPendingRef = useRef(false);
+
+  // Ensure modifications are allowed when an active reservation exists.
+  const ensureCanModify = useCallback(async (changeCallback) => {
+    const reservationUuid = booking?.reservationUuid;
+    if (!reservationUuid) {
+      changeCallback();
+      return;
+    }
+
+    // If a decision prompt is already visible, show a short toast and do nothing
+    if (decisionPendingRef.current) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Please choose Cancel or Keep your active reservation first',
+        showConfirmButton: false,
+        timer: 2000,
+      });
+      return;
+    }
+
+    decisionPendingRef.current = true;
+
+    try {
+      const result = await Swal.fire({
+        title: 'You have an active reservation',
+        text: 'You already have an ongoing appointment reservation. Cancel it to make a new selection, or keep it to continue with your current selection?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Cancel Reservation',
+        cancelButtonText: 'Keep Reservation',
+        focusCancel: true,
+        allowOutsideClick: false,
+      });
+
+      if (result.isConfirmed) {
+        try {
+          setBookingSubmitting(true);
+          const res = await fetch(`/api/appointments/${reservationUuid}`, { method: 'DELETE' });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            if (res.status === 404) {
+              const force = await Swal.fire({
+                title: 'Server cancel unavailable',
+                text: 'Could not cancel on server. Force-clear local reservation and continue? Server slot may remain reserved.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Force continue',
+                cancelButtonText: 'Go to payment',
+                focusCancel: true,
+              });
+
+              if (force.isConfirmed) {
+                dispatch(clearPendingAppointment({ slug }));
+                changeCallback();
+              } else {
+                window.location.href = `/checkout/${reservationUuid}`;
+              }
+              setBookingSubmitting(false);
+              return;
+            }
+            throw new Error(body.message || 'Failed to cancel reservation');
+          }
+          dispatch(clearPendingAppointment({ slug }));
+          changeCallback();
+        } catch (e) {
+          setBookingError(e.message || 'Failed to cancel reservation');
+        } finally {
+          setBookingSubmitting(false);
+        }
+      } else {
+        // User chose to keep reservation — do nothing
+      }
+    } finally {
+      decisionPendingRef.current = false;
+    }
+  }, [booking, dispatch, slug]);
 
   const clearFilters = useCallback(() => {
     selectedCategoryUuids?.forEach((uuid) => {
@@ -704,30 +774,93 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
       return;
     }
 
-    // LocalStore/Redux fallback: if there is a pending appointment stored in Redux, reopen payment modal
-    const pendingAppointment = booking?.pendingAppointment;
-    const pendingPaymentIntent = booking?.pendingPaymentIntent;
+    // Reservation/Modification rules
+    const reservationUuid = booking?.reservationUuid;
+    const hasUserModifiedSelection = !!booking?.hasUserModifiedSelection;
 
-    if ((!pendingAppointment || !pendingPaymentIntent) && typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(`pending_appointment_${slug}`);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed?.appointment && parsed?.payment_intent) {
-            dispatch(setPendingAppointment({ slug, appointment: parsed.appointment, payment_intent: parsed.payment_intent }));
-            console.log('Restored pending appointment from localStorage into store, opening payment modal', parsed.appointment.uuid);
+    if (reservationUuid) {
+      // 1) reservation exists and selection unchanged -> reopen Stripe immediately
+      if (!hasUserModifiedSelection) {
+        const pendingPaymentIntent = booking?.pendingPaymentIntent;
+        if (pendingPaymentIntent) {
+          setPaymentRequired(true);
+          return;
+        }
+
+        // Try refreshing payment intent from server
+        try {
+          const status = await fetchAppointmentPaymentStatus(reservationUuid);
+          if (status?.payment_intent) {
+            dispatch(setPendingAppointment({ slug, appointment: status.appointment, payment_intent: status.payment_intent, snapshot: booking?.pendingAppointmentSnapshot }));
             setPaymentRequired(true);
-            setBookingSubmitting(false);
             return;
           }
+        } catch (err) {
+          console.warn('Failed to refresh payment intent for reservation', err?.message);
         }
-      } catch (e) {}
-    }
 
-    if (pendingAppointment && pendingPaymentIntent) {
-      console.log('Found existing pending appointment in store, reopening payment modal', pendingAppointment.uuid);
-      setPaymentRequired(true);
-      return;
+        // Fallback: open checkout page for reservation
+        window.location.href = `/checkout/${reservationUuid}`;
+        return;
+      }
+
+      // 2) reservation exists and user modified selection -> prompt cancel or keep
+      const result = await Swal.fire({
+        title: 'You have an active reservation',
+        text: 'You already have a reserved appointment. Cancel it and continue with a new selection?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, cancel & continue',
+        cancelButtonText: 'No, keep reservation',
+        focusCancel: true,
+      });
+
+      if (result.isConfirmed) {
+        try {
+          setBookingSubmitting(true);
+          const res = await fetch(`/api/appointments/${reservationUuid}`, { method: 'DELETE' });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            if (res.status === 404) {
+              const force = await Swal.fire({
+                title: 'Server cancel unavailable',
+                text: 'Could not cancel on server. Force-clear local reservation and continue? Server slot may remain reserved.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Force continue',
+                cancelButtonText: 'Go to payment',
+              });
+
+              if (force.isConfirmed) {
+                dispatch(clearPendingAppointment({ slug }));
+              } else {
+                window.location.href = `/checkout/${reservationUuid}`;
+                return;
+              }
+            } else {
+              throw new Error(body.message || 'Failed to cancel reservation');
+            }
+          } else {
+            dispatch(clearPendingAppointment({ slug }));
+          }
+        } catch (e) {
+          setBookingError(e.message || 'Failed to cancel reservation');
+          setBookingSubmitting(false);
+          return;
+        }
+        // proceed to create new appointment
+      } else {
+        // User kept reservation: revert selection to snapshot and open payment
+        const snapshot = booking?.pendingAppointmentSnapshot;
+        if (snapshot) {
+          if (snapshot.service_uuid) dispatch(setService({ slug, uuid: snapshot.service_uuid }));
+          if (snapshot.employee_uuid) dispatch(setProfessional({ slug, uuid: snapshot.employee_uuid }));
+          if (snapshot.date) dispatch(setDate({ slug, date: snapshot.date }));
+          if (snapshot.time) dispatch(setTime({ slug, time: snapshot.time }));
+        }
+        setPaymentRequired(true);
+        return;
+      }
     }
 
     setBookingSubmitting(true);
@@ -754,11 +887,15 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         // Payment required - show payment form
         console.log('Payment required for appointment:', response.appointment.uuid);
         console.log('Payment intent data:', response.payment_intent);
-        // Persist pending appointment + payment intent into Redux and localStorage so retries reopen the same intent
-        dispatch(setPendingAppointment({ slug, appointment: response.appointment, payment_intent: response.payment_intent }));
-        try {
-          localStorage.setItem(`pending_appointment_${slug}`, JSON.stringify({ appointment: response.appointment, payment_intent: response.payment_intent }));
-        } catch (e) {}
+        // Persist pending appointment + payment intent into Redux (in-memory only)
+        // Save a snapshot of the user's selection so we can tell if they change it later
+        const snapshot = {
+          service_uuid: selectedServiceUuid,
+          employee_uuid: selectedProfessionalUuid,
+          date: selectedDate,
+          time: (selectedTime || '').slice(0,5),
+        };
+        dispatch(setPendingAppointment({ slug, appointment: response.appointment, payment_intent: response.payment_intent, snapshot }));
         setPaymentRequired(true);
         setBookingSubmitting(false);
         return;
@@ -836,7 +973,6 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     // Reset payment state
     setPaymentRequired(false);
     dispatch(clearPendingAppointment({ slug }));
-    try { localStorage.removeItem(`pending_appointment_${slug}`); } catch (e) {}
 
     // Show success message
     await Swal.fire({
@@ -863,7 +999,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     console.log('Payment cancelled by user');
     // Close the payment modal but keep the pending appointment/payment intent so user can retry
     setPaymentRequired(false);
-    // pending appointment stored in Redux/localStorage remains so user can retry
+    // pending appointment stored in Redux remains so user can retry during this session
   }, []);
 
   const handleSkipPayment = useCallback(async () => {
@@ -1137,7 +1273,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                             <div className="flex items-start justify-between gap-3">
                               {/* Service info - clickable to select */}
                               <div
-                                onClick={() => {
+                                onClick={() => ensureCanModify(() => {
                                   const todayIso = dayjs().format('YYYY-MM-DD');
                                   dispatch(setService({ slug, uuid: service.uuid }));
                                   // Ensure date is set to today so professionals are fetched for today immediately
@@ -1150,7 +1286,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                                   dispatch(setProfessionalOpen({ slug, open: false }));
                                   dispatch(setTimeOpen({ slug, open: false }));
                                   dispatch(setCommentsOpen({ slug, open: false }));
-                                }}
+                                })}
                                 className="flex-1 min-w-0"
                               >
                                 <p className={`truncate text-sm font-medium ${isSelected ? "text-primary" : "text-neutral-900"}`}>
@@ -1230,7 +1366,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
               >
                 <SalonDatePicker
                   value={selectedDate}
-                  onChange={(val) => {
+                  onChange={(val) => ensureCanModify(() => {
                     dispatch(setDate({ slug, date: val }));
                     dispatch(setProfessional({ slug, uuid: null }));
                     dispatch(setTime({ slug, time: null }));
@@ -1239,7 +1375,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                     dispatch(setCommentsOpen({ slug, open: false }));
                     // show professionals once a date has been selected
                     dispatch(setProfessionalOpen({ slug, open: true }));
-                  }}
+                  })}
                   unavailableDates={unavailableDates}
                   availableDates={serviceAvailableDates}
                   onMonthChange={handleDatepickerMonthChange}
@@ -1318,17 +1454,17 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                           const isSelectedProfessional = professional.uuid === selectedProfessionalUuid;
 
                           return (
-                            <button
+                              <button
                               key={professional.uuid}
                               type="button"
-                              onClick={() => {
+                              onClick={() => ensureCanModify(() => {
                                 dispatch(setProfessional({ slug, uuid: professional.uuid }));
                                 dispatch(setProfessionalOpen({ slug, open: false }));
                                 dispatch(setTime({ slug, time: null }));
                                 dispatch(setTimeOpen({ slug, open: true }));
                                 dispatch(setComments({ slug, comments: "" }));
                                 dispatch(setCommentsOpen({ slug, open: false }));
-                              }}
+                              })}
                               className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${
                                 isSelectedProfessional ? "border-primary/60 bg-primary/5" : "border-black/10 bg-white hover:border-black/20 hover:bg-neutral-50"
                               }`}
@@ -1398,11 +1534,11 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                                       <button
                                         key={slot.value}
                                         type="button"
-                                        onClick={() => {
-                                          dispatch(setTime({ slug, time: slot.value }));
-                                          dispatch(setTimeOpen({ slug, open: false }));
-                                          dispatch(setCommentsOpen({ slug, open: true }));
-                                        }}
+                                          onClick={() => ensureCanModify(() => {
+                                            dispatch(setTime({ slug, time: slot.value }));
+                                            dispatch(setTimeOpen({ slug, open: false }));
+                                            dispatch(setCommentsOpen({ slug, open: true }));
+                                          })}
                                         className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
                                           isSelectedTime ? "border-primary/60 bg-primary/5 text-neutral-900 shadow-sm" : "border-black/15 bg-white text-neutral-900 hover:border-black/30 hover:bg-neutral-50"
                                         }`}
@@ -1591,7 +1727,10 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                       <div className="pt-4 mt-2 space-y-3">
                         <textarea
                           value={selectedComments}
-                          onChange={(e) => dispatch(setComments({ slug, comments: e.target.value }))}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            ensureCanModify(() => dispatch(setComments({ slug, comments: v })));
+                          }}
                           placeholder="Comments (optional)"
                           rows={3}
                           className="w-full rounded-md border border-black/10 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-black/30 focus:outline-none focus:ring-0"
