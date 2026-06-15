@@ -126,6 +126,23 @@ export async function createSalonAppointment(slug, payload) {
   return data;
 }
 
+export async function fetchAppointmentPaymentStatus(appointmentUuid) {
+  const response = await fetch(`/api/appointments/${appointmentUuid}/payment-status`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || 'Failed to fetch payment status');
+  }
+
+  return data;
+}
+
 export async function validateSalonVoucher(slug, { code, service_uuid }) {
   const response = await fetch("/api/vouchers/validate", {
     method: "POST",

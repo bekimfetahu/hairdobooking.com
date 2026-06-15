@@ -20,7 +20,6 @@ export default async function SalonPage({ params }) {
   }
 
   const title = salon?.venue?.name || "Salon";
-  const description = salon?.venue?.address?.formatted || "";
 
   return (
     <PageShell 

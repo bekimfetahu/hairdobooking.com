@@ -3,6 +3,6 @@ import CheckoutPage from '../../../components/checkout/CheckoutPage';
 
 export default async function Page({ params, searchParams }) {
   // SSR: appointmentUuid from URL
-  const { appointmentUuid } = params;
+  const { appointmentUuid } = await params;
   return <CheckoutPage appointmentUuid={appointmentUuid} />;
 }
