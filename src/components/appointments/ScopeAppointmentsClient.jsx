@@ -2,12 +2,24 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import Swal from 'sweetalert2';
 
 function displayValue(v) {
   if (v === null || v === undefined) return '';
   if (typeof v === 'string' || typeof v === 'number') return v;
   if (typeof v === 'object') return v.name || v.title || v.display_name || JSON.stringify(v);
   return String(v);
+}
+
+function escapeHtml(input) {
+  if (input === null || input === undefined) return '';
+  return String(input)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function isSameDay(dateA, dateB) {
@@ -24,6 +36,7 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [cancelingId, setCancelingId] = useState(null);
 
   const fetchPage = useCallback(async (p = 1) => {
     setLoading(true);
@@ -84,9 +97,49 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     const isPast = apptDate ? apptDate < new Date(new Date().setHours(0,0,0,0)) : false; // before today
     const isToday = apptDate ? isSameDay(apptDate, new Date()) : false;
     const canAct = !isPast && !isToday; // only after today
+    const apptUuid = appt.uuid || appt.appointment_uuid || appt.id;
+
+    const cancelHandler = async () => {
+      console.log('cancelHandler invoked for', apptUuid);
+      if (!apptUuid) return;
+      const confirmHtml = `<div style="text-align:left">` +
+        `<strong>Service:</strong> ${escapeHtml(service)}<br/>` +
+        `${venue ? `<strong>Venue:</strong> ${escapeHtml(venue)}<br/>` : ''}` +
+        `${professional ? `<strong>Professional:</strong> ${escapeHtml(professional)}<br/>` : ''}` +
+        `<strong>When:</strong> ${escapeHtml(when)}` +
+        `</div>`;
+
+      const confirmRes = await Swal.fire({
+        title: 'Cancel appointment',
+        html: confirmHtml,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, cancel',
+        cancelButtonText: 'No, keep it',
+        focusConfirm: false,
+      });
+      if (!confirmRes.isConfirmed) return;
+      try {
+        setCancelingId(apptUuid);
+        const res = await fetch(`/api/appointments/${encodeURIComponent(apptUuid)}`, { method: 'DELETE', credentials: 'include' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.message || 'Failed to cancel appointment');
+        }
+        // Optimistically remove
+        setItems((prev) => prev.filter((x) => (x.uuid || x.appointment_uuid || x.id) !== apptUuid));
+        // Refresh current page
+        try { await fetchPage(page); } catch (e) { /* ignore */ }
+      } catch (e) {
+        console.error(e);
+        await Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'Failed to cancel appointment' });
+      } finally {
+        setCancelingId(null);
+      }
+    };
 
     return (
-      <div className="rounded-md border border-black/10 p-4">
+      <div className="w-full rounded-md border border-black/10 p-4">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-sm font-semibold">{service}</h3>
@@ -96,20 +149,56 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
             <p className="mt-1 text-xs">Status: <strong>{status}</strong></p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {paymentPending && (
+            {scope==='upcomming' && paymentPending && (
               <Link href={`/checkout/${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-orange-600 px-3 py-1 text-xs text-white"> 
                 Checkout to complete
               </Link>
             )}
-            {requiresPayment && !paymentPending && (
+            {scope==='upcomming' && requiresPayment && !paymentPending && (
               <Link href={`/checkout?appointment=${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-primary px-3 py-1 text-xs text-white"> 
                 Pay now
               </Link>
             )}
             {!isPast && (
               <div className="flex gap-2">
-                <button disabled={!canAct} className={`rounded border px-3 py-1 text-xs ${canAct ? 'text-black' : 'text-neutral-400'}`}>Cancel</button>
-                <button disabled={!canAct} className={`rounded border px-3 py-1 text-xs ${canAct ? 'text-black' : 'text-neutral-400'}`}>Reschedule</button>
+                <button
+                  onClick={() => {
+                    console.log('Cancel clicked', apptUuid, 'canAct=', canAct, 'cancelingId=', cancelingId);
+                    if (!canAct) { Swal.fire({ icon: 'info', title: 'Cannot cancel', text: 'This appointment cannot be cancelled (same-day or past).' }); return; }
+                    if (cancelingId === apptUuid) return;
+                    cancelHandler();
+                  }}
+                  aria-disabled={!canAct || cancelingId === apptUuid}
+                  aria-busy={cancelingId === apptUuid}
+                  className={`rounded px-3 py-1 text-xs inline-flex items-center gap-2 ${canAct ? 'bg-white text-red-600 border border-red-600 hover:bg-red-50' : 'text-neutral-400 border border-neutral-200'}`}>
+                  {cancelingId === apptUuid ? (
+                    <>
+                      <AiOutlineLoading3Quarters className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      <span>Cancelling...</span>
+                    </>
+                  ) : (
+                    'Cancel'
+                  )}
+                </button>
+                <button
+                  disabled={!canAct}
+                  onClick={async () => {
+                    if (!canAct) { Swal.fire({ icon: 'info', title: 'Cannot reschedule', text: 'This appointment cannot be rescheduled (same-day or past).' }); return; }
+                    const html = `<div style="text-align:left">` +
+                      `<strong>Service:</strong> ${escapeHtml(service)}<br/>` +
+                      `${venue ? `<strong>Venue:</strong> ${escapeHtml(venue)}<br/>` : ''}` +
+                      `${professional ? `<strong>Professional:</strong> ${escapeHtml(professional)}<br/>` : ''}` +
+                      `<strong>When:</strong> ${escapeHtml(when)}` +
+                      `</div>`;
+                    const r = await Swal.fire({ title: 'Reschedule appointment', html, icon: 'question', showCancelButton: true, confirmButtonText: 'Start reschedule', cancelButtonText: 'Keep appointment' });
+                    if (r.isConfirmed) {
+                      const dest = `/reschedule/${encodeURIComponent(apptUuid)}`;
+                      window.location.href = dest;
+                    }
+                  }}
+                  className={`rounded px-3 py-1 text-xs ${canAct ? 'bg-yellow-50 text-yellow-800 border border-yellow-300 hover:bg-yellow-100' : 'text-neutral-400 border border-neutral-200'}`}>
+                  Reschedule
+                </button>
               </div>
             )}
           </div>

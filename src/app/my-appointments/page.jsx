@@ -2,6 +2,7 @@ import Link from 'next/link';
 import React from 'react';
 import { cookies } from 'next/headers';
 import ScopeAppointmentsClient from '@/components/appointments/ScopeAppointmentsClient';
+import AuthPageShell from '@/components/layouts/AuthPageShell';
 
 export default async function MyAppointmentsPage() {
   const cookieStore = await cookies();
@@ -9,18 +10,21 @@ export default async function MyAppointmentsPage() {
 
   if (!token) {
     return (
-      <div className="container mx-auto py-12">
-        <h1 className="text-2xl font-semibold">My Appointments</h1>
-        <p className="mt-4">Please <Link href="/login">sign in</Link> to view your appointments.</p>
-      </div>
+      <AuthPageShell title="My Appointments" rightCardClassName="max-w-3xl w-full">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold">My Appointments</h1>
+          <p className="mt-4">Please <Link href="/login">sign in</Link> to view your appointments.</p>
+        </div>
+      </AuthPageShell>
     );
   }
 
   return (
-    <div className="container mx-auto py-12">
-      <h1 className="text-2xl font-semibold">My Appointments</h1>
-      <ScopeAppointmentsClient scope="upcoming" />
-      <ScopeAppointmentsClient scope="past" />
-    </div>
+    <AuthPageShell title="My Appointments" rightCardClassName="max-w-3xl w-full">
+      <div>
+        <ScopeAppointmentsClient scope="upcoming" />
+        <ScopeAppointmentsClient scope="past" />
+      </div>
+    </AuthPageShell>
   );
 }
