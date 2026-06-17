@@ -26,6 +26,7 @@ const navLinks = [
 const accountLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/dashboard?view=bookings', label: 'Bookings', icon: CalendarDays },
+    { href: '/my-appointments', label: 'My Appointments', icon: CalendarDays },
     { href: '/dashboard?view=settings', label: 'Settings', icon: Settings2 },
 ];
 
@@ -198,7 +199,7 @@ export default function NavbarClient() {
                                     </button>
 
                                     {isDropdownOpen && (
-                                        <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-md border border-black/10 bg-white shadow-xl">
+                                        <div className="absolute right-0 mt-2 w-64 overflow-visible rounded-md border border-black/10 bg-white shadow-xl">
                                             <div className="border-b border-black/5 px-4 py-4">
                                                 <p className="text-xs uppercase tracking-[0.2em] text-primary">Signed in</p>
                                                 <p className="mt-1 text-sm font-semibold text-neutral-900">{displayName}</p>
@@ -304,14 +305,7 @@ export default function NavbarClient() {
                                     </button>
 
                                     <div className="space-y-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleNavigatePreferredSalon}
-                                            className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
-                                        >
-                                            <MapPin className="h-4 w-4 shrink-0 text-black" />
-                                            <span className="truncate">My preferred salon</span>
-                                        </button>
+                         
                                         {accountLinks.map((link) => {
                                             const Icon = link.icon;
                                             const isActive = pathname === getBasePath(link.href) || pathname.startsWith(`${getBasePath(link.href)}/`);

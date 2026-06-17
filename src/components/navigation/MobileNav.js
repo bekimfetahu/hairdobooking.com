@@ -36,6 +36,15 @@ export default function MobileNav({
                             </Link>
                         </li>
                         <li>
+                            <Link
+                                href="/my-appointments"
+                                className="block px-3 py-2 text-lg transition duration-300 hover:bg-gray-100 hover:text-black"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                My Appointments
+                            </Link>
+                        </li>
+                        <li>
                             <button
                                 onClick={() => {
                                     setIsMobileMenuOpen(false);

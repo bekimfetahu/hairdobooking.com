@@ -64,6 +64,35 @@ export async function POST(req) {
   }
 }
 
+export async function GET(req) {
+  try {
+    const token = req.cookies.get('token')?.value;
+    const service = token ? laravelApi : laravelApp;
+    const config = {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    };
+
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthenticated' }, { status: 401 });
+    }
+
+    // forward query params (page, scope, etc.) to backend
+    const url = `appointments`;
+    const { searchParams } = new URL(req.url);
+    const params = Object.fromEntries(searchParams.entries());
+    const response = await laravelApi.get(`/${url}`, { params, headers: { Authorization: `Bearer ${token}` } });
+
+    return NextResponse.json(response.data, { status: response.status });
+  } catch (error) {
+    console.error('appointments proxy GET error', error?.response || error);
+    const status = error?.response?.status || 500;
+    const data = error?.response?.data || { message: 'Unexpected error occurred.' };
+    return NextResponse.json(data, { status });
+  }
+}
+
 function getClientIp(req) {
   const forwarded = req.headers.get('x-forwarded-for');
   return forwarded?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown';

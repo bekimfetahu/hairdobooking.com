@@ -868,13 +868,15 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
     setBookingSuccess("");
 
     try {
-      const response = await createSalonAppointment(slug, {
+      const payload = {
         from_time: selectedTime,
         service_uuid: selectedServiceUuid,
         employee_uuid: selectedProfessionalUuid,
         comments: selectedComments,
         voucher_code: selectedVoucher?.code || null,
-      });
+      };
+
+      const response = await createSalonAppointment(slug, payload);
 
       const successMessage = response?.message || "Appointment created successfully!";
       console.log('✓ Booking successful:', successMessage);

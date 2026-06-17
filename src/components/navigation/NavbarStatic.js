@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { CreditCard, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, ChevronDown, Menu, X } from 'lucide-react';
+import { CreditCard, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, ChevronDown, Menu, X, CalendarDays } from 'lucide-react';
 import { loginSuccess, logout } from '@/store/slices/authSlice';
 
 export default function NavbarStatic({ initialUser = null }) {
@@ -267,6 +267,14 @@ export default function NavbarStatic({ initialUser = null }) {
                         <LayoutDashboard className="h-4 w-4 shrink-0 text-black" />
                         Dashboard
                       </Link>
+                      <Link
+                        href="/my-appointments"
+                        className="mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <CalendarDays className="h-4 w-4 shrink-0 text-black" />
+                        My Appointments
+                      </Link>
                       <div className="mt-1 border-t border-black/10 pt-2">
                         <button
                           type="button"
@@ -344,21 +352,14 @@ export default function NavbarStatic({ initialUser = null }) {
 
                   <Link
                     href={preferredVenueSlug ? `/salon/${preferredVenueSlug}` : '/salon/search'}
-                    className="flex w-full items-center justify-between rounded-md border border-black/10 bg-white px-4 py-4 text-left text-sm font-semibold text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black hover:bg-neutral-50"
+                    className="flex w-full items-center justify-start rounded-md border border-black/10 bg-white px-4 py-4 text-left text-sm font-semibold text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black hover:bg-neutral-50"
                   >
+                    <MapPin className="h-5 w-5 text-black mr-3" />
                     <span className="block max-w-[200px] truncate">{preferredVenueLabel}</span>
-                    <MapPin className="h-5 w-5 text-black" />
+                
                   </Link>
 
                   <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={handleNavigatePreferredSalon}
-                      className="flex w-full items-center gap-3 rounded-md px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
-                    >
-                      <MapPin className="h-4 w-4 shrink-0 text-black" />
-                      <span className="truncate">My preferred salon</span>
-                    </button>
                     <Link
                       href="/dashboard"
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -367,6 +368,14 @@ export default function NavbarStatic({ initialUser = null }) {
                       <LayoutDashboard className="h-4 w-4 shrink-0 text-black" />
                       Dashboard
                     </Link>
+                      <Link
+                        href="/my-appointments"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-md px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                      >
+                        <CalendarDays className="h-4 w-4 shrink-0 text-black" />
+                        My Appointments
+                      </Link>
                   </div>
 
                   <div className="border-t border-black/10 pt-2">
