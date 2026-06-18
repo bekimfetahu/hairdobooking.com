@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Swal from 'sweetalert2';
+import { MapPin, Calendar, User, Clock, Scissors } from 'lucide-react';
 
 function displayValue(v) {
   if (v === null || v === undefined) return '';
@@ -139,69 +140,87 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     };
 
     return (
-      <div className="w-full rounded-md border border-black/10 p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-sm font-semibold">{service}</h3>
-            {venue && <p className="text-xs text-neutral-600">{venue}</p>}
-            {professional && <p className="text-xs text-neutral-600">Professional: {professional}</p>}
-            <p className="mt-2 text-xs text-neutral-700">{when}</p>
-            <p className="mt-1 text-xs">Status: <strong>{status}</strong></p>
+      <div className="w-full rounded-md border border-black/10 bg-white p-4 flex flex-col">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3">
+            <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-black/5 text-black">
+              <Scissors size={16} strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold">{service}</h3>
+              {venue && <p className="text-xs text-neutral-600 line-clamp-1">{venue}</p>}
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            {scope==='upcomming' && paymentPending && (
-              <Link href={`/checkout/${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-orange-600 px-3 py-1 text-xs text-white"> 
+
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                <Calendar size={14} strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 text-sm">{when}</div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 text-amber-600">
+                <MapPin size={14} strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 text-sm">{venue || '—'}</div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-green-50 text-green-600">
+                <User size={14} strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 text-sm">{professional || '—'}</div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-50 text-gray-600">
+                <Clock size={14} strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 text-sm">Status: <strong>{status}</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+          <div className="sm:mr-2">
+            {scope==='upcoming' && paymentPending && (
+              <Link href={`/checkout/${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-orange-600 px-3 py-1 text-xs text-white block sm:inline-block"> 
                 Checkout to complete
               </Link>
             )}
-            {scope==='upcomming' && requiresPayment && !paymentPending && (
-              <Link href={`/checkout?appointment=${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-primary px-3 py-1 text-xs text-white"> 
+            {scope==='upcoming' && requiresPayment && !paymentPending && (
+              <Link href={`/checkout?appointment=${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-primary px-3 py-1 text-xs text-white block sm:inline-block"> 
                 Pay now
               </Link>
             )}
-            {!isPast && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    console.log('Cancel clicked', apptUuid, 'canAct=', canAct, 'cancelingId=', cancelingId);
-                    if (!canAct) { Swal.fire({ icon: 'info', title: 'Cannot cancel', text: 'This appointment cannot be cancelled (same-day or past).' }); return; }
-                    if (cancelingId === apptUuid) return;
-                    cancelHandler();
-                  }}
-                  aria-disabled={!canAct || cancelingId === apptUuid}
-                  aria-busy={cancelingId === apptUuid}
-                  className={`rounded px-3 py-1 text-xs inline-flex items-center gap-2 ${canAct ? 'bg-white text-red-600 border border-red-600 hover:bg-red-50' : 'text-neutral-400 border border-neutral-200'}`}>
-                  {cancelingId === apptUuid ? (
-                    <>
-                      <AiOutlineLoading3Quarters className="h-4 w-4 animate-spin" aria-hidden="true" />
-                      <span>Cancelling...</span>
-                    </>
-                  ) : (
-                    'Cancel'
-                  )}
-                </button>
-                <button
-                  disabled={!canAct}
-                  onClick={async () => {
-                    if (!canAct) { Swal.fire({ icon: 'info', title: 'Cannot reschedule', text: 'This appointment cannot be rescheduled (same-day or past).' }); return; }
-                    const html = `<div style="text-align:left">` +
-                      `<strong>Service:</strong> ${escapeHtml(service)}<br/>` +
-                      `${venue ? `<strong>Venue:</strong> ${escapeHtml(venue)}<br/>` : ''}` +
-                      `${professional ? `<strong>Professional:</strong> ${escapeHtml(professional)}<br/>` : ''}` +
-                      `<strong>When:</strong> ${escapeHtml(when)}` +
-                      `</div>`;
-                    const r = await Swal.fire({ title: 'Reschedule appointment', html, icon: 'question', showCancelButton: true, confirmButtonText: 'Start reschedule', cancelButtonText: 'Keep appointment' });
-                    if (r.isConfirmed) {
-                      const dest = `/reschedule/${encodeURIComponent(apptUuid)}`;
-                      window.location.href = dest;
-                    }
-                  }}
-                  className={`rounded px-3 py-1 text-xs ${canAct ? 'bg-yellow-50 text-yellow-800 border border-yellow-300 hover:bg-yellow-100' : 'text-neutral-400 border border-neutral-200'}`}>
-                  Reschedule
-                </button>
-              </div>
-            )}
           </div>
+
+          {!isPast && (
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => {
+                  console.log('Cancel clicked', apptUuid, 'canAct=', canAct, 'cancelingId=', cancelingId);
+                  if (!canAct) { Swal.fire({ icon: 'info', title: 'Cannot cancel', text: 'This appointment cannot be cancelled (same-day or past).' }); return; }
+                  if (cancelingId === apptUuid) return;
+                  cancelHandler();
+                }}
+                aria-disabled={!canAct || cancelingId === apptUuid}
+                aria-busy={cancelingId === apptUuid}
+                className={`rounded px-3 py-2 text-sm inline-flex items-center justify-center gap-2 w-full sm:w-auto ${canAct ? 'bg-white text-red-600 border border-red-600 hover:bg-red-50' : 'text-neutral-400 border border-neutral-200'}`}>
+                {cancelingId === apptUuid ? (
+                  <>
+                    <AiOutlineLoading3Quarters className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    <span>Cancelling...</span>
+                  </>
+                ) : (
+                  'Cancel'
+                )}
+              </button>
+              <button disabled={!canAct} className={`rounded px-3 py-2 text-sm w-full sm:w-auto ${canAct ? 'bg-yellow-50 text-yellow-800 border border-yellow-300 hover:bg-yellow-100' : 'text-neutral-400 border border-neutral-200'}`}>Reschedule</button>
+            </div>
+          )}
         </div>
       </div>
     );

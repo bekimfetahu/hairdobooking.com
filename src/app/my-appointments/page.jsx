@@ -10,7 +10,7 @@ export default async function MyAppointmentsPage() {
 
   if (!token) {
     return (
-      <AuthPageShell title="My Appointments" rightCardClassName="max-w-3xl w-full">
+      <AuthPageShell title="My Appointments" pageClassName="w-full">
         <div className="text-center">
           <h1 className="text-2xl font-semibold">My Appointments</h1>
           <p className="mt-4">Please <Link href="/login">sign in</Link> to view your appointments.</p>
@@ -20,11 +20,9 @@ export default async function MyAppointmentsPage() {
   }
 
   return (
-    <AuthPageShell title="My Appointments" rightCardClassName="max-w-3xl w-full">
-      <div>
+    <AuthPageShell title="My Appointments" pageClassName="w-full">
         <ScopeAppointmentsClient scope="upcoming" />
         <ScopeAppointmentsClient scope="past" />
-      </div>
     </AuthPageShell>
   );
 }

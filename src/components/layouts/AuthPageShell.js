@@ -16,7 +16,7 @@ export default function AuthPageShell({
         >
 
             <div className={cn("flex justify-center sm:mx-0", className)}>
-                <section className={cn("w-full bg-white p-4 sm:px-6 sm:py-8 rounded-md border border-black/10 shadow-xl shadow-black/5")}>
+                <section className={cn("w-full p-2 sm:px-3 sm:py-4")}>
                     {children}
                 </section>
             </div>

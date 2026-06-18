@@ -1341,31 +1341,18 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                 )}
               </StepSection>
 
-              {/* Step 2: Select Date */}
-              <StepSection
-                stepNumber={2}
-                title={selectedDate && !isTimeSectionOpen ? "Date" : "Select Date"}
-                isOpen={true}
-                headerSummary={
-                  selectedDate && !isTimeSectionOpen ? (
-                    <p className="text-xs text-neutral-700">{dayjs(selectedDate).format('dddd, D MMM YYYY')}</p>
-                  ) : null
-                }
-                headerRight={
-                  selectedDate ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // allow user to change the date section
-                        // keep other sections closed
-                      }}
-                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
-                    >
-                      Change
-                    </button>
-                  ) : null
-                }
-              >
+              {/* Step 2: Select Date - only show when a service is selected */}
+              {selectedService && (
+                <StepSection
+                  stepNumber={2}
+                  title={selectedDate && !isTimeSectionOpen ? "Date" : "Select Date"}
+                  isOpen={true}
+                  headerSummary={
+                    selectedDate && !isTimeSectionOpen ? (
+                      <p className="text-xs text-neutral-700">{dayjs(selectedDate).format('dddd, D MMM YYYY')}</p>
+                    ) : null
+                  }
+                >
                 <SalonDatePicker
                   value={selectedDate}
                   onChange={(val) => ensureCanModify(() => {
@@ -1384,6 +1371,7 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                   isLoading={availabilityLoading}
                 />
               </StepSection>
+              )}
 
               {/* Step 3: Choose a professional (collapsible, placeholder for now) */}
               <StepSection
@@ -1413,17 +1401,6 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                   ) : (
                     <p className="text-xs text-neutral-600">Choose the professional who will handle this service.</p>
                   )
-                }
-                headerRight={
-                  selectedService && selectedDate ? (
-                    <button
-                      type="button"
-                      onClick={() => dispatch(setProfessionalOpen({ slug, open: !isProfessionalSectionOpen }))}
-                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
-                    >
-                      {selectedProfessional && !isProfessionalSectionOpen ? "Change" : isProfessionalSectionOpen ? "Hide" : "Show"}
-                    </button>
-                  ) : null
                 }
               >
                 {selectedService && (
@@ -1503,7 +1480,12 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
                 )}
               </StepSection>
 
-              <StepSection stepNumber={4} title={selectedTime && !isTimeSectionOpen ? "Time" : "Choose Time"} isOpen={!!selectedProfessional && isTimeSectionOpen} headerSummary={!selectedProfessional ? (<p className="text-xs text-neutral-600">First choose a professional to see available booking times.</p>) : selectedTime ? (<p className="text-xs font-medium text-neutral-900">{selectedTimeSlot?.label || selectedTime}</p>) : (<p className="text-xs text-neutral-600">Choose the time that works best for you.</p>)} headerRight={selectedProfessional ? (<button type="button" onClick={() => dispatch(setTimeOpen({ slug, open: !isTimeSectionOpen }))} className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50">{selectedTime && !isTimeSectionOpen ? "Change" : isTimeSectionOpen ? "Hide" : "Show"}</button>) : null}>
+              <StepSection
+                stepNumber={4}
+                title={selectedTime && !isTimeSectionOpen ? "Time" : "Choose Time"}
+                isOpen={!!selectedProfessional && isTimeSectionOpen}
+                headerSummary={!selectedProfessional ? (<p className="text-xs text-neutral-600">First choose a professional to see available booking times.</p>) : selectedTime ? (<p className="text-xs font-medium text-neutral-900">{selectedTimeSlot?.label || selectedTime}</p>) : (<p className="text-xs text-neutral-600">Choose the time that works best for you.</p>)}
+              >
                 {selectedProfessional && (
                   <div className="space-y-3">
                     {timeSlotsLoading && (
