@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Swal from 'sweetalert2';
-import { MapPin, Calendar, User, Clock, Scissors } from 'lucide-react';
+import { MapPin, Calendar, User, Clock, Sparkles } from 'lucide-react';
 
 function displayValue(v) {
   if (v === null || v === undefined) return '';
@@ -93,6 +93,7 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     const status = displayValue(appt.status || appt.appointment_state || appt.state) || 'Unknown';
     const requiresPayment = appt.requires_payment || appt.payment_required || appt.requires_payment_intent || false;
     const paymentPending = appt.payment && appt.payment.status === 'pending';
+    const address = displayValue(appt.venue?.line_address || '');
 
     const apptDate = dateObj || null;
     const isPast = apptDate ? apptDate < new Date(new Date().setHours(0,0,0,0)) : false; // before today
@@ -140,19 +141,17 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     };
 
     return (
-      <div className="w-full rounded-md border border-black/10 bg-white p-4 flex flex-col">
+<div className="w-full rounded-md border border-black/10 bg-white p-4 flex flex-col">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
-            <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-black/5 text-black">
-              <Scissors size={16} strokeWidth={1.5} />
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+            <div className="flex items-center gap-2">
+                <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-black/5 text-black">
+              <Sparkles size={16} strokeWidth={1.5} />
             </div>
             <div className="min-w-0">
               <h3 className="text-sm font-semibold">{service}</h3>
-              {venue && <p className="text-xs text-neutral-600 line-clamp-1">{venue}</p>}
             </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+            </div>
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-blue-600">
                 <Calendar size={14} strokeWidth={1.5} />
@@ -165,6 +164,12 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
                 <MapPin size={14} strokeWidth={1.5} />
               </div>
               <div className="min-w-0 text-sm">{venue || '—'}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 text-amber-600">
+                <MapPin size={14} strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 text-sm">{address || '—'}</div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -185,13 +190,13 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
 
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
           <div className="sm:mr-2">
-            {scope==='upcoming' && paymentPending && (
-              <Link href={`/checkout/${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-orange-600 px-3 py-1 text-xs text-white block sm:inline-block"> 
+            {scope === 'upcoming' && paymentPending && (
+              <Link href={`/checkout/${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-orange-600 px-3 py-1 text-xs text-white block sm:inline-block">
                 Checkout to complete
               </Link>
             )}
-            {scope==='upcoming' && requiresPayment && !paymentPending && (
-              <Link href={`/checkout?appointment=${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-primary px-3 py-1 text-xs text-white block sm:inline-block"> 
+            {scope === 'upcoming' && requiresPayment && !paymentPending && (
+              <Link href={`/checkout?appointment=${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-primary px-3 py-1 text-xs text-white block sm:inline-block">
                 Pay now
               </Link>
             )}
