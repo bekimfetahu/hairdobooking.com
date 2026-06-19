@@ -13,7 +13,7 @@ export async function POST(req) {
     try {
         // Make the backend API call to Laravel to delete Sanctum tokens.
         // This call might fail, but we want to remove the cookie regardless.
-        const response = await laravelApi.post('/client/logout', null, {
+        const response = await laravelApi.post('/logout', null, {
             headers: {
                 Authorization: `Bearer ${tokenCookie.value}`,
             },

@@ -24,15 +24,16 @@ const navLinks = [
 ];
 
 const accountLinks = [
+    { href: '/profile', label: 'Profile', icon: UserRound },
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/dashboard?view=bookings', label: 'Bookings', icon: CalendarDays },
     { href: '/my-appointments', label: 'My Appointments', icon: CalendarDays },
-    { href: '/dashboard?view=settings', label: 'Settings', icon: Settings2 },
 ];
 
 const getBasePath = (href) => href.split('?')[0];
 
 export default function NavbarClient() {
+
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const user = useSelector((state) => state.auth.user);
@@ -41,6 +42,8 @@ export default function NavbarClient() {
     const dispatch = useDispatch();
     const router = useRouter();
     const navRef = useRef(null);
+
+        console.log("PATHNAME:", pathname);
 
     const isForBusinessPage = pathname === '/partners' || pathname.startsWith('/partners/');
     const isPricingPage = pathname === '/pricing' || pathname.startsWith('/pricing/');
@@ -132,27 +135,31 @@ export default function NavbarClient() {
             router.push('/salon/search');
         }
     };
+const renderNavLink = (link, className = '') => {
+  const Icon = link.icon;
 
-    const renderNavLink = (link, className = '') => {
-        const Icon = link.icon;
-        const basePath = getBasePath(link.href);
-        const isActive = basePath === '/' ? pathname === '/' : pathname === basePath || pathname.startsWith(`${basePath}/`);
+  const normalize = (path) => path.replace(/\/+$/, "");
+  const current = normalize(pathname);
+  const target = normalize(link.href);
 
-        return (
-            <Link
-                key={link.href}
-                href={link.href}
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:shadow-sm ${
-                    isActive
-                        ? 'bg-neutral-100 text-black border-black/20'
-                        : 'border-transparent text-neutral-700 hover:bg-neutral-100 hover:text-black hover:border-black/10'
-                } ${className}`}
-            >
-                <Icon className="h-4 w-4" />
-                {link.label}
-            </Link>
-        );
-    };
+  const isActive = current === target || current.startsWith(`${target}/`);
+
+  return (
+    <Link
+      key={link.href}
+      href={link.href}
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:shadow-sm ${
+        isActive
+          ? 'bg-neutral-100 text-black border-black/20'
+          : 'border-transparent text-neutral-700 hover:bg-neutral-100 hover:text-black hover:border-black/10'
+      } ${className}`}
+    >
+      <Icon className="h-4 w-4" />
+      {link.label}
+    </Link>
+  );
+};
+
 
     return (
         <nav ref={navRef} className="fixed top-0 z-50 w-full border-b border-black/10 bg-white">
@@ -203,7 +210,7 @@ export default function NavbarClient() {
                                             <div className="border-b border-black/5 px-4 py-4">
                                                 <p className="text-xs uppercase tracking-[0.2em] text-primary">Signed in</p>
                                                 <p className="mt-1 text-sm font-semibold text-neutral-900">{displayName}</p>
-                                                <p className="text-xs text-neutral-500">Manage your bookings and profile</p>
+                        
                                             </div>
                                             <div className="p-2">
                                                 {accountLinks.map((link) => {
@@ -214,7 +221,7 @@ export default function NavbarClient() {
                                                             key={link.href}
                                                             href={link.href}
                                                             className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal transition-colors ${
-                                                                isActive ? 'text-black' : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
+                                                                isActive ? 'text-black font-semibold' : 'text-neutral-700 hover:bg-neutral-50 hover:text-black'
                                                             }`}
                                                         >
                                                             <Icon className="h-4 w-4 shrink-0 text-black" />

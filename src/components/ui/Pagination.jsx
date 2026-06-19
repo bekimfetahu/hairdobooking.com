@@ -30,9 +30,12 @@ export default function Pagination({ current = 1, last = 1, onPage = () => {}, m
       <button
         disabled={cur <= 1}
         onClick={() => handle(cur - 1)}
-        className={`rounded px-3 py-1 text-sm border border-neutral-300 bg-white ${cur <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-50'}`}
+        className={`rounded px-3 py-1 text-sm border border-neutral-300 bg-white 
+          ${cur <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-50'}`}
       >
-        Previous
+        {/* Mobile: <  |  Desktop: Previous */}
+        <span className="block sm:hidden"> &lt; </span>
+        <span className="hidden sm:block">Previous</span>
       </button>
 
       {start > 1 && (
@@ -62,9 +65,12 @@ export default function Pagination({ current = 1, last = 1, onPage = () => {}, m
       <button
         disabled={cur >= total}
         onClick={() => handle(cur + 1)}
-        className={`rounded px-3 py-1 text-sm border border-neutral-300 bg-white ${cur >= total ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-50'}`}
+        className={`rounded px-3 py-1 text-sm border border-neutral-300 bg-white 
+          ${cur >= total ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-50'}`}
       >
-        Next
+        {/* Mobile: >  |  Desktop: Next */}
+        <span className="block sm:hidden">&gt;</span>
+        <span className="hidden sm:block">Next</span>
       </button>
     </div>
   );

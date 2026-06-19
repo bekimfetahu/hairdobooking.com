@@ -281,7 +281,7 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
           current={meta?.current_page || page}
           last={meta?.last_page || 1}
           onPage={handlePage}
-          maxPages={10}
+          maxPages={5}
         />
       )}
     </div>

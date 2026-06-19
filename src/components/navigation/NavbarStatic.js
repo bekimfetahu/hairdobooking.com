@@ -8,7 +8,10 @@ import { CreditCard, Briefcase, LayoutDashboard, LogOut, UserRound, MapPin, Chev
 import { loginSuccess, logout } from '@/store/slices/authSlice';
 
 export default function NavbarStatic({ initialUser = null }) {
+
   const pathname = usePathname();
+  console.log("PATHNAME static:", pathname);
+
   const router = useRouter();
   const dispatch = useDispatch();
   const reduxUser = useSelector((state) => state.auth.user);
@@ -28,9 +31,9 @@ export default function NavbarStatic({ initialUser = null }) {
     if (initialUser) {
       setUser(initialUser);
       setIsAuthenticated(true);
-      dispatch(loginSuccess({ 
+      dispatch(loginSuccess({
         user: initialUser,
-        token: initialUser?.token 
+        token: initialUser?.token
       }));
     }
   }, [initialUser, dispatch]);
@@ -64,9 +67,9 @@ export default function NavbarStatic({ initialUser = null }) {
           const data = await res.json();
           setUser(data.user);
           setIsAuthenticated(true);
-          dispatch(loginSuccess({ 
+          dispatch(loginSuccess({
             user: data.user,
-            token: data.token 
+            token: data.token
           }));
         } else if (res.status === 401) {
           setUser(null);
@@ -87,9 +90,9 @@ export default function NavbarStatic({ initialUser = null }) {
       if (updatedUser) {
         setUser(updatedUser);
         setIsAuthenticated(true);
-        dispatch(loginSuccess({ 
+        dispatch(loginSuccess({
           user: updatedUser,
-          token: updatedUser?.token 
+          token: updatedUser?.token
         }));
       }
     };
@@ -199,12 +202,19 @@ export default function NavbarStatic({ initialUser = null }) {
     const basePath = getBasePath(href);
     const isActive = basePath === '/' ? pathname === '/' : pathname === basePath || pathname.startsWith(`${basePath}/`);
 
-    return `inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:shadow-sm ${
-      isActive
-        ? 'bg-neutral-100 text-black border-black/20'
-        : 'border-transparent text-neutral-700 hover:bg-neutral-100 hover:text-black hover:border-black/10'
-    }`;
+    return `inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out hover:shadow-sm ${isActive
+      ? 'bg-neutral-100 text-black border-black/20'
+      : 'border-transparent text-neutral-700 hover:bg-neutral-100 hover:text-black hover:border-black/10'
+      }`;
   };
+
+  const clean = (p) => p.replace(/\/+$/, ""); // remove trailing slash
+  const isActivePath = (href, pathname) => {
+    const current = clean(pathname);
+    const target = clean(href);
+    return current === target || current.startsWith(`${target}/`);
+  };
+
 
   return (
     <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white/95 backdrop-blur-xl" ref={navRef}>
@@ -256,25 +266,43 @@ export default function NavbarStatic({ initialUser = null }) {
                     <div className="border-b border-black/5 px-4 py-4">
                       <p className="text-xs uppercase tracking-[0.2em] text-primary">Signed in</p>
                       <p className="mt-1 text-sm font-semibold text-neutral-900">{displayName}</p>
-                      <p className="text-xs text-neutral-500">Manage your bookings and profile</p>
                     </div>
                     <div className="p-2">
                       <Link
                         href="/dashboard"
-                        className="mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                        className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${isActivePath("/dashboard", pathname)
+                            ? "bg-neutral-100 text-black font-medium"
+                            : "text-neutral-700 hover:bg-neutral-50 hover:text-black"
+                          }`}
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <LayoutDashboard className="h-4 w-4 shrink-0 text-black" />
                         Dashboard
                       </Link>
+
+                      <Link
+                        href="/profile"
+                        className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${isActivePath("/profile", pathname)
+                            ? "bg-neutral-100 text-black font-medium"
+                            : "text-neutral-700 hover:bg-neutral-50 hover:text-black"
+                          }`}
+                      >
+                        <UserRound className="h-4 w-4 shrink-0 text-black" />
+                        Profile
+                      </Link>
+
                       <Link
                         href="/my-appointments"
-                        className="mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                        className={`mb-2 flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${isActivePath("/my-appointments", pathname)
+                            ? "bg-neutral-100 text-black font-medium"
+                            : "text-neutral-700 hover:bg-neutral-50 hover:text-black"
+                          }`}
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <CalendarDays className="h-4 w-4 shrink-0 text-black" />
                         My Appointments
                       </Link>
+
                       <div className="mt-1 border-t border-black/10 pt-2">
                         <button
                           type="button"
@@ -286,6 +314,7 @@ export default function NavbarStatic({ initialUser = null }) {
                         </button>
                       </div>
                     </div>
+
                   </div>
                 )}
               </div>
@@ -297,11 +326,10 @@ export default function NavbarStatic({ initialUser = null }) {
               </Link>
               <Link
                 href="/partners"
-                className={`hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium md:inline-flex ${
-                  isForBusinessPage
-                    ? 'bg-neutral-100 border-black/20 text-primary'
-                    : 'border-transparent text-primary hover:bg-neutral-50 hover:border-black/10'
-                }`}
+                className={`hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium md:inline-flex ${isForBusinessPage
+                  ? 'bg-neutral-100 border-black/20 text-primary'
+                  : 'border-transparent text-primary hover:bg-neutral-50 hover:border-black/10'
+                  }`}
               >
                 <Briefcase className="h-4 w-4 text-black" />
                 For businesses
@@ -356,7 +384,7 @@ export default function NavbarStatic({ initialUser = null }) {
                   >
                     <MapPin className="h-5 w-5 text-black mr-3" />
                     <span className="block max-w-[200px] truncate">{preferredVenueLabel}</span>
-                
+
                   </Link>
 
                   <div className="space-y-2">
@@ -368,14 +396,14 @@ export default function NavbarStatic({ initialUser = null }) {
                       <LayoutDashboard className="h-4 w-4 shrink-0 text-black" />
                       Dashboard
                     </Link>
-                      <Link
-                        href="/my-appointments"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-md px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
-                      >
-                        <CalendarDays className="h-4 w-4 shrink-0 text-black" />
-                        My Appointments
-                      </Link>
+                    <Link
+                      href="/my-appointments"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-md px-4 py-3 text-sm font-normal text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+                    >
+                      <CalendarDays className="h-4 w-4 shrink-0 text-black" />
+                      My Appointments
+                    </Link>
                   </div>
 
                   <div className="border-t border-black/10 pt-2">
