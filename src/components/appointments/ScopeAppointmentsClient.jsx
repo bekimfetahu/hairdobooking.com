@@ -4,7 +4,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Swal from 'sweetalert2';
-import { MapPin, Calendar, User, Clock, Sparkles } from 'lucide-react';
+import { MapPin, Calendar, User, Clock, Sparkles, Store } from 'lucide-react';
+import dynamic from 'next/dynamic';
+const Pagination = dynamic(() => import('@/components/ui/Pagination'), { ssr: false });
 
 function displayValue(v) {
   if (v === null || v === undefined) return '';
@@ -80,31 +82,31 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     useEffect(() => {
       if (!dateObj) return;
       try {
-        const formatted = dateObj.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric' });
+        const formatted = dateObj.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
         setWhen(formatted);
       } catch (e) {
         setWhen(dateObj.toISOString());
       }
     }, [dtRaw]);
 
-    const service = displayValue(appt.service_name || appt.service || appt?.service_display_name) || 'Service';
-    const venue = displayValue(appt.venue_name || appt.venue || appt?.salon_name) || '';
-    const professional = displayValue(appt.employee?.full_name || appt.employee_name || appt?.professional_name) || '';
-    const status = displayValue(appt.status || appt.appointment_state || appt.state) || 'Unknown';
-    const requiresPayment = appt.requires_payment || appt.payment_required || appt.requires_payment_intent || false;
-    const paymentPending = appt.payment && appt.payment.status === 'pending';
-    const address = displayValue(appt.venue?.line_address || '');
+    const service = appt?.service?.display_name || appt?.service?.name || 'Service';
+    const venue = appt?.venue?.name || '';
+    const professional = appt?.employee?.full_name || '';
+    const status = appt?.appointment_state?.name || 'Unknown';
+    const requiresPayment = !!appt?.requires_payment;
+    const paymentPending = appt?.payment?.status === 'pending';
+    const address = appt?.venue?.line_address || '';
 
     const apptDate = dateObj || null;
-    const isPast = apptDate ? apptDate < new Date(new Date().setHours(0,0,0,0)) : false; // before today
+    const isPast = apptDate ? apptDate < new Date(new Date().setHours(0, 0, 0, 0)) : false; // before today
     const isToday = apptDate ? isSameDay(apptDate, new Date()) : false;
     const canAct = !isPast && !isToday; // only after today
-    const apptUuid = appt.uuid || appt.appointment_uuid || appt.id;
+    const apptUuid = appt.uuid || appt.id;
 
     const cancelHandler = async () => {
       console.log('cancelHandler invoked for', apptUuid);
       if (!apptUuid) return;
-      const confirmHtml = `<div style="text-align:left">` +
+      const confirmHtml = `<div style="text-center:left">` +
         `<strong>Service:</strong> ${escapeHtml(service)}<br/>` +
         `${venue ? `<strong>Venue:</strong> ${escapeHtml(venue)}<br/>` : ''}` +
         `${professional ? `<strong>Professional:</strong> ${escapeHtml(professional)}<br/>` : ''}` +
@@ -129,7 +131,7 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
           throw new Error(err?.message || 'Failed to cancel appointment');
         }
         // Optimistically remove
-        setItems((prev) => prev.filter((x) => (x.uuid || x.appointment_uuid || x.id) !== apptUuid));
+        setItems((prev) => prev.filter((x) => (x.uuid || x.id) !== apptUuid));
         // Refresh current page
         try { await fetchPage(page); } catch (e) { /* ignore */ }
       } catch (e) {
@@ -141,62 +143,87 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     };
 
     return (
-<div className="w-full rounded-md border border-black/10 bg-white p-4 flex flex-col">
+      <div className="w-full rounded-md border border-black/10 bg-white p-4 flex flex-col">
         <div className="min-w-0 flex-1">
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-700">
+
+            {/* Venue */}
             <div className="flex items-center gap-2">
-                <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-black/5 text-black">
-              <Sparkles size={16} strokeWidth={1.5} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full
+      bg-gradient-to-br from-white to-blue-50
+      text-blue-600 shadow-sm border border-blue-100">
+                <Store size={16} strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 text-sm">{venue || "—"}</div>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold">{service}</h3>
-            </div>
-            </div>
+
+            {/* Address */}
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-                <Calendar size={14} strokeWidth={1.5} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full
+      bg-gradient-to-br from-white to-rose-50
+      text-rose-600 shadow-sm border border-rose-100">
+                <MapPin size={16} strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 text-sm">{address || "—"}</div>
+            </div>
+
+            {/* Service */}
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full
+      bg-gradient-to-br from-white to-amber-50
+      text-amber-600 shadow-sm border border-amber-100">
+                <Sparkles size={16} strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold">{service}</h3>
+              </div>
+            </div>
+
+            {/* Date */}
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full
+      bg-gradient-to-br from-white to-indigo-50
+      text-indigo-600 shadow-sm border border-indigo-100">
+                <Calendar size={16} strokeWidth={1.5} />
               </div>
               <div className="min-w-0 text-sm">{when}</div>
             </div>
 
+            {/* Practitioner */}
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 text-amber-600">
-                <MapPin size={14} strokeWidth={1.5} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full
+      bg-gradient-to-br from-white to-green-50
+      text-green-600 shadow-sm border border-green-100">
+                <User size={16} strokeWidth={1.5} />
               </div>
-              <div className="min-w-0 text-sm">{venue || '—'}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 text-amber-600">
-                <MapPin size={14} strokeWidth={1.5} />
-              </div>
-              <div className="min-w-0 text-sm">{address || '—'}</div>
+              <div className="min-w-0 text-sm">{professional || "—"}</div>
             </div>
 
+            {/* Status */}
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-green-50 text-green-600">
-                <User size={14} strokeWidth={1.5} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full
+      bg-gradient-to-br from-white to-gray-50
+      text-gray-600 shadow-sm border border-gray-200">
+                <Clock size={16} strokeWidth={1.5} />
               </div>
-              <div className="min-w-0 text-sm">{professional || '—'}</div>
+              <div className="min-w-0 text-sm">
+                Status: <strong>{status}</strong>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-50 text-gray-600">
-                <Clock size={14} strokeWidth={1.5} />
-              </div>
-              <div className="min-w-0 text-sm">Status: <strong>{status}</strong></div>
-            </div>
           </div>
+
         </div>
 
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
           <div className="sm:mr-2">
             {scope === 'upcoming' && paymentPending && (
-              <Link href={`/checkout/${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-orange-600 px-3 py-1 text-xs text-white block sm:inline-block">
+              <Link href={`/checkout/${encodeURIComponent(apptUuid)}`} className="rounded bg-orange-600 px-3 py-1 text-xs text-white block sm:inline-block">
                 Checkout to complete
               </Link>
             )}
             {scope === 'upcoming' && requiresPayment && !paymentPending && (
-              <Link href={`/checkout?appointment=${encodeURIComponent(appt.uuid || appt.appointment_uuid || appt.id)}`} className="rounded bg-primary px-3 py-1 text-xs text-white block sm:inline-block">
+              <Link href={`/checkout?appointment=${encodeURIComponent(apptUuid)}`} className="rounded bg-primary px-3 py-1 text-xs text-white block sm:inline-block">
                 Pay now
               </Link>
             )}
@@ -231,35 +258,9 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     );
   };
 
-  const renderPagination = () => {
-    const current = meta?.current_page || page;
-    const last = meta?.last_page || 1;
-    const pages = [];
-    for (let i = 1; i <= last; i++) pages.push(i);
-
-    const handlePage = async (p) => {
-      await fetchPage(p);
-      setPage(p);
-    };
-
-    return (
-      <div className="mt-3 flex items-center justify-center gap-2">
-        <button disabled={current <= 1} onClick={async () => handlePage(Math.max(1, current - 1))} className={`rounded px-3 py-1 text-sm border border-neutral-300 bg-white ${current <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-50'}`}>
-          Previous
-        </button>
-        {pages.map((p) => (
-          <button
-            key={p}
-            onClick={async () => handlePage(p)}
-            className={`rounded px-3 py-1 text-sm border ${p === current ? 'bg-black text-white border-black' : 'bg-white border-neutral-300 hover:bg-neutral-50'}`}>
-            {p}
-          </button>
-        ))}
-        <button disabled={current >= last} onClick={async () => handlePage(Math.min(last, current + 1))} className={`rounded px-3 py-1 text-sm border border-neutral-300 bg-white ${current >= last ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-50'}`}>
-          Next
-        </button>
-      </div>
-    );
+  const handlePage = async (p) => {
+    await fetchPage(p);
+    setPage(p);
   };
 
   return (
@@ -271,11 +272,18 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
       <div className="mt-4 space-y-3">
         {items.length === 0 && !loading && <p className="text-sm text-neutral-600">No appointments.</p>}
         {items.map((a) => (
-          <AppointmentCard key={a.uuid || a.id || a.appointment_uuid} appt={a} showCheckout={scope === 'upcoming'} />
+          <AppointmentCard key={a.uuid || a.id} appt={a} showCheckout={scope === 'upcoming'} />
         ))}
       </div>
 
-      {meta && renderPagination()}
+      {meta && (
+        <Pagination
+          current={meta?.current_page || page}
+          last={meta?.last_page || 1}
+          onPage={handlePage}
+          maxPages={10}
+        />
+      )}
     </div>
   );
 }
