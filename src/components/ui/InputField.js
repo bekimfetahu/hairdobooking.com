@@ -1,4 +1,4 @@
-export default function InputField({ id, label, type, value, onChange, required = false, autoComplete }) {
+export default function InputField({ id, name, label, type = 'text', value, onChange, required = false, autoComplete }) {
     return (
         <div className="mt-4">
             <label htmlFor={id} className="block font-medium text-sm text-gray-700">
@@ -6,7 +6,7 @@ export default function InputField({ id, label, type, value, onChange, required 
             </label>
             <input
                 id={id}
-                name={id}
+                name={name || id}
                 type={type}
                 autoComplete={autoComplete}
                 value={value}

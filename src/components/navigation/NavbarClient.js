@@ -43,8 +43,6 @@ export default function NavbarClient() {
     const router = useRouter();
     const navRef = useRef(null);
 
-        console.log("PATHNAME:", pathname);
-
     const isForBusinessPage = pathname === '/partners' || pathname.startsWith('/partners/');
     const isPricingPage = pathname === '/pricing' || pathname.startsWith('/pricing/');
     const isLoginPage = pathname === '/login' || pathname.startsWith('/login/');
