@@ -4,7 +4,8 @@
 
 import "./globals.css";
 import Script from 'next/script';
-import NavbarAuthWrapper from '@/components/navigation/NavbarAuthWrapper';
+import NavbarStatic from '@/components/navigation/NavbarStatic';
+import { getCurrentUserServer } from '@/lib/auth-server';
 import StoreProvider from '@/components/providers/StoreProvider';
 
 export const metadata = {
@@ -12,8 +13,9 @@ export const metadata = {
   description: 'Book appointments at hair salons',
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  const user = await getCurrentUserServer();
 
   return (
     <html lang="en">
@@ -35,8 +37,8 @@ export default function RootLayout({ children }) {
         ) : null}
         <StoreProvider>
           <div className="pt-16">
-            {/* Server-side auth wrapper that passes user data to navbar */}
-            <NavbarAuthWrapper />
+            {/* Server-side fetch of current user and pass to client navbar */}
+            <NavbarStatic initialUser={user} />
 
             {/* Page content */}
             <main>

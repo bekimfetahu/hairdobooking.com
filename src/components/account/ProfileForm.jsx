@@ -75,6 +75,8 @@ export default function ProfileForm({initial, onSaved}){
 
     try{
       const res = await fetch('/api/account/profile', { method: 'POST', body: fd, credentials: 'include' });
+   
+      
       if(!res.ok){
         // try to parse validation errors
         if(res.status === 422){
@@ -86,6 +88,7 @@ export default function ProfileForm({initial, onSaved}){
       const body = await res.json().catch(()=>null);
       // backend may return either the user object or { user }
       const data = body && body.user ? body.user : body || null;
+      console.log('data', data);
       if(data){
         // update local form fields to match /api/auth/me shape
         const avatar_url = data.avatar_url || (data.user && data.user.avatar_url) || data.avatar || null;
