@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '@/store/slices/authSlice';
 import { fetchCurrentUser } from '@/services/auth/session';
+import StoreProvider from '@/components/providers/StoreProvider';
 
-export default function SocialCallbackClient() {
+function InnerSocialCallbackClient() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const dispatch = useDispatch();
@@ -27,6 +28,7 @@ export default function SocialCallbackClient() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token }),
+                    credentials: 'include',
                 });
 
                 if (!res.ok) {
@@ -34,7 +36,6 @@ export default function SocialCallbackClient() {
                 }
 
                 // Immediately fetch user and update Redux state
-                // This updates NavbarStatic and all connected components without needing a page refresh
                 const user = await fetchCurrentUser();
                 if (user) {
                     dispatch(loginSuccess({ 
@@ -61,5 +62,16 @@ export default function SocialCallbackClient() {
                 <div className="animate-spin h-8 w-8 border-4 border-gray-300 rounded-full border-t-black mx-auto" />
             </div>
         </div>
+    );
+}
+
+export default function SocialCallbackClient() {
+    // Ensure Redux Provider is available even if this route is rendered outside
+    // the global client wrapper (e.g., /auth routes). Wrapping here is safe
+    // and idempotent when a Provider already exists.
+    return (
+        <StoreProvider>
+            <InnerSocialCallbackClient />
+        </StoreProvider>
     );
 }

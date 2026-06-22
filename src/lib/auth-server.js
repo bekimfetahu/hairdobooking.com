@@ -21,21 +21,50 @@ export async function getCurrentUserServer() {
     const cookieStore = await cookies();
     const token = cookieStore.get('token');
 
-    if (!token) {
-      return null;
+    // If a `token` cookie exists, use it as a Bearer token (legacy JWT flow).
+    if (token) {
+      try {
+        const response = await laravelApi.get('/auth/me', {
+          headers: {
+            Authorization: `Bearer ${token.value}`,
+          },
+        });
+
+        return response.data || null;
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug('[Auth] Failed to fetch user from Laravel API (bearer):', error.message);
+        }
+        // fallthrough to try session cookie forwarding
+      }
     }
 
+    // Fallback: forward all incoming cookies to the Laravel app so session-based
+    // auth (Sanctum/session) can authenticate the server-side request.
     try {
-      const response = await laravelApi.get('/client/user', {
+      const allCookies = cookieStore.getAll() || [];
+      if (process.env.NODE_ENV !== 'production') {
+        const names = allCookies.map(c => c.name).join(', ');
+        console.debug('[Auth] No bearer token; attempting cookie-forward. Cookies present:', names);
+      }
+
+      // Build Cookie header string
+      const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ');
+
+      if (!cookieHeader) {
+        return null;
+      }
+
+      const response = await laravelApi.get('/auth/me', {
         headers: {
-          Authorization: `Bearer ${token.value}`,
+          Cookie: cookieHeader,
         },
       });
 
       return response.data || null;
     } catch (error) {
       if (process.env.NODE_ENV !== 'production') {
-        console.debug('[Auth] Failed to fetch user from Laravel API:', error.message);
+        console.debug('[Auth] Failed to fetch user from Laravel API (cookie-forward):', error?.message || error);
       }
       return null;
     }

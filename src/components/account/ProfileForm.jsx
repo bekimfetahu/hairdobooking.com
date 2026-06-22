@@ -1,3 +1,5 @@
+"use client";
+
 import React, {useState, useEffect} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginSuccess } from '@/store/slices/authSlice';

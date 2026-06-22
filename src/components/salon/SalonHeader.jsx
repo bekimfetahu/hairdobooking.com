@@ -11,7 +11,7 @@ import { saveSalon, unsaveSalon } from "@/services/auth/savedSalons";
 import { cn } from "@/lib/utils";
 import BookingAuthModal from "@/components/modals/BookingAuthModal";
 
-export default function SalonHeader({ salon }) {
+function InnerSalonHeader({ salon }) {
   const venueName = salon?.venue?.name || "Salon";
   const venueAddress = salon?.venue?.address?.formatted || "";
   const venueUuid = salon?.venue?.uuid || null;
@@ -218,5 +218,15 @@ export default function SalonHeader({ salon }) {
         signupTitle="Create account to continue"
       />
     </div>
+  );
+}
+
+import StoreProvider from '@/components/providers/StoreProvider';
+
+export default function SalonHeader(props) {
+  return (
+    <StoreProvider>
+      <InnerSalonHeader {...props} />
+    </StoreProvider>
   );
 }

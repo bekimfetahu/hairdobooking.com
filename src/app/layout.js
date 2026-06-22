@@ -4,9 +4,9 @@
 
 import "./globals.css";
 import Script from 'next/script';
-import NavbarStatic from '@/components/navigation/NavbarStatic';
+// Navbar is rendered in the client layout where Redux/providers are mounted.
 import { getCurrentUserServer } from '@/lib/auth-server';
-import StoreProvider from '@/components/providers/StoreProvider';
+import RootClientWrapper from '@/components/layouts/RootClientWrapper';
 
 export const metadata = {
   title: 'HairdoBooking',
@@ -35,17 +35,17 @@ export default async function RootLayout({ children }) {
             strategy="afterInteractive"
           />
         ) : null}
-        <StoreProvider>
           <div className="pt-16">
-            {/* Server-side fetch of current user and pass to client navbar */}
-            <NavbarStatic initialUser={user} />
+            {/* Expose initial user for client hydration (AuthHydrator will consume) */}
+            <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `window.__INITIAL_USER__ = ${JSON.stringify(user || null)}` }} />
 
-            {/* Page content */}
+            {/* Client wrapper mounts Navbar and Redux for public pages (homepage) */}
+            <RootClientWrapper />
+
             <main>
               {children}
             </main>
           </div>
-        </StoreProvider>
       </body>
     </html>
   );

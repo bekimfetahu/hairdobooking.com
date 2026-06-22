@@ -48,41 +48,11 @@ export default function NavbarStatic({ initialUser = null }) {
 
   // Hydration: Only fetch if initialUser wasn't provided from server
   useEffect(() => {
-    // Mark component as hydrated to enable rendering
+    // Mark component as hydrated. AuthHydrator will sync Redux from the
+    // server-provided initial user (window.__INITIAL_USER__). Navbar should
+    // not perform its own session fetch to avoid double requests.
     setHasHydrated(true);
-
-    // If we already have user data from server, skip the fetch
-    if (initialUser) {
-      return;
-    }
-
-    const restoreSession = async () => {
-      try {
-        const res = await fetch('/api/auth/me', {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
-          setIsAuthenticated(true);
-          dispatch(loginSuccess({
-            user: data.user,
-            token: data.token
-          }));
-        } else if (res.status === 401) {
-          setUser(null);
-          setIsAuthenticated(false);
-          dispatch(logout());
-        }
-      } catch (err) {
-        console.error('Failed to restore session in navbar:', err?.message || err);
-      }
-    };
-
-    restoreSession();
-  }, [initialUser, dispatch]);
+  }, []);
 
   useEffect(() => {
     const handlePreferredSalonUpdated = (event) => {

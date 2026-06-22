@@ -2,6 +2,10 @@
 
 import ClientProvider from '@/components/providers/ClientProvider';
 import MainLayout from '@/components/layouts/MainLayout';
+import StoreProvider from '@/components/providers/StoreProvider';
+import AuthHydrator from '@/components/auth/AuthHydrator';
+import NavbarStatic from '@/components/navigation/NavbarStatic';
+import RootClientMount from '@/components/layouts/RootClientMount';
 
 export default function AppClientLayout({ children }) {
   // Client wrapper for interactive/authenticated pages. Place dashboard,
@@ -9,11 +13,16 @@ export default function AppClientLayout({ children }) {
   // route group `(app)` so they inherit this layout and gain Redux, session
   // restore, and other client behavior.
   return (
-    <ClientProvider>
-      <div className="pt-0">
-        <MainLayout>{children}</MainLayout>
-      </div>
-    </ClientProvider>
+    <StoreProvider>
+      <ClientProvider>
+        <div className="pt-0">
+          <AuthHydrator />
+          <NavbarStatic />
+          <RootClientMount />
+          <MainLayout>{children}</MainLayout>
+        </div>
+      </ClientProvider>
+    </StoreProvider>
   );
 }
 

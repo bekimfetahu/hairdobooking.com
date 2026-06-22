@@ -81,7 +81,7 @@ function groupTimeSlots(slots) {
   return grouped;
 }
 
-export default function SalonClient({ slug, initialSalon, initialServiceUuid = null }) {
+function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null }) {
   const dispatch = useDispatch();
   const booking = useSelector(selectBooking(slug));
   const isAuthenticated = useSelector((state) => !!state.auth.user);
@@ -1861,5 +1861,15 @@ export default function SalonClient({ slug, initialSalon, initialServiceUuid = n
         </div>
       )}
     </>
+  );
+}
+
+import StoreProvider from '@/components/providers/StoreProvider';
+
+export default function SalonClient(props) {
+  return (
+    <StoreProvider>
+      <InnerSalonClient {...props} />
+    </StoreProvider>
   );
 }
