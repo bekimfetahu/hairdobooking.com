@@ -73,6 +73,7 @@ export default function AuthPanel({
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -532,9 +533,13 @@ export default function AuthPanel({
               label={
                 <span>
                   I agree to the{' '}
-                  <Link href="/terms" className="font-semibold hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => setShowTerms(true)}
+                    className="font-semibold hover:underline text-neutral-900"
+                  >
                     terms and conditions
-                  </Link>
+                  </button>
                 </span>
               }
             />
@@ -561,6 +566,13 @@ export default function AuthPanel({
           <div className="space-y-4">
             <SocialSSOButtons returnUrl={socialReturnUrl || returnUrl} />
           </div>
+          {/* Terms modal component (lazy client-only) */}
+          {typeof window !== 'undefined' && (
+            (function() {
+              const TermsModal = require('@/components/modals/TermsModal').default;
+              return <TermsModal open={showTerms} onClose={() => setShowTerms(false)} />;
+            })()
+          )}
         </div>
       )}
 

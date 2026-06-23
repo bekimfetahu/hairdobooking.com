@@ -188,6 +188,49 @@ summary {
   padding-right: 1rem;
 }
 
+/* Policy content wrapper: used when rendering stored HTML from DB.
+   Keeps raw HTML free of layout chrome while ensuring consistent site typography. */
+.policy-body {
+  /* Use Tailwind's prose defaults when available, otherwise provide sensible fallbacks */
+  font-family: inherit;
+  color: var(--foreground);
+}
+.policy-body h1,
+.policy-body h2,
+.policy-body h3,
+.policy-body h4 {
+  color: var(--foreground);
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+.policy-body p {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+}
+.policy-body ul,
+.policy-body ol {
+  padding-left: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.policy-body li {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+.policy-body a {
+  color: var(--brand-blue);
+  text-decoration: underline;
+}
+.policy-body pre,
+.policy-body code {
+  background: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  overflow: auto;
+}
+
 
 .gsi-material-button .gsi-material-button-icon {
   height: 20px;
