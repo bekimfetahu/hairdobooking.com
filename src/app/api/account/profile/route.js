@@ -53,9 +53,17 @@ export async function POST(req){
     let parsed = null;
     try{ parsed = text ? JSON.parse(text) : null; }catch(e){ parsed = null; }
     console.log('[profile proxy POST] backend status', fetchRes.status, 'bodyText:', text);
-    // temporary debug: include which cookies/xsrf were forwarded to help diagnose 401
+    // When proxying, return the backend response body directly so clients receive the expected shape.
+    // Include lightweight debug info under `_debug` to avoid changing primary response shape.
+    const responseBody = parsed ?? text ?? null;
     const debug = { forwardedCookie: cookieHeader || null, forwardedXSRF: xsrf || null, backendStatus: fetchRes.status };
-    return NextResponse.json({ status: fetchRes.status, body: parsed ?? text, debug }, { status: fetchRes.status });
+    // If the backend returned an object, attach _debug without overwriting existing keys.
+    if(responseBody && typeof responseBody === 'object' && !Array.isArray(responseBody)){
+      responseBody._debug = debug;
+      return NextResponse.json(responseBody, { status: fetchRes.status });
+    }
+    // otherwise return a wrapper with body and debug (for non-JSON responses)
+    return NextResponse.json({ body: responseBody, _debug: debug }, { status: fetchRes.status });
   }catch(error){
     console.error('[profile proxy POST] axios error', { message: error?.message, responseStatus: error?.response?.status, responseData: error?.response?.data });
     const status = error?.response?.status || 500;

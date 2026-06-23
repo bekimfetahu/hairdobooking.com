@@ -88,8 +88,14 @@ export default function ProfileForm({initial, onSaved}){
         throw new Error('Save failed');
       }
       const body = await res.json().catch(()=>null);
-      // backend may return either the user object or { user }
-      const data = body && body.user ? body.user : body || null;
+      // backend proxy historically returned a wrapper { status, body, debug }
+      // New proxy returns the backend body directly. Support both shapes defensively.
+      let data = null;
+      if(!body) data = null;
+      else if(body.user) data = body.user; // backend returned { user }
+      else if(body.body && body.body.user) data = body.body.user; // old wrapper { body: { user } }
+      else if(body.body) data = body.body; // old wrapper with body payload
+      else data = body; // direct backend response
       console.log('data', data);
       if(data){
         // update local form fields to match /api/auth/me shape
