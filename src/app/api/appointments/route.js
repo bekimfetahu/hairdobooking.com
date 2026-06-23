@@ -44,7 +44,8 @@ export async function POST(req) {
       },
     };
 
-    const url = `client/salons/${slug}/appointments`;
+    const url = accessType === 'laravelApp' ? `client/salons/${slug}/appointments` : `salons/${slug}/appointments`;
+
     let response;
 
     if (method === 'get') {

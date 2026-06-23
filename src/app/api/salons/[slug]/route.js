@@ -37,6 +37,7 @@ export async function POST(req, { params }) {
     };
 
     const url = accessType === 'laravelApp' ? `client/salons/${slug}` : `salons/${slug}`;
+    console.log('url', url, 'method', method, 'accessType', accessType, 'payload', payload);
 
     let response;
     if (method === 'get') {
