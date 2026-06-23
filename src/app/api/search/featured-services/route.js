@@ -11,6 +11,9 @@
  * - distance (string): Distance radius like "10mi", "30mi"
  */
 
+import { NextResponse } from 'next/server';
+import laravelApp from '@/services/laravelApp';
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -18,66 +21,36 @@ export async function GET(request) {
     const lon = searchParams.get('lon');
     const distance = searchParams.get('distance');
 
-    // Build query params for Laravel
-    const laravelParams = new URLSearchParams();
-    if (lat) laravelParams.append('lat', lat);
-    if (lon) laravelParams.append('lon', lon);
-    if (distance) laravelParams.append('distance', distance);
+    // Build query parameters for Laravel
+    const params = {};
+    if (lat) params.lat = lat;
+    if (lon) params.lon = lon;
+    if (distance) params.distance = distance;
 
-    const laravelBaseUrl = process.env.LARAVEL_INTERNAL_URL || process.env.NEXT_PUBLIC_LARAVEL_URL;
-    const url = `${laravelBaseUrl}/api/client/search/featured-services?${laravelParams}`;
+    // Call Laravel search endpoint with X-App-Token
+    const response = await laravelApp.get('client/search/featured-services', { params });
 
-    console.log('[Featured Services API] Fetching from Laravel:', url);
-
-    const response = await fetch(url, {
-      method: 'GET',
+    return NextResponse.json(response.data, {
+      status: response.status,
       headers: {
-        'Content-Type': 'application/json',
-        'X-App-Token': process.env.CLIENT_ACCESS_TOKEN,
-        'Accept': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       },
     });
-
-    console.log('[Featured Services API] Laravel response status:', response.status);
-
-    if (!response.ok) {
-      let errorData;
-      let errorText = '';
-      try {
-        errorData = await response.json();
-        errorText = JSON.stringify(errorData);
-      } catch (e) {
-        errorText = await response.text();
-        errorData = { message: errorText };
-      }
-      
-      console.error('[Featured Services API] Laravel error:', response.status, errorText);
-
-      return new Response(
-        JSON.stringify({
-          error: errorData.message || errorData.error || 'Featured services endpoint error',
-          details: errorData,
-          status: response.status,
-        }),
-        { status: response.status, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const data = await response.json();
-    console.log('[Featured Services API] Success:', data?.data?.length ?? 0, 'services');
-
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
   } catch (error) {
-    console.error('[Featured Services API] Exception:', error.message, error.stack);
-    return new Response(
-      JSON.stringify({
+    // Detailed error logging for debugging
+    console.error('[Featured Services Error]', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      laravel_response: error.response?.data,
+    });
+
+    return NextResponse.json(
+      {
         error: 'Failed to fetch featured services',
         message: error.message,
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      },
+      { status: error.response?.status || 500 }
     );
   }
 }
