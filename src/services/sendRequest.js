@@ -53,14 +53,24 @@ export async function sendRequest({ method, access_type, api, data }) {
               }
             : undefined;
 
+        let respStatus = undefined;
+        let respData = undefined;
+        try {
+            respStatus = error && error.response && error.response.status;
+            respData = error && error.response && error.response.data ? JSON.stringify(error.response.data) : undefined;
+        } catch (e) {
+            // ignore
+        }
+
         console.error("Laravel request failed", {
-            message: error?.message,
+            message: error && error.message,
             api,
             access_type,
             method,
             request: sanitizedConfig,
-            responseStatus: error?.response?.status,
-            responseData: error?.response?.data,
+            responseStatus: respStatus,
+            responseData: respData,
+            stack: error && error.stack,
         });
 
         throw new Error(error?.response?.data?.message || error?.message || "Laravel request failed");

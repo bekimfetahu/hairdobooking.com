@@ -637,7 +637,7 @@ export default function Hero({
       <div
         className="absolute inset-0"
         style={{
-          background: 'linear-gradient(135deg, hsl(30, 30%, 99%) 0%, hsl(0, 30%, 97%) 40%, hsl(30, 25%, 98%) 70%, hsl(0, 20%, 96%) 100%)',
+          background: 'radial-gradient(circle at center, hsl(30, 30%, 99%) 0%, hsl(0, 30%, 97%) 40%, hsl(30, 25%, 98%) 70%, hsl(0, 20%, 96%) 100%)',
         }}
       />
 

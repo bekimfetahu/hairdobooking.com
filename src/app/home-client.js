@@ -143,7 +143,7 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       {/* ===== HERO SECTION ===== */}
       <Hero 
         onSearch={handleSearch}
