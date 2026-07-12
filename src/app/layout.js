@@ -7,6 +7,7 @@ import Script from 'next/script';
 // Navbar is rendered in the client layout where Redux/providers are mounted.
 import { getCurrentUserServer } from '@/lib/auth-server';
 import RootClientWrapper from '@/components/layouts/RootClientWrapper';
+import Footer from '@/components/layouts/Footer';
 
 export const metadata = {
   title: 'HairdoBooking',
@@ -46,6 +47,7 @@ export default async function RootLayout({ children }) {
               {children}
             </main>
           </div>
+          <Footer />
       </body>
     </html>
   );

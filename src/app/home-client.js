@@ -220,50 +220,6 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
           </div>
         </div>
       </section>
-
-      {/* ===== FOOTER ===== */}
-      <footer className="bg-gray-50 border-t border-gray-200 py-6 md:py-12">
-        <div className="max-w-6xl mx-auto px-4 md:px-6">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            {/* Brand */}
-            <div>
-              <h3 className="font-bold text-lg mb-4">
-                <span className="text-brand-black">Hairdo</span>
-                <span className="text-primary">Booking</span>
-              </h3>
-              <p className="text-sm text-accent">
-                Your perfect salon booking experience.
-              </p>
-            </div>
-
-            {/* Links Columns */}
-            {[
-              { title: 'Product', items: ['Features', 'Pricing', 'Security'] },
-              { title: 'Company', items: ['About', 'Blog', 'Careers'] },
-              { title: 'Support', items: ['Help', 'Contact', 'Docs'] },
-            ].map((column) => (
-              <div key={column.title}>
-                <h4 className="font-semibold mb-4 text-sm">{column.title}</h4>
-                <ul className="space-y-2">
-                  {column.items.map((item) => (
-                    <li key={item}>
-                      <a href="#" className="text-sm text-accent hover:text-brand-black transition-colors">
-                        {item}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t border-gray-200 pt-8">
-            <p className="text-sm text-accent">
-              © 2024 HairdoBooking. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
