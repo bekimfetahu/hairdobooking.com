@@ -18,6 +18,10 @@ import {
     MessageCircle,
     BarChart3,
     Clock,
+    Heart,
+    Smile,
+    TrendingUp,
+    XCircle,
 } from "lucide-react";
 import React from "react";
 
@@ -171,7 +175,7 @@ export default function PartnerPage() {
 
             {/* SCHEDULER */}
             <section
-                className="relative w-full py-24 overflow-hidden"
+                className="relative w-full py-14 md:py-16 overflow-hidden"
                 style={{
                     background: `
     linear-gradient(
@@ -223,10 +227,59 @@ export default function PartnerPage() {
                 </div>
             </section>
 
+            {/* WHY HAIRDOBOOKING - FEATURES */}
+            <section id="why-hairdobooking" className="mt-11 md:mt-14 py-11 md:py-14" style={{
+                background: `linear-gradient(to bottom, hsl(0, 0%, 99%) 0%, hsl(0, 0%, 96%) 100%)`,
+            }}>
+                <div className="max-w-6xl mx-auto px-6">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-foreground">
+                            Why choose HairdoBooking?
+                        </h2>
+                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                            Built exclusively for Hair & Beauty professionals. Simple, fast, and designed for how salons actually work.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="p-8 rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={{ background: 'hsl(0, 80%, 95%)', color: accent }}>
+                                <Sparkles className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-semibold text-lg mb-3 text-foreground">Built for salons</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Designed exclusively for Hair & Beauty professionals—not restaurants or gyms. We know how salons actually work.</p>
+                        </div>
+
+                        <div className="p-8 rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={{ background: 'hsl(0, 80%, 95%)', color: accent }}>
+                                <Zap className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-semibold text-lg mb-3 text-foreground">Get started faster</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Common salon services are included by default. Select what you offer instead of creating everything from scratch.</p>
+                        </div>
+
+                        <div className="p-8 rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={{ background: 'hsl(0, 80%, 95%)', color: accent }}>
+                                <Calendar className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-semibold text-lg mb-3 text-foreground">One central hub</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">All bookings—phone, social media, website, walk-ins—in one place. No more double bookings or missed appointments.</p>
+                        </div>
+
+                        <div className="p-8 rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={{ background: 'hsl(0, 80%, 95%)', color: accent }}>
+                                <Clock className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-semibold text-lg mb-3 text-foreground">Save time managing</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Less admin, fewer mistakes, and more time with clients. Your entire team has complete visibility.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             {/* ===== BENEFITS ===== */}
             <section id="benefits" className="relative">
-                <div className="py-20 md:py-28 -mx-4 sm:-mx-6" style={{
+                <div className="py-14 md:py-16 -mx-4 sm:-mx-6" style={{
                     background: `linear-gradient(to bottom, hsl(0, 0%, 99%) 0%, hsl(0, 0%, 97%) 100%)`,
                 }}>
                     <div className="max-w-6xl mx-auto px-6">
@@ -253,9 +306,8 @@ export default function PartnerPage() {
                 </div>
             </section>
 
-
             {/* MARKETPLACE */}
-            <section id="marketplace" className="mt-16 md:mt-20 py-16 md:py-20" style={{
+            <section id="marketplace" className="mt-11 md:mt-14 py-11 md:py-14" style={{
                 background: `linear-gradient(to bottom, hsl(0, 0%, 99%) 0%, hsl(0, 0%, 96%) 100%)`,
             }}>
                 <div className="max-w-6xl mx-auto px-6">
@@ -265,8 +317,7 @@ export default function PartnerPage() {
                             <span className="block" style={{ color: accent }}>without losing your own</span>
                         </h2>
                         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                            HairdoBooking includes a marketplace designed to help new clients discover your salon — without pushing your existing clients toward competitors.
-                        </p>
+                            HairdoBooking helps your salon reach new clients through our marketplace. Once a client selects your salon as their preferred salon, they'll be taken straight to your salon whenever they sign in—making repeat bookings faster and helping you build lasting client relationships instead of sending them back to browse competing salons.       </p>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-6">
@@ -298,45 +349,58 @@ export default function PartnerPage() {
             </section>
 
             {/* FAIRNESS / RATINGS */}
-            <section id="fairness" className="mt-16 md:mt-20 py-16 md:py-20" style={{
+            <section id="fairness" className="mt-11 md:mt-14 py-11 md:py-14" style={{
                 background: `linear-gradient(to bottom, hsl(0, 0%, 99%) 0%, hsl(0, 0%, 96%) 100%)`,
             }}>
-                <div className="max-w-4xl mx-auto px-6">
-                    <div className="grid md:grid-cols-[1fr_1.2fr] gap-8 items-center">
-                        <div className="flex flex-col items-center md:items-start">
-                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: accent }}>
-                                <Users className="w-8 h-8 text-white" />
+                <div className="max-w-6xl mx-auto px-6">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-foreground">
+                            Your reputation shouldn't be
+                            <span className="block" style={{ color: accent }}>decided by anonymous reviews</span>
+                        </h2>
+                        <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+                            At HairdoBooking, we believe great salons deserve to be recognised for the relationships they build—not by anonymous ratings that can be misleading or unfair. Our platform helps you strengthen client loyalty, encourage repeat bookings, and grow your business without the pressure of public review scores that can negatively impact both your reputation and your team's wellbeing.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+                        <div className="p-8 rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={{ background: 'hsl(0, 80%, 95%)', color: accent }}>
+                                <XCircle className="w-6 h-6" />
                             </div>
-                            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4 md:text-left text-center">
-                                A fairer experience for salon professionals
-                            </h2>
+                            <h3 className="font-semibold text-lg mb-3 text-foreground">No anonymous ratings</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Build your reputation on verified client relationships, not questionable anonymous scores.</p>
                         </div>
 
-                        <div className="space-y-4">
-                            <p className="text-lg text-muted-foreground leading-relaxed">
-                                Public rating systems can often be inconsistent. HairdoBooking focuses on helping you build strong client relationships and a reliable business — instead of relying heavily on anonymous scores that don't always reflect your work.
-                            </p>
-                            <div className="space-y-3 pt-4">
-                                <div className="flex items-start gap-3">
-                                    <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-1" style={{ color: accent }} />
-                                    <span className="text-foreground">Focus on building real relationships with your clients</span>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-1" style={{ color: accent }} />
-                                    <span className="text-foreground">Fair and transparent feedback system</span>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-1" style={{ color: accent }} />
-                                    <span className="text-foreground">Less reliance on anonymous scores</span>
-                                </div>
+                        <div className="p-8 rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={{ background: 'hsl(0, 80%, 95%)', color: accent }}>
+                                <Heart className="w-6 h-6" />
                             </div>
+                            <h3 className="font-semibold text-lg mb-3 text-foreground">Stronger relationships</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Focus on building genuine, lasting connections with your clients that drive loyalty.</p>
+                        </div>
+
+                        <div className="p-8 rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={{ background: 'hsl(0, 80%, 95%)', color: accent }}>
+                                <Smile className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-semibold text-lg mb-3 text-foreground">Happier team</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Remove the stress of public scores. Your team stays confident and focused on delivering great service.</p>
+                        </div>
+
+                        <div className="p-8 rounded-2xl border border-border/50 bg-gradient-to-br from-white to-slate-50 hover:shadow-lg transition-all duration-300">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5" style={{ background: 'hsl(0, 80%, 95%)', color: accent }}>
+                                <TrendingUp className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-semibold text-lg mb-3 text-foreground">Growth via loyalty</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Grow your business through repeat bookings and strong client relationships, not review scores.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
             {/* HOW IT WORKS */}
-            <section id="how" className="mt-16 md:mt-20 py-16 md:py-20" style={{
+            <section id="how" className="mt-11 md:mt-14 py-11 md:py-14" style={{
                 background: `linear-gradient(to bottom, hsl(0, 0%, 99%) 0%, hsl(0, 0%, 96%) 100%)`,
             }}>
                 <div className="max-w-6xl mx-auto px-6">
@@ -368,87 +432,6 @@ export default function PartnerPage() {
                                 )}
                             </div>
                         ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* COMPARISON */}
-            <section id="comparison" className="mt-16 md:mt-20 py-16 md:py-20" style={{
-                background: `linear-gradient(to bottom, hsl(0, 0%, 99%) 0%, hsl(0, 0%, 96%) 100%)`,
-            }}>
-                <div className="max-w-6xl mx-auto px-6">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-foreground">Why choose HairdoBooking?</h2>
-                        <p className="text-lg text-muted-foreground max-w-xl mx-auto">See how we compare to the old way of managing bookings</p>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {/* Without */}
-                        <div className="p-8 rounded-2xl border-2 border-border/30 bg-white">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100">
-                                    <TrendingDown className="w-5 h-5 text-slate-500" />
-                                </div>
-                                <h3 className="text-xl font-bold text-foreground">The Old Way</h3>
-                            </div>
-                            <ul className="space-y-3">
-                                <li className="flex items-center gap-3 text-muted-foreground">
-                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'hsl(0, 60%, 70%)' }} />
-                                    Multiple tools & apps
-                                </li>
-                                <li className="flex items-center gap-3 text-muted-foreground">
-                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'hsl(0, 60%, 70%)' }} />
-                                    Manual tracking & updates
-                                </li>
-                                <li className="flex items-center gap-3 text-muted-foreground">
-                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'hsl(0, 60%, 70%)' }} />
-                                    High risk of mistakes
-                                </li>
-                                <li className="flex items-center gap-3 text-muted-foreground">
-                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'hsl(0, 60%, 70%)' }} />
-                                    No central visibility
-                                </li>
-                                <li className="flex items-center gap-3 text-muted-foreground">
-                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'hsl(0, 60%, 70%)' }} />
-                                    Wasted time & energy
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* With HairdoBooking */}
-                        <div className="p-8 rounded-2xl border-2 border-border/50 bg-gradient-to-br from-white/50 to-slate-50/50 ring-1" style={{ ringColor: accent, opacity: 1 }}>
-                            <div className="absolute -top-3 right-6 px-3 py-1 rounded-full text-sm font-semibold text-white" style={{ background: accent }}>
-                                Recommended
-                            </div>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ background: accent }}>
-                                    <Zap className="w-5 h-5" />
-                                </div>
-                                <h3 className="text-xl font-bold text-foreground">HairdoBooking</h3>
-                            </div>
-                            <ul className="space-y-3">
-                                <li className="flex items-center gap-3 text-foreground font-medium">
-                                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
-                                    One unified system
-                                </li>
-                                <li className="flex items-center gap-3 text-foreground font-medium">
-                                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
-                                    Automatic syncing
-                                </li>
-                                <li className="flex items-center gap-3 text-foreground font-medium">
-                                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
-                                    Error prevention
-                                </li>
-                                <li className="flex items-center gap-3 text-foreground font-medium">
-                                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
-                                    Full control & visibility
-                                </li>
-                                <li className="flex items-center gap-3 text-foreground font-medium">
-                                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: accent }} />
-                                    More time to grow
-                                </li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
             </section>
