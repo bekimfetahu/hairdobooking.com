@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import dayjs from "dayjs";
 import { Calendar, Sparkles, Banknote, User, Clock, ChevronDown, MapPin, Filter, X } from "lucide-react";
 import Swal from "sweetalert2";
@@ -21,6 +22,7 @@ import StripePaymentContainer from "@/components/booking/StripePaymentContainer"
 import ImageSlider from "@/components/ui/ImageSlider";
 import BookingAuthModal from "@/components/modals/BookingAuthModal";
 import { useSelector, useDispatch } from "react-redux";
+import { setPreviewToken, clearPreviewToken } from "@/store/slices/previewSlice";
 import {
   initBooking,
   selectBooking,
@@ -81,8 +83,14 @@ function groupTimeSlots(slots) {
   return grouped;
 }
 
-function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null }) {
+function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previewToken = null }) {
   const dispatch = useDispatch();
+  const searchParams = useSearchParams();
+  
+  // Get preview token from Redux store
+  const reduxPreviewToken = useSelector((state) => state.preview.previewToken);
+  const [tokenInitialized, setTokenInitialized] = useState(false);
+  
   const booking = useSelector(selectBooking(slug));
   const isAuthenticated = useSelector((state) => !!state.auth.user);
   const {
@@ -107,6 +115,52 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null }) {
   useEffect(() => {
     if (slug) dispatch(initBooking({ slug }));
   }, [slug, dispatch]);
+
+  // On first mount, read token from props/URL/localStorage and store in Redux
+  useEffect(() => {
+    // Priority: SSR prop → URL params → localStorage
+    const urlToken = previewToken || searchParams.get('preview_token');
+    const storedToken = localStorage.getItem(`preview_token_${slug}`);
+    const tokenToUse = urlToken || storedToken;
+    
+    console.log(`[SalonClient] Token init for ${slug}:`, { 
+      hasUrlToken: !!urlToken, 
+      hasStoredToken: !!storedToken, 
+      willUse: !!tokenToUse 
+    });
+    
+    if (tokenToUse && !reduxPreviewToken) {
+      console.log(`[SalonClient] Storing preview token in Redux and localStorage`);
+      dispatch(setPreviewToken({ token: tokenToUse, slug }));
+      // Persist to localStorage for future navigations
+      localStorage.setItem(`preview_token_${slug}`, tokenToUse);
+      
+      // Clean up URL by removing preview_token query param
+      // This keeps the URL clean while token is available in store/localStorage
+      if (typeof window !== 'undefined' && urlToken) {
+        const url = new URL(window.location);
+        if (url.searchParams.has('preview_token')) {
+          console.log(`[SalonClient] Removing preview_token from URL`);
+          url.searchParams.delete('preview_token');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    }
+    
+    // Mark token as initialized (whether we found one or not)
+    console.log(`[SalonClient] Token initialization complete`);
+    setTokenInitialized(true);
+  }, [slug, dispatch, reduxPreviewToken, previewToken, searchParams]);
+
+  // Clear preview token from localStorage when component unmounts
+  useEffect(() => {
+    return () => {
+      if (reduxPreviewToken) {
+        localStorage.removeItem(`preview_token_${slug}`);
+        dispatch(clearPreviewToken());
+      }
+    };
+  }, [dispatch, reduxPreviewToken, slug]);
 
   
 
@@ -356,7 +410,16 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null }) {
   }, [slug, selectedCategoryUuids, selectedAudienceUuids, dispatch]);
 
   useEffect(() => {
-    if (!slug || initialSalon) return;
+    if (!slug || initialSalon || !tokenInitialized) {
+      console.log(`[SalonClient] Skipping fetch:`, { 
+        hasSlug: !!slug, 
+        hasInitialSalon: !!initialSalon, 
+        tokenInitialized 
+      });
+      return;
+    }
+
+    console.log(`[SalonClient] Fetching salon ${slug} with token:`, !!reduxPreviewToken);
 
     let cancelled = false;
 
@@ -365,12 +428,13 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null }) {
       setError("");
 
       try {
-        const data = await fetchSalonBySlug(slug);
+        const data = await fetchSalonBySlug(slug, reduxPreviewToken);
         if (!cancelled) {
           setSalon(data);
         }
       } catch (err) {
         if (!cancelled) {
+          console.error(`[SalonClient] Fetch failed:`, err);
           setError(err?.message || "Failed to load salon");
         }
       } finally {
@@ -385,7 +449,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null }) {
     return () => {
       cancelled = true;
     };
-  }, [slug, initialSalon]);
+  }, [slug, initialSalon, reduxPreviewToken, tokenInitialized]);
 
   const venueName = salon?.venue?.name || "Salon";
   const venueAddress = salon?.venue?.address?.formatted || "";
@@ -1865,11 +1929,14 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null }) {
 }
 
 import StoreProvider from '@/components/providers/StoreProvider';
+import { Suspense } from 'react';
 
 export default function SalonClient(props) {
   return (
     <StoreProvider>
-      <InnerSalonClient {...props} />
+      <Suspense fallback={null}>
+        <InnerSalonClient {...props} />
+      </Suspense>
     </StoreProvider>
   );
 }

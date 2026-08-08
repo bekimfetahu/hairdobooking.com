@@ -1,4 +1,4 @@
-export async function fetchSalonBySlug(slug) {
+export async function fetchSalonBySlug(slug, previewToken = null) {
   const response = await fetch(`/api/salons/${slug}`, {
     method: "POST",
     headers: {
@@ -7,7 +7,7 @@ export async function fetchSalonBySlug(slug) {
     body: JSON.stringify({
       method: "get",
       access_type: "laravelApp",
-      data: {},
+      data: previewToken ? { preview_token: previewToken } : {},
     }),
   });
 
