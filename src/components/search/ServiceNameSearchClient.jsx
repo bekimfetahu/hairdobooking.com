@@ -108,10 +108,16 @@ function VenueMap({ venues, selectedLocation, serviceName, searchDistance, route
             },
           });
 
+          const imageUrl = venue.primary_image?.url || venue.primary_image || venue.image || venue.venue?.primary_image?.url || venue.venue?.primary_image || null;
           const infoContent = `
-            <div style="padding: 8px; max-width: 250px; cursor: pointer;" class="venue-info-popup" data-slug="${venue.venue?.slug}">
-              <p style="font-weight: 600; margin: 0 0 4px 0; font-size: 14px; text-decoration: underline; color: #2563eb;">${venue.venue?.name || "Venue"}</p>
-              <p style="margin: 0; font-size: 12px; color: #666;">${venue.address?.formatted || ""}</p>
+            <div style="padding: 0; max-width: 280px; cursor: pointer;" class="venue-info-popup" data-slug="${venue.venue?.slug || venue.slug}">
+              ${imageUrl ? `
+                <img src="${imageUrl}" alt="${venue.venue?.name || venue.name || "Venue"}" style="width: 100%; height: 160px; object-fit: cover; display: block; border-radius: 4px 4px 0 0;">
+              ` : ''}
+              <div style="padding: 8px;">
+                <p style="font-weight: 600; margin: 0 0 4px 0; font-size: 14px; text-decoration: underline; color: #2563eb;">${venue.venue?.name || venue.name || "Venue"}</p>
+                <p style="margin: 0; font-size: 12px; color: #666;">${venue.address?.formatted || venue.address || ""}</p>
+              </div>
             </div>
           `;
 

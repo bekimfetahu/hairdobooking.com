@@ -17,8 +17,10 @@ const laravelApp = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'X-App-Token': process.env.CLIENT_ACCESS_TOKEN,
     },
+
 });
 
 // Request Interceptor (optional for dynamic token updates)
