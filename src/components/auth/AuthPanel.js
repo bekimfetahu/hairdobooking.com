@@ -96,7 +96,12 @@ export default function AuthPanel({
       const data = await response.json();
       if (!response.ok) {
         if (response.status === 422 && data.errors) {
-          const errorMessages = Object.values(data.errors).flat().join('; ');
+          const errorMessages = Object.entries(data.errors)
+            .map(([field, messages]) => {
+              const msgs = Array.isArray(messages) ? messages : [messages];
+              return msgs.join(' ');
+            })
+            .join('; ');
           setError(errorMessages || data.message || 'Login failed');
         } else {
           setError(data.message || 'Login failed');
@@ -285,7 +290,12 @@ export default function AuthPanel({
       const data = await response.json();
       if (!response.ok) {
         if (response.status === 422 && data.errors) {
-          const errorMessages = Object.values(data.errors).flat().join('; ');
+          const errorMessages = Object.entries(data.errors)
+            .map(([field, messages]) => {
+              const msgs = Array.isArray(messages) ? messages : [messages];
+              return msgs.join(' ');
+            })
+            .join('; ');
           setError(errorMessages || data.message || 'Registration failed');
         } else {
           setError(data.message || 'Registration failed');
@@ -730,3 +740,5 @@ export default function AuthPanel({
     </div>
   );
 }
+
+

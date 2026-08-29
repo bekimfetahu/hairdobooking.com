@@ -7,10 +7,8 @@ export async function POST(req) {
         const body = await req.json();
         const isProduction = process.env.NODE_ENV === 'production';
 
-        // Call Laravel API using the centralized Axios instance
         const response = await laravelApp.post('/client/register', body);
 
-        // Store the token in an HttpOnly cookie
         const res = NextResponse.json(response.data, { status: 200 });
         res.headers.set(
             'Set-Cookie',
@@ -20,13 +18,18 @@ export async function POST(req) {
         return res;
     } catch (error) {
         const status = error.response?.status || 500;
-        const data = error.response?.data || {};
-        const message = data.message || 'An error occurred.';
-        const errors = data.errors || null;
+        console.log('error',error)
 
-        // Forward the original Laravel message, errors (for 422), and status
+        // Laravel always returns message + errors for 422
+        const message = error.response?.data?.message || 'An error occurred.';
+        const errors = error.response?.data?.errors || {};
+
         return NextResponse.json(
-            { message, errors },
+            {
+                status,
+                message,
+                errors
+            },
             { status }
         );
     }

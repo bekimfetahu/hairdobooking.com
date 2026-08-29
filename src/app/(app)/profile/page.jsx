@@ -11,7 +11,6 @@ export default async function ProfilePage() {
   }
 
   const me = user;
-  console.log(JSON.stringify(me));
 
   const initial = {
     first_name: me.client?.first_name || me.first_name || '',
