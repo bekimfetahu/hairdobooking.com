@@ -11,12 +11,13 @@ export default async function ProfilePage() {
   }
 
   const me = user;
+  console.log(JSON.stringify(me));
 
   const initial = {
     first_name: me.client?.first_name || me.first_name || '',
     last_name: me.client?.last_name || me.last_name || '',
     phone: me.client?.phone || '',
-    avatar_url: me.avatar_url || (me.user && me.user.avatar_url) || me.client?.avatar_url || null,
+    avatar_url: me.avatar || null,
   };
 
   return (
