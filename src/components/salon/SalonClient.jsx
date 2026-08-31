@@ -285,7 +285,9 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState("");
   const [serviceAvailableDates, setServiceAvailableDates] = useState(null);
+  const [serviceAvailabilityMap, setServiceAvailabilityMap] = useState({});
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const availabilityRequestIdRef = useRef(0);
   const [expandedServices, setExpandedServices] = useState({});
   const [expandedFilter, setExpandedFilter] = useState(null);
   const searchInputRef = useRef(null);
@@ -571,6 +573,18 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
       return;
     }
 
+    const dateAvailability = serviceAvailabilityMap?.[selectedDate];
+    if (dateAvailability) {
+      const profs = Array.isArray(dateAvailability.professionals) ? dateAvailability.professionals : [];
+      setProfessionals(profs);
+      setProfessionalsError("");
+      setProfessionalsLoading(false);
+      if (profs.length > 0) {
+        dispatch(setProfessionalOpen({ slug, open: true }));
+      }
+      return;
+    }
+
     let cancelled = false;
 
     async function loadProfessionals() {
@@ -608,7 +622,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
     return () => {
       cancelled = true;
     };
-  }, [slug, selectedDate, selectedServiceUuid, serviceAvailableDates, dispatch]);
+  }, [slug, selectedDate, selectedServiceUuid, serviceAvailableDates, serviceAvailabilityMap, dispatch]);
 
   useEffect(() => {
     if (!slug || !selectedDate || !selectedServiceUuid || !selectedProfessionalUuid) {
@@ -666,6 +680,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
           end_date: endIso,
           service_uuid: serviceUuid,
         });
+        console.log('response',response)
 
         // Response is already in the format { "2026-04-01": { available: true, professionals: [...] }, ... }
         // Extract just the available dates array for backward compatibility
@@ -759,12 +774,18 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
       return;
     }
 
+    const requestId = ++availabilityRequestIdRef.current;
     let cancelled = false;
+
     (async () => {
       const start = dayjs().startOf("day");
       const end = start.add(13, "day");
       const result = await fetchAvailableDatesInRange(start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD"), selectedServiceUuid);
-      if (!cancelled) setServiceAvailableDates(result.availableDates || []);
+
+      if (!cancelled && requestId === availabilityRequestIdRef.current) {
+        setServiceAvailabilityMap(result.availabilityMap || {});
+        setServiceAvailableDates(result.availableDates || []);
+      }
     })();
 
     return () => {
@@ -775,7 +796,19 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
   // Called by the datepicker when the visible month changes so we can fetch month availability
   const handleDatepickerMonthChange = useCallback(async (monthIso) => {
     if (!selectedServiceUuid) return;
-    let start = dayjs(monthIso).startOf("month");
+
+    const monthStart = dayjs(monthIso).startOf("month");
+    const currentRangeStart = dayjs().startOf("day");
+    const currentRangeEnd = currentRangeStart.add(13, "day");
+
+    // The parent already prefetches the current 2-week window; avoid re-fetching the same
+    // month data when we are still inside that already-loaded window.
+    if (monthStart.isSame(currentRangeStart, "month") && !monthStart.isAfter(currentRangeStart, "day")) {
+      return;
+    }
+
+    const requestId = ++availabilityRequestIdRef.current;
+    let start = monthStart;
     const today = dayjs().startOf("day");
     // Defensive: ensure start_date is never before today (backend requires this)
     if (start.isBefore(today)) {
@@ -783,8 +816,12 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
     }
     const end = dayjs(monthIso).endOf("month");
     const result = await fetchAvailableDatesInRange(start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD"), selectedServiceUuid);
-    setServiceAvailableDates(result.availableDates || []);
-  }, [selectedServiceUuid]);
+
+    if (requestId === availabilityRequestIdRef.current) {
+      setServiceAvailabilityMap(result.availabilityMap || {});
+      setServiceAvailableDates(result.availableDates || []);
+    }
+  }, [selectedServiceUuid, slug]);
 
   const handleApplyVoucher = useCallback(async () => {
     if (!voucherCode.trim() || !selectedServiceUuid) {
@@ -1441,7 +1478,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
               <StepSection
                 stepNumber={3}
                 title={selectedProfessional && !isProfessionalSectionOpen ? "Professional" : "Choose Professional"}
-                isOpen={!!selectedService && !!selectedDate && isProfessionalSectionOpen}
+                isOpen={!!selectedService && !!selectedDate && (isProfessionalSectionOpen || !selectedProfessional)}
                 headerSummary={
                   !selectedService ? (
                     <p className="text-xs text-neutral-600">First select a service to see available professionals.</p>
@@ -1465,6 +1502,19 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                   ) : (
                     <p className="text-xs text-neutral-600">Choose the professional who will handle this service.</p>
                   )
+                }
+                headerRight={
+                  selectedProfessional && !isProfessionalSectionOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch(setProfessionalOpen({ slug, open: true }));
+                      }}
+                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
+                    >
+                      Change
+                    </button>
+                  ) : null
                 }
               >
                 {selectedService && (
@@ -1547,8 +1597,21 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
               <StepSection
                 stepNumber={4}
                 title={selectedTime && !isTimeSectionOpen ? "Time" : "Choose Time"}
-                isOpen={!!selectedProfessional && isTimeSectionOpen}
+                isOpen={!!selectedProfessional && (isTimeSectionOpen || !selectedTime)}
                 headerSummary={!selectedProfessional ? (<p className="text-xs text-neutral-600">First choose a professional to see available booking times.</p>) : selectedTime ? (<p className="text-xs font-medium text-neutral-900">{selectedTimeSlot?.label || selectedTime}</p>) : (<p className="text-xs text-neutral-600">Choose the time that works best for you.</p>)}
+                headerRight={
+                  selectedTime && !isTimeSectionOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch(setTimeOpen({ slug, open: true }));
+                      }}
+                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
+                    >
+                      Change
+                    </button>
+                  ) : null
+                }
               >
                 {selectedProfessional && (
                   <div className="space-y-3">

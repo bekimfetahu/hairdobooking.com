@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 
 export default function SalonDatePicker({ value, onChange, unavailableDates = [], availableDates = null, onMonthChange = () => {}, isLoading = false }) {
@@ -10,6 +10,7 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
   const [weekStart, setWeekStart] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const initialMonthFetchDoneRef = useRef(false);
 
   // Initialize state after hydration to avoid SSR/client mismatch from timezone differences
   useEffect(() => {
@@ -39,6 +40,14 @@ export default function SalonDatePicker({ value, onChange, unavailableDates = []
 
   useEffect(() => {
     if (!currentMonth) return;
+
+    // Skip the initial hydration-driven month load because the parent already prefetches
+    // the current 2-week availability window for the selected service.
+    if (!initialMonthFetchDoneRef.current) {
+      initialMonthFetchDoneRef.current = true;
+      return;
+    }
+
     try {
       onMonthChange(currentMonth.format("YYYY-MM-DD"));
     } catch (e) {
