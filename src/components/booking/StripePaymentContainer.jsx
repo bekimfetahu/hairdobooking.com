@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import StripePaymentForm from './StripePaymentForm';
@@ -35,60 +35,34 @@ export default function StripePaymentContainer({
   paymentIntentId,
   paymentOptional,
   currency,
+  stripeAccountId,
   onPaymentSuccess,
   onPaymentError,
   onSkipPayment,
   onClose,
 }) {
-  const [stripePromise, setStripePromise] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const missingPaymentData = !clientSecret || !paymentIntentId;
+  const stripeError = !publishableKey
+    ? 'Stripe configuration is missing. Please contact support.'
+    : missingPaymentData
+      ? 'Payment information missing. Please try again.'
+      : null;
 
-  // Initialize Stripe
-  useEffect(() => {
-    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-
+  const stripePromise = useMemo(() => {
     if (!publishableKey) {
-      setError('Stripe configuration is missing. Please contact support.');
-      setLoading(false);
-      return;
+      return null;
     }
 
-    const stripe = loadStripe(publishableKey);
-    setStripePromise(stripe);
-  }, []);
+    return loadStripe(publishableKey, stripeAccountId ? { stripeAccount: stripeAccountId } : undefined);
+  }, [publishableKey, stripeAccountId]);
 
-  // Validate payment intent data from props
-  useEffect(() => {
-    if (!stripePromise) return;
-
-    if (!clientSecret || !paymentIntentId) {
-      setError('Payment information missing. Please try again.');
-      setLoading(false);
-      return;
-    }
-
-    // Payment intent data already provided, ready to render form
-    setLoading(false);
-  }, [stripePromise, clientSecret, paymentIntentId]);
-
-  if (loading) {
-    return (
-      <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow">
-        <div className="flex items-center justify-center space-x-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600">Initializing payment...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
+  if (stripeError) {
     return (
       <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow">
         <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-md">
           <p className="font-medium mb-2">Payment Error</p>
-          <p className="text-sm mb-4">{error}</p>
+          <p className="text-sm mb-4">{stripeError}</p>
           <div className="flex space-x-2">
             <button
               onClick={() => window.location.reload()}

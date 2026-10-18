@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Swal from 'sweetalert2';
@@ -78,23 +78,25 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
   const AppointmentCard = ({ appt }) => {
     const dtRaw = appt.from_time || appt.start_time || appt.datetime || null;
     const dateObj = dtRaw ? new Date(dtRaw) : null;
-    const [when, setWhen] = useState(dateObj ? dateObj.toISOString() : 'TBD');
-    useEffect(() => {
-      if (!dateObj) return;
+    const when = useMemo(() => {
+      if (!dateObj) return 'TBD';
       try {
-        const formatted = dateObj.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-        setWhen(formatted);
+        return dateObj.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
       } catch (e) {
-        setWhen(dateObj.toISOString());
+        return dateObj.toISOString();
       }
-    }, [dtRaw]);
+    }, [dateObj]);
 
     const service = appt?.service?.display_name || appt?.service?.name || 'Service';
     const venue = appt?.venue?.name || '';
     const professional = appt?.employee?.full_name || '';
-    const status = appt?.appointment_state?.name || 'Unknown';
-    const requiresPayment = !!appt?.requires_payment;
-    const paymentPending = appt?.payment?.status === 'pending';
+    const status = appt?.appointment_state?.name ||
+      (appt?.appointment_state_id === 6 ? 'Reserved' :
+      appt?.appointment_state_id === 1 ? 'Booked' : 'Unknown');
+    const requiresPayment = !!(appt?.requires_payment || appt?.appointment_detail?.requires_payment);
+    const isReserved = appt?.appointment_state_id === 6 || String(appt?.appointment_state?.name || '').toLowerCase() === 'reserved';
+    const paymentPending = isReserved && requiresPayment &&
+      (['pending', 'requires_payment_method', 'requires_action', 'processing'].includes(String(appt?.payment?.status || '').toLowerCase()));
     const address = appt?.venue?.line_address || '';
 
     const apptDate = dateObj || null;

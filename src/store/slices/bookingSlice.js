@@ -171,12 +171,20 @@ const bookingSlice = createSlice({
           state.bySlug[slug].hasUserModifiedSelection = false;
         }
     },
+    clearPendingPayment(state, action) {
+      const { slug } = action.payload;
+      if (state.bySlug[slug]) {
+        state.bySlug[slug].pendingPaymentIntent = null;
+        state.bySlug[slug].pendingAppointmentSnapshot = null;
+        state.bySlug[slug].hasUserModifiedSelection = false;
+      }
+    },
     clearPendingAppointment(state, action) {
       const { slug } = action.payload;
       if (state.bySlug[slug]) {
         state.bySlug[slug].pendingAppointment = null;
         state.bySlug[slug].pendingPaymentIntent = null;
-          state.bySlug[slug].pendingAppointmentSnapshot = null;
+        state.bySlug[slug].pendingAppointmentSnapshot = null;
         state.bySlug[slug].reservationUuid = null;
         state.bySlug[slug].hasUserModifiedSelection = false;
       }
@@ -219,6 +227,7 @@ export const {
   setVoucherError,
   setVoucherValidating,
   setPendingAppointment,
+  clearPendingPayment,
   clearPendingAppointment,
   clearBooking,
 } = bookingSlice.actions;

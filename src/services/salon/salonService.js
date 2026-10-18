@@ -143,6 +143,24 @@ export async function fetchAppointmentPaymentStatus(appointmentUuid) {
   return data;
 }
 
+export async function createAppointmentPaymentIntent(appointmentUuid) {
+  const response = await fetch(`/api/appointments/${appointmentUuid}/payment-intent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || 'Failed to create payment intent');
+  }
+
+  return data;
+}
+
 export async function validateSalonVoucher(slug, { code, service_uuid }) {
   const response = await fetch("/api/vouchers/validate", {
     method: "POST",

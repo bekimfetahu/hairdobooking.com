@@ -212,6 +212,7 @@ export default function CheckoutPage({ appointmentUuid: propAppointmentUuid }) {
                     clientSecret={paymentIntent.client_secret}
                     paymentIntentId={paymentIntent.payment_intent_id}
                     paymentOptional={paymentIntent.payment_optional}
+                    stripeAccountId={paymentIntent.stripe_account_id}
                     onPaymentSuccess={() => window.location.href = `/checkout/${appointment.uuid}/success`}
                     onPaymentError={() => {}}
                     onSkipPayment={paymentIntent.payment_optional ? () => { setShowPaymentModal(false); window.location.href = `/checkout/${appointment.uuid}/success`; } : null}

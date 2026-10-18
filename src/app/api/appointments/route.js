@@ -55,6 +55,7 @@ export async function POST(req) {
     } else {
       response = await service[method](url, payload, config);
     }
+    console.log('response',response)
 
     return NextResponse.json(response.data, { status: response.status });
   } catch (error) {

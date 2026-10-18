@@ -15,6 +15,7 @@ import {
   createSalonAppointment,
   validateSalonVoucher,
   fetchAppointmentPaymentStatus,
+  createAppointmentPaymentIntent,
 } from "@/services/salon/salonService";
 import SalonDatePicker from "@/components/booking/SalonDatePicker";
 import StepSection from "@/components/booking/StepSection";
@@ -43,6 +44,7 @@ import {
   setVoucherError,
   setVoucherValidating,
   setPendingAppointment,
+  clearPendingPayment,
   clearPendingAppointment,
   clearBooking,
 } from "@/store/slices/bookingSlice";
@@ -850,6 +852,14 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
   }, [slug, voucherCode, selectedServiceUuid, dispatch]);
 
   const handleBookNow = useCallback(async () => {
+    // Keep the current reserved appointment in Redux while the user is retrying the payment.
+    // We only clear the stale payment intent details, not the reservation itself, so we do not
+    // create a duplicate appointment for the same slot while the reserved booking is still active.
+    if (booking?.pendingPaymentIntent) {
+      dispatch(clearPendingPayment({ slug }));
+      setPaymentRequired(false);
+    }
+
     // Check if user is authenticated
     if (!isAuthenticated) {
       // Save current booking state to localStorage before redirecting to auth
@@ -888,16 +898,20 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
           return;
         }
 
-        // Try refreshing payment intent from server
+        // Always create a fresh PaymentIntent for the current reservation when the
+        // user clicks Book now again. This avoids reusing a stale or canceled PI.
         try {
-          const status = await fetchAppointmentPaymentStatus(reservationUuid);
-          if (status?.payment_intent) {
-            dispatch(setPendingAppointment({ slug, appointment: status.appointment, payment_intent: status.payment_intent, snapshot: booking?.pendingAppointmentSnapshot }));
-            setPaymentRequired(true);
-            return;
-          }
+          const paymentIntent = await createAppointmentPaymentIntent(reservationUuid);
+          dispatch(setPendingAppointment({
+            slug,
+            appointment: booking?.pendingAppointment ?? { uuid: reservationUuid },
+            payment_intent: paymentIntent,
+            snapshot: booking?.pendingAppointmentSnapshot,
+          }));
+          setPaymentRequired(true);
+          return;
         } catch (err) {
-          console.warn('Failed to refresh payment intent for reservation', err?.message);
+          console.warn('Failed to create fresh payment intent for reservation', err?.message);
         }
 
         // Fallback: open checkout page for reservation
@@ -1098,12 +1112,19 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
     // User can click "Try Again" in the payment form to retry
   }, []);
 
-  const handlePaymentCancel = useCallback(() => {
-    console.log('Payment cancelled by user');
-    // Close the payment modal but keep the pending appointment/payment intent so user can retry
+  const handlePaymentCancel = useCallback(async () => {
+    const appointmentUuid = booking?.pendingAppointment?.uuid;
+    const paymentIntentId = booking?.pendingPaymentIntent?.payment_intent_id;
+
+    console.log('Payment modal closed by user', { appointmentUuid, paymentIntentId });
+
+    // Do not call the backend cancellation endpoint here.
+    // The reservation remains active and the next Book now click creates a fresh
+    // PaymentIntent for the same appointment. We only clear the stale in-memory
+    // payment state so the modal can reopen cleanly.
+    dispatch(clearPendingPayment({ slug }));
     setPaymentRequired(false);
-    // pending appointment stored in Redux remains so user can retry during this session
-  }, []);
+  }, [booking?.pendingAppointment?.uuid, booking?.pendingPaymentIntent?.payment_intent_id, dispatch, slug]);
 
   const handleSkipPayment = useCallback(async () => {
     console.log('✓ Payment skipped - proceeding with booking without payment');
@@ -1978,6 +1999,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                 clientSecret={booking.pendingPaymentIntent.client_secret}
                 paymentIntentId={booking.pendingPaymentIntent.payment_intent_id}
                 paymentOptional={booking.pendingPaymentIntent.payment_optional}
+                stripeAccountId={booking.pendingPaymentIntent.stripe_account_id}
                 onPaymentSuccess={handlePaymentSuccess}
                 onPaymentError={handlePaymentError}
                 onSkipPayment={booking.pendingPaymentIntent.payment_optional ? handleSkipPayment : null}
