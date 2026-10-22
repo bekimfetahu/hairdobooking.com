@@ -77,7 +77,9 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
   const router = useRouter();
   const [currentLocation, setCurrentLocation] = React.useState(initialLocation || null);
   const [newSalons, setNewSalons] = React.useState([]);
+  const [popularSalons, setPopularSalons] = React.useState([]);
   const [loadingNewSalons, setLoadingNewSalons] = React.useState(false);
+  const [loadingPopularSalons, setLoadingPopularSalons] = React.useState(false);
 
   // Fetch new salons on mount
   React.useEffect(() => {
@@ -87,7 +89,6 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
         const response = await fetch('/api/new-salons');
         if (response.ok) {
           const data = await response.json();
-          // Transform API response to CardCarousel format
           const transformedSalons = (data.data || []).map(salon => ({
             id: salon.venue.uuid,
             name: salon.venue.name,
@@ -105,6 +106,32 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
     };
 
     fetchNewSalons();
+  }, []);
+
+  React.useEffect(() => {
+    const fetchPopularSalons = async () => {
+      setLoadingPopularSalons(true);
+      try {
+        const response = await fetch('/api/popular-salons');
+        if (response.ok) {
+          const data = await response.json();
+          const transformedSalons = (data.data || []).map(salon => ({
+            id: salon.venue.uuid,
+            name: salon.venue.name,
+            slug: salon.venue.slug,
+            subtitle: salon.address?.formatted || 'Address not available',
+            image: salon.primary_image?.url || '/images/placeholder.jpg',
+          }));
+          setPopularSalons(transformedSalons);
+        }
+      } catch (error) {
+        console.error('Failed to fetch popular salons:', error);
+      } finally {
+        setLoadingPopularSalons(false);
+      }
+    };
+
+    fetchPopularSalons();
   }, []);
 
   const handleSearch = (searchData) => {
@@ -182,17 +209,19 @@ export default function HomeClient({ initialLocation, initialVenues, initialServ
       )}
 
       {/* ===== POPULAR SALONS CAROUSEL ===== */}
-      <section className="py-6 md:py-16 bg-white" id="popular">
-        <div className="max-w-6xl mx-auto px-4 md:px-6">
-          <CardCarousel
-            title="Popular Salons"
-            cards={salonData.slice(0, 3)}
-            cardWidth={280}
-            onCardClick={handleCardClick}
-            onNavigate={handleNavigate}
-          />
-        </div>
-      </section>
+      {!loadingPopularSalons && popularSalons.length > 0 && (
+        <section className="py-6 md:py-16 bg-white" id="popular">
+          <div className="max-w-6xl mx-auto px-4 md:px-6">
+            <CardCarousel
+              title="Popular Salons"
+              cards={popularSalons.slice(0, 6)}
+              cardWidth={280}
+              onCardClick={handleCardClick}
+              onNavigate={handleNavigate}
+            />
+          </div>
+        </section>
+      )}
 
       {/* ===== TESTIMONIALS SECTION ===== */}
       <section className="py-6 md:py-16 bg-[#FDFBF8]" id="testimonials">

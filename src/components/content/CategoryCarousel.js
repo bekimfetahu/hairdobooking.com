@@ -72,7 +72,7 @@ export default function CategoryCarousel({
       {/* Carousel Container */}
       <div
         ref={scrollRef}
-        className={`flex gap-2 overflow-x-auto scrollbar-hide scroll-smooth pb-4 ${
+        className={`flex gap-2 overflow-x-auto scrollbar-hide scroll-smooth pb-4 -mx-6 px-6 ${
           isMobile ? 'snap-x' : ''
         }`}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}

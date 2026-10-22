@@ -291,7 +291,7 @@ export default function NavbarStatic({ initialUser = null }) {
             </>
           ) : (
             <>
-              <Link href="/login" className={navLinkClasses('/login')}>
+              <Link href="/login" className="hidden">
                 Sign in
               </Link>
               <Link
