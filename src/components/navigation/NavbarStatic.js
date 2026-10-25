@@ -291,9 +291,14 @@ export default function NavbarStatic({ initialUser = null }) {
             </>
           ) : (
             <>
-              <Link href="/login" className="hidden">
-                Sign in
-              </Link>
+              {pathname === '/' && (
+                <Link
+                  href="/login"
+                  className="hidden items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium text-black transition-colors duration-150 ease-out hover:shadow-sm hover:border-black/20 hover:bg-neutral-50 md:inline-flex"
+                >
+                  Login
+                </Link>
+              )}
               <Link
                 href="/partners"
                 className={`hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium md:inline-flex ${isForBusinessPage
@@ -397,7 +402,7 @@ export default function NavbarStatic({ initialUser = null }) {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center justify-center rounded-2xl border border-black/10 px-4 py-3 text-sm font-medium text-neutral-700 transition-colors hover:border-black hover:text-black"
                   >
-                    Sign in
+                    Login
                   </Link>
 
                   <Link

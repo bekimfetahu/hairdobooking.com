@@ -3,16 +3,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import PageShell from "@/components/layouts/PageShell";
-import { ArrowRight, BadgePercent, CalendarClock, Users2 } from "lucide-react";
+import {
+    ArrowRight,
+    BadgePercent,
+    BellRing,
+    BriefcaseBusiness,
+    Building2,
+    CalendarCheck2,
+    ChartColumnIncreasing,
+    ClipboardList,
+    User,
+    Users2,
+} from "lucide-react";
 import PricingQuote from "@/components/marketing/PricingQuote";
 
-export default function PricingPage() {
-    // Starter card (1-user) pricing
-    const [starterBillingFrequency, setStarterBillingFrequency] = useState("month");
+const includedFeatures = [
+    { icon: CalendarCheck2, label: "Appointment scheduling & calendar management" },
+    { icon: ClipboardList, label: "Client management & appointment history" },
+    { icon: Building2, label: "Your own salon pages in the marketplace included" },
+    { icon: CalendarCheck2, label: "Working hours, holidays & availability" },
+    { icon: BellRing, label: "Email notifications included" },
+    { icon: BadgePercent, label: "Optional SMS reminder packages" },
+    { icon: ChartColumnIncreasing, label: "Reports & business insights" },
+    { icon: CalendarCheck2, label: "No booking fee — only Stripe transaction fees apply" },
+];
 
-    // Calculator pricing
-    const [numberOfUsers, setNumberOfUsers] = useState(3);
-    const [billingFrequency, setBillingFrequency] = useState("month");
+export default function PricingPage() {
+    const [numberOfUsers, setNumberOfUsers] = useState(1);
 
     return (
         <PageShell
@@ -20,10 +37,10 @@ export default function PricingPage() {
             eyebrow="Pricing"
             title={(
                 <>
-                    <span className="text-primary">Simple</span>, per-user pricing.
+                    Pay only for <span className="text-primary">active professionals</span>
                 </>
             )}
-            description="Pay per team member, monthly or yearly, and run as many salons as you like on one account. Every subscription includes the same features for everyone, with VAT included and optional SMS add-ons billed separately. No long-term contracts—cancel anytime, or pause your account for up to 6 months so you don’t pay while you’re not using it."
+            description="Only professionals who take appointments count towards your subscription. Your salon pages in the marketplace are included at no extra cost, and there is no booking or appointment fee. We only pass through the standard Stripe processing fees for each transaction, which vary by location and payment method. Receptionists, managers, accountants and other administrative staff are included at no extra cost."
             actions={(
                 <>
                     <Link href="/partners/register" className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
@@ -31,136 +48,77 @@ export default function PricingPage() {
                     </Link>
                     <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-3 text-sm text-neutral-600">
                         <BadgePercent className="h-4 w-4 text-black" />
-                        Automatic discounts based on team size and billing—no extra steps.
+                        Automatic team discounts as your professional team grows
                     </div>
                 </>
             )}
         >
-            <section className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+            <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
                 <div className="grid gap-4 md:grid-cols-1 lg:col-span-1">
-                    <article className="max-w-md rounded-md border border-black bg-white p-6 shadow-lg shadow-black/10">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Starter</p>
-                        <p className="mt-2 text-sm leading-7 text-neutral-600">
-                            For solo pros and small salons getting started. Pricing below is for 1 active staff member 
-                            – you&apos;ll get better value when you add more users on the right.
-                        </p>
+                    <article className="max-w-md rounded-md border border-black/10 bg-white p-6 shadow-sm">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Everything Included</p>
 
-                        <div className="mt-4 inline-flex rounded-full border border-black/10 bg-neutral-50 p-1 text-xs font-medium">
-                            <button
-                                type="button"
-                                onClick={() => setStarterBillingFrequency("month")}
-                                className={`px-3 py-1 rounded-full ${
-                                    starterBillingFrequency === "month"
-                                        ? "bg-black text-white"
-                                        : "text-neutral-700"
-                                }`}
-                            >
-                                Monthly
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setStarterBillingFrequency("year")}
-                                className={`px-3 py-1 rounded-full ${
-                                    starterBillingFrequency === "year"
-                                        ? "bg-black text-white"
-                                        : "text-neutral-700"
-                                }`}
-                            >
-                                Yearly
-                            </button>
+                        <div className="mt-3 space-y-3 text-[15px] leading-7 text-neutral-700">
+                            {includedFeatures.map(({ icon: Icon, label }) => (
+                                <div key={label} className="flex items-center gap-2 rounded-md px-2 py-1">
+                                    <Icon className="h-5 w-5 shrink-0 text-black" />
+                                    <span>{label}</span>
+                                </div>
+                            ))}
                         </div>
-
-                        <PricingQuote
-                            variant="starter"
-                            numberOfUsers={1}
-                            billingFrequency={starterBillingFrequency}
-                        />
-
-                        <ul className="mt-5 space-y-3 text-sm text-neutral-700">
-                            <li className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-black" />
-                                Online booking
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-black" />
-                                Client reminders
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-black" />
-                                Basic reports
-                            </li>
-                        </ul>
                     </article>
                 </div>
 
                 <aside className="rounded-md border border-black/10 bg-white p-6 shadow-sm">
                     <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 items-center justify-center rounded-md bg-neutral-50 text-black">
-                            <CalendarClock className="h-5 w-5" />
+                            <CalendarCheck2 className="h-5 w-5" />
                         </div>
                         <div>
-                            <p className="text-lg font-semibold text-primary">Estimate your subscription</p>
-                            <p className="text-sm text-neutral-500">Live quote from the HairdoBooking billing engine</p>
+                            <p className="text-lg font-semibold text-primary">Calculate your monthly price</p>
+                            <p className="text-sm text-neutral-500">Only active professionals are billable</p>
                         </div>
                     </div>
 
                     <div className="mt-6 space-y-5 text-sm leading-7 text-neutral-600">
-                        <p>
-                            Choose how many professional staff seats you need and whether you want to pay Monthly or Yearly. Prices come directly from the backend pricing rules.
-                        </p>
+                        <p>Choose how many active professionals you need.</p>
 
                         <div className="space-y-4 rounded-md border border-black/10 bg-neutral-50 p-4">
                             <div className="flex items-center justify-between text-sm">
-                                <label className="flex items-center gap-2 font-medium text-neutral-900">
-                                    <Users2 className="h-4 w-4 text-black" />
-                                    Team size
-                                </label>
-                                <span className="text-neutral-700">{numberOfUsers} user{numberOfUsers > 1 ? "s" : ""}</span>
+                                <div className="flex items-center gap-2 font-medium text-neutral-900">
+                                    {numberOfUsers === 1 ? (
+                                        <User className="h-4 w-4 text-black" />
+                                    ) : (
+                                        <Users2 className="h-4 w-4 text-black" />
+                                    )}
+                                    <span>{numberOfUsers === 1 ? "Individual" : "Team"}</span>
+                                </div>
+                                <span className="font-semibold text-neutral-900">
+                                    {numberOfUsers} {numberOfUsers === 1 ? "professional" : "professionals"}
+                                </span>
                             </div>
                             <input
                                 type="range"
                                 min={1}
-                                max={20}
+                                max={100}
                                 value={numberOfUsers}
                                 onChange={(e) => setNumberOfUsers(Number(e.target.value))}
                                 className="w-full accent-black"
                             />
-
-                            <div className="flex items-center justify-between gap-2 text-sm">
-                                <span className="font-medium text-neutral-900">Billing frequency</span>
-                                <div className="inline-flex rounded-full border border-black/10 bg-white p-1 text-xs font-medium">
-                                    <button
-                                        type="button"
-                                        onClick={() => setBillingFrequency("month")}
-                                        className={`px-3 py-1 rounded-full ${
-                                            billingFrequency === "month"
-                                                ? "bg-black text-white"
-                                                : "text-neutral-700"
-                                        }`}
-                                    >
-                                        Monthly
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setBillingFrequency("year")}
-                                        className={`px-3 py-1 rounded-full ${
-                                            billingFrequency === "year"
-                                                ? "bg-black text-white"
-                                                : "text-neutral-700"
-                                        }`}
-                                    >
-                                        Yearly
-                                    </button>
-                                </div>
-                            </div>
                         </div>
 
-                        <div className="rounded-md border border-black/10 bg-white p-4">
+                        <div className="rounded-md border border-black/10">
                             <PricingQuote
                                 variant="calculator"
                                 numberOfUsers={numberOfUsers}
-                                billingFrequency={billingFrequency}
+                                billingFrequency="month"
                             />
+                        </div>
+
+                        <div className="pt-2 text-sm text-neutral-600">
+                            We do not charge booking fee. Only Stripe processing fees apply per transaction.
+                            <br />
+                            See the <a href="https://stripe.com/pricing" target="_blank" rel="noreferrer" className="font-medium text-black underline underline-offset-2">Stripe pricing</a>.
                         </div>
                     </div>
                 </aside>

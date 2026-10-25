@@ -50,6 +50,7 @@ export default function PricingQuote({ numberOfUsers, billingFrequency, variant 
     }, [numberOfUsers, billingFrequency]);
 
     const frequencyLabel = billingFrequency === "month" ? "month" : "year";
+    const professionalLabel = `${numberOfUsers} active professional${numberOfUsers > 1 ? "s" : ""}`;
 
     if (variant === "starter") {
         return (
@@ -59,7 +60,7 @@ export default function PricingQuote({ numberOfUsers, billingFrequency, variant 
                 </span>
                 <span className="pb-1 text-sm text-neutral-500">
                     {isReady
-                        ? `per ${frequencyLabel} (1 user)`
+                        ? `per ${frequencyLabel} • ${professionalLabel}`
                         : error
                             ? "Price unavailable"
                             : "Fetching live price…"}
@@ -68,47 +69,45 @@ export default function PricingQuote({ numberOfUsers, billingFrequency, variant 
         );
     }
 
-    // Default: calculator / detailed variant
     return (
-        <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                {isReady ? (
-                    quote.plan?.name ?? "Current plan"
-                ) : (
-                    <span className="inline-block h-3 w-24 rounded bg-neutral-100" />
-                )}
+        <div className="space-y-4 rounded-md  bg-neutral-50 p-4">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-neutral-800">
+                {isReady ? "Monthly subscription" : <span className="inline-block h-3 w-24 rounded bg-neutral-100" />}
             </p>
-            <div className="flex items-end gap-2">
-                <span className="text-3xl font-semibold text-neutral-950">
+
+            <div className="flex items-end gap-3">
+                <span className="text-4xl font-semibold tracking-[-0.04em] text-neutral-950">
                     {isReady ? `£${quote.pay_price}` : "£—"}
                 </span>
-                <span className="pb-1 text-xs text-neutral-500">
+                <span className="pb-1 text-sm font-medium text-neutral-600">
                     {isReady
-                        ? `per ${frequencyLabel} (incl. VAT)`
+                        ? `per ${frequencyLabel} • ${professionalLabel}`
                         : loading
                             ? "Calculating price…"
                             : error
                                 ? "Price unavailable"
-                                : "Set team size & billing"}
+                                : "Set active professionals"}
                 </span>
             </div>
-            <ul className="space-y-1 text-xs text-neutral-600">
-                <li>
-                    Base price: {isReady ? (
-                        <>£{quote.base_price}</>
-                    ) : (
-                        <span className="inline-block h-3 w-20 rounded bg-neutral-100" />
-                    )}
-                </li>
-                <li className="flex items-center gap-1">
-                    <BadgePercent className="h-3 w-3 text-black" />
-                    {isReady ? (
-                        <>Discount: {quote.discount_percent}% (−£{quote.discount_amount})</>
-                    ) : (
-                        <span className="inline-block h-3 w-28 rounded bg-neutral-100" />
-                    )}
-                </li>
-            </ul>
+
+            <div className="space-y-2 rounded-md border border-black/10 bg-white p-3 text-sm text-neutral-700">
+                <div className="flex items-center justify-between gap-3">
+                    <span className="text-neutral-600">Base price</span>
+                    <span className="font-medium text-neutral-900">{isReady ? `£${quote.base_price}` : "£—"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-neutral-600">
+                    <span>
+                        Team discount
+                    </span>
+                    <span className="font-semibold">
+                        {isReady ? `${quote.discount_percent}%` : "—"}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-neutral-600">
+                    <span>You save</span>
+                    <span className="font-semibold text-neutral-900">{isReady ? `£${quote.discount_amount}` : "£—"}</span>
+                </div>
+            </div>
         </div>
     );
 }
