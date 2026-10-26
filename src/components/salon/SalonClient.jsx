@@ -545,16 +545,48 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
 
   const selectedProfessional = useMemo(() => professionals.find((professional) => professional.uuid === selectedProfessionalUuid) || null, [professionals, selectedProfessionalUuid]);
 
+  const currentProfessionalPrice = useMemo(() => {
+    if (selectedProfessional && selectedProfessional.price !== null && selectedProfessional.price !== undefined) {
+      return Number(selectedProfessional.price);
+    }
+    if (selectedService && selectedService.price !== null && selectedService.price !== undefined) {
+      return Number(selectedService.price);
+    }
+    if (professionals.length === 0) return null;
+    const prices = professionals
+      .map((p) => p.price)
+      .filter((price) => price !== null && price !== undefined)
+      .map((price) => Number(price));
+    if (prices.length === 0) return null;
+    return Math.min(...prices);
+  }, [professionals, selectedProfessional, selectedService]);
+
   const minProfessionalPrice = useMemo(() => {
     if (professionals.length === 0) return null;
     const prices = professionals
       .map((p) => p.price)
-      .filter((price) => price !== null && price !== undefined);
+      .filter((price) => price !== null && price !== undefined)
+      .map((price) => Number(price));
     if (prices.length === 0) return null;
     return Math.min(...prices);
   }, [professionals]);
 
   const selectedTimeSlot = useMemo(() => timeSlots.find((slot) => (slot?.value ?? slot) === selectedTime) || null, [timeSlots, selectedTime]);
+
+  const voucherDiscountAmount = useMemo(() => {
+    if (!selectedVoucher || currentProfessionalPrice === null || Number.isNaN(currentProfessionalPrice)) return 0;
+
+    if (selectedVoucher.discount_type === "percent") {
+      return (currentProfessionalPrice * Number(selectedVoucher.discount_value || 0)) / 100;
+    }
+
+    return Number(selectedVoucher.discount_value || 0);
+  }, [currentProfessionalPrice, selectedVoucher]);
+
+  const finalProfessionalPrice = useMemo(() => {
+    if (currentProfessionalPrice === null || Number.isNaN(currentProfessionalPrice)) return null;
+    return Math.max(currentProfessionalPrice - voucherDiscountAmount, 0);
+  }, [currentProfessionalPrice, voucherDiscountAmount]);
 
   const groupedTimeSlots = useMemo(() => groupTimeSlots(timeSlots), [timeSlots]);
 
@@ -1791,65 +1823,48 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                         </div>
                       </div>
                     )}
-                     {/* Price - From professionals or Selected professional */}
-                    {(minProfessionalPrice !== null || (selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null)) && (
+                    {/* Price - selected professional price, with voucher discount reflected */}
+                    {selectedProfessional && (currentProfessionalPrice !== null || minProfessionalPrice !== null) && (
                       <div className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
                         <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
                           <Banknote size={18} strokeWidth={1.5} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          {selectedProfessional && selectedProfessional.price !== undefined && selectedProfessional.price !== null ? (
-                            <>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">
-                                {selectedVoucher ? "Original Price" : "Price"}
-                              </p>
-                              <p className={`mt-1 text-sm font-bold ${selectedVoucher ? "text-neutral-500 line-through" : "text-neutral-950"}`}>
-                                {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
-                                {typeof selectedProfessional.price === "number"
-                                  ? selectedProfessional.price.toFixed(2)
-                                  : selectedProfessional.price}
-                              </p>
+                          {selectedVoucher ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Price</p>
+                                <p className="text-sm font-bold text-neutral-500 line-through">
+                                  {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
+                                  {(currentProfessionalPrice ?? minProfessionalPrice).toFixed(2)}
+                                </p>
+                              </div>
 
-                              {/* Voucher discount breakdown */}
-                              {selectedVoucher && (
-                                <>
-                                  <div className="mt-2 pt-2 border-t border-neutral-200">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Discount</p>
-                                    <p className="mt-1 text-xs text-emerald-700 font-medium">
-                                      -{selectedService.currency?.symbol}
-                                      {selectedVoucher.discount_type === "percent"
-                                        ? ((selectedProfessional.price * selectedVoucher.discount_value) / 100).toFixed(2)
-                                        : parseFloat(selectedVoucher.discount_value).toFixed(2)}
-                                    </p>
-                                  </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Discount</p>
+                                <p className="text-xs text-emerald-700 font-medium">
+                                  -{selectedService.currency?.symbol}
+                                  {voucherDiscountAmount.toFixed(2)}
+                                </p>
+                              </div>
 
-                                  <div className="mt-2 pt-2 border-t border-neutral-200">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Final Price</p>
-                                    <p className="mt-1 text-sm font-bold text-emerald-700">
-                                      {selectedService.currency?.symbol}
-                                      {(
-                                        selectedProfessional.price -
-                                        (selectedVoucher.discount_type === "percent"
-                                          ? (selectedProfessional.price * selectedVoucher.discount_value) / 100
-                                          : selectedVoucher.discount_value)
-                                      ).toFixed(2)}
-                                    </p>
-                                  </div>
-                                </>
-                              )}
-                            </>
-                          ) : minProfessionalPrice !== null ? (
-                            <>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">From Price</p>
-                              <p className="mt-1 text-sm font-bold text-neutral-950">
+                              <div className="flex items-center justify-between gap-3 border-t border-neutral-200 pt-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-700">Total</p>
+                                <p className="text-sm font-bold text-emerald-700">
+                                  {selectedService.currency?.symbol}
+                                  {finalProfessionalPrice !== null ? finalProfessionalPrice.toFixed(2) : "0.00"}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Price</p>
+                              <p className="text-sm font-bold text-neutral-950">
                                 {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
-                                {typeof minProfessionalPrice === "number"
-                                  ? minProfessionalPrice.toFixed(2)
-                                  : minProfessionalPrice}
+                                {(currentProfessionalPrice ?? minProfessionalPrice).toFixed(2)}
                               </p>
-                              <p className="mt-0.5 text-xs text-neutral-500">(Select professional for exact price)</p>
-                            </>
-                          ) : null}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1901,7 +1916,11 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                                 </p>
                               </div>
                               <button
-                                onClick={() => dispatch(setSelectedVoucher({ slug, voucher: null }))}
+                                onClick={() => {
+                                  dispatch(setSelectedVoucher({ slug, voucher: null }));
+                                  localStorage.removeItem(`voucher_${slug}`);
+                                  dispatch(setVoucherCode({ slug, code: "" }));
+                                }}
                                 className="text-emerald-600 hover:text-emerald-800 text-sm font-semibold"
                               >
                                 Remove
