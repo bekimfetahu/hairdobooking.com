@@ -16,12 +16,7 @@ export default function Footer() {
                 {/* Top Section */}
                 <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
                     {/* Logo and Description */}
-                    <div className="text-center md:text-left">
-
-                        <p className="mt-3 max-w-sm text-sm text-neutral-700">
-                            A sleek, modern booking experience built for salons and beauty professionals.
-                        </p>
-                    </div>
+                    <div className="text-center md:text-left" />
 
                     {/* Social Media Links */}
                     <div className="flex space-x-4">
