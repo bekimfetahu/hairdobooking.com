@@ -1,7 +1,15 @@
-// components/Footer.js
-import Image from "next/image";
+"use client";
+
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+    const pathname = usePathname();
+    const hideFooter = pathname === "/search/service" || pathname === "/salon/search";
+
+    if (hideFooter) {
+        return null;
+    }
+
     return (
         <footer className="border-t border-black/10 bg-white text-neutral-900">
             <div className="mx-auto max-w-[1200px] px-4 sm:px-6 py-8 md:py-12">
