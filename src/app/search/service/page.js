@@ -54,7 +54,11 @@ export default async function ServiceNameSearchPage({ searchParams }) {
       if (categories) params.category = categories;
       if (audiences) params.audience = audiences;
 
+      console.log("Venue search params:", params);
+
       const response = await laravelApp.get("/client/search/venues", { params });
+
+      console.log("Venue search response:", response.data);
       initialVenues = response.data?.data || [];
       // Pass meta so the client can hydrate pagination state and avoid unnecessary loads
       initialVenuesMeta = response.data?.meta || null;
