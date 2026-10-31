@@ -645,7 +645,7 @@ export default function SalonSearchClient({
       <section className="flex flex-1 overflow-hidden relative w-full">
         {/* Salons Results View - Full width when map is hidden */}
         {!showMap && (
-          <div ref={scrollContainerRef} className="w-full h-full relative">
+                   <div ref={scrollContainerRef} className="w-full h-full overflow-y-auto relative show-scrollbar">
             <div className="container mx-auto pl-0 pr-0 sm:pr-1 py-4">
               {/* Show skeletons while loading and no venues yet */}
               {loading && displayedVenues.length === 0 ? (
