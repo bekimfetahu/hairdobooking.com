@@ -35,6 +35,7 @@ export default function useSalonSearch({
   const lastLoadMoreTimeRef = React.useRef(0);
   const isFreshSearchRef = React.useRef(true); // prevent immediate loadMore
 
+  const requestIdRef = React.useRef(0);
   const loadMoreRef = React.useRef(null);
 
   // keep refs in sync
@@ -60,7 +61,8 @@ export default function useSalonSearch({
   };
 
   const fetchPage = React.useCallback(async (pageNum, { replace = true } = {}) => {
-    if (loadingRef.current) return null;
+    if (!replace && loadingRef.current) return null;
+    const requestId = ++requestIdRef.current;
     // Skip fetching a page we've already loaded from SSR or earlier
     if (!replace && loadedPagesRef.current.has(pageNum)) {
       // eslint-disable-next-line no-console
@@ -71,6 +73,8 @@ export default function useSalonSearch({
     try {
       const params = buildParamsForPage(pageNum);
       const res = await searchVenues(params);
+      // A newer search superseded this one; discard the stale response
+      if (requestId !== requestIdRef.current) return null;
       const data = res.data || [];
       if (replace) {
         setDisplayedVenues(data);
@@ -119,6 +123,7 @@ export default function useSalonSearch({
       return res;
     } catch (e) {
       console.error('[useSalonSearch] fetchPage failed', e);
+      if (requestId !== requestIdRef.current) return null;
       if (replace) {
         setDisplayedVenues([]);
         setTotalVenues(0);
@@ -126,12 +131,13 @@ export default function useSalonSearch({
       }
       return null;
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [initialLocationLat, initialLocationLon]);
 
   const handleDistanceChange = React.useCallback(async (newDistance) => {
     setDistance(newDistance);
+    distanceRef.current = newDistance;
     isFreshSearchRef.current = true;
     lastLoadMoreTimeRef.current = 0;
     await fetchPage(1, { replace: true });
@@ -139,6 +145,7 @@ export default function useSalonSearch({
 
   const handleLocationChange = React.useCallback(async (loc) => {
     setSelectedLocation(loc);
+    selectedLocationRef.current = loc;
     isFreshSearchRef.current = true;
     lastLoadMoreTimeRef.current = 0;
     await fetchPage(1, { replace: true });
@@ -146,6 +153,7 @@ export default function useSalonSearch({
 
   const handleQueryChange = React.useCallback(async (q) => {
     setQuery(q);
+    queryRef.current = q;
     isFreshSearchRef.current = true;
     lastLoadMoreTimeRef.current = 0;
     await fetchPage(1, { replace: true });
