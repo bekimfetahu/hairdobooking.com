@@ -109,6 +109,7 @@ export default function PartnerPage() {
         <PageShell containerClassName="">
             {/* ===== HERO ===== */}
             <section
+                className="pt-4 pb-0 md:pt-8 md:pb-0"
                 style={{
                     background:
                         'radial-gradient(circle at center, hsl(30, 30%, 99%) 0%, hsl(0, 30%, 97%) 40%, hsl(30, 25%, 98%) 70%, hsl(0, 20%, 96%) 100%)',
@@ -116,8 +117,8 @@ export default function PartnerPage() {
             >
                 <div
                     className="
-            relative max-w-6xl mx-auto px-3 pt-10 sm:pt-8 md:pt-10 lg:pt-12 xl:pt-16
-            grid md:grid-cols-[1.4fr_1.1fr] gap-5
+            relative max-w-6xl mx-auto px-3 pt-0 sm:pt-0 md:pt-0 lg:pt-0
+            grid md:grid-cols-[1.4fr_1.1fr] gap-5 items-start
         "
                 >
                     {/* LEFT COLUMN */}
@@ -160,14 +161,14 @@ export default function PartnerPage() {
                     </div>
 
                     {/* RIGHT COLUMN */}
-                    <div className="relative z-10 flex items-start justify-end">
+                    <div className="relative z-10 flex items-start justify-center md:justify-end pt-0 md:pt-0">
                         <Image
                             src="/images/stylist.png"
                             alt="HairdoBooking dashboard screenshot"
-                            width={369}
-                            height={500}
-                            className="h-auto max-w-none opacity-70"
-                            style={{ width: 'auto', height: 'auto' }}
+                            width={700}
+                            height={900}
+                            className="h-auto w-full max-w-[280px] sm:max-w-[330px] lg:max-w-[360px] translate-y-[-6px] drop-shadow-[0_30px_50px_rgba(0,0,0,0.12)]"
+                            priority
                         />
                     </div>
                 </div>
