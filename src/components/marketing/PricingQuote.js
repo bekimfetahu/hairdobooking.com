@@ -50,7 +50,7 @@ export default function PricingQuote({ numberOfUsers, billingFrequency, variant 
     }, [numberOfUsers, billingFrequency]);
 
     const frequencyLabel = billingFrequency === "month" ? "month" : "year";
-    const professionalLabel = `${numberOfUsers} active professional${numberOfUsers > 1 ? "s" : ""}`;
+
 
     if (variant === "starter") {
         return (
@@ -60,7 +60,7 @@ export default function PricingQuote({ numberOfUsers, billingFrequency, variant 
                 </span>
                 <span className="pb-1 text-sm text-neutral-500">
                     {isReady
-                        ? `per ${frequencyLabel} • ${professionalLabel}`
+                        ? `per ${frequencyLabel}`
                         : error
                             ? "Price unavailable"
                             : "Fetching live price…"}
@@ -81,7 +81,7 @@ export default function PricingQuote({ numberOfUsers, billingFrequency, variant 
                 </span>
                 <span className="pb-1 text-sm font-medium text-neutral-600">
                     {isReady
-                        ? `per ${frequencyLabel} • ${professionalLabel}`
+                        ? `per ${frequencyLabel}`
                         : loading
                             ? "Calculating price…"
                             : error
