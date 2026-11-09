@@ -457,6 +457,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
 
   const venueName = salon?.venue?.name || "Salon";
   const venueAddress = salon?.venue?.address?.formatted || "";
+  const isMaintenanceMode = Boolean(salon?.venue?.maintenance);
   const images = salon?.images || [];
   const n = images.length;
   const unavailableDates = salon?.availability?.unavailable_dates || [];
@@ -1196,7 +1197,16 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
         <div className="rounded-md border border-red-200 bg-red-50 p-6 text-sm text-red-700">{error}</div>
       )}
 
-      {!loading && !error && (
+      {!loading && !error && isMaintenanceMode && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center shadow-sm">
+          <h2 className="text-2xl font-bold text-amber-900">Temporary out of service</h2>
+          <p className="mt-3 text-sm text-amber-800">
+            Booking is currently paused while this business is undergoing maintenance. Please try again later.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && !isMaintenanceMode && (
         <div className="space-y-6">
           {/* Gallery slider */}
           <section className="relative">
