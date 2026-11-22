@@ -119,7 +119,8 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     const apptDate = dateObj || null;
     const isPast = apptDate ? apptDate < new Date(new Date().setHours(0, 0, 0, 0)) : false; // before today
     const isToday = apptDate ? isSameDay(apptDate, new Date()) : false;
-    const canAct = !isPast && !isToday; // only after today
+    const canCancel = appt?.can_cancel === true;
+    const canAct = appt?.can_cancel === true;
     const apptUuid = appt.uuid || appt.id;
 
     const cancelHandler = async () => {
@@ -265,7 +266,7 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
               <button
                 onClick={() => {
                   console.log('Cancel clicked', apptUuid, 'canAct=', canAct, 'cancelingId=', cancelingId);
-                  if (!canAct) { Swal.fire({ icon: 'info', title: 'Cannot cancel', text: 'This appointment cannot be cancelled (same-day or past).' }); return; }
+                  if (!canCancel) { Swal.fire({ icon: 'info', title: 'Cannot cancel', text: 'This appointment is inside the salon cancellation deadline.' }); return; }
                   if (cancelingId === apptUuid) return;
                   cancelHandler();
                 }}
@@ -281,7 +282,22 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
                   'Cancel'
                 )}
               </button>
-              <button disabled={!canAct} className={`rounded px-3 py-2 text-sm w-full sm:w-auto ${canAct ? 'bg-yellow-50 text-yellow-800 border border-yellow-300 hover:bg-yellow-100' : 'text-neutral-400 border border-neutral-200'}`}>Reschedule</button>
+              {appt?.can_reschedule && appt?.venue?.slug ? (
+                <Link
+                  href={`/salon/${encodeURIComponent(appt.venue.slug)}/reschedule/${encodeURIComponent(apptUuid)}`}
+                  className="rounded px-3 py-2 text-sm w-full sm:w-auto bg-yellow-50 text-yellow-800 border border-yellow-300 hover:bg-yellow-100 text-center"
+                >
+                  Reschedule
+                </Link>
+              ) : (
+                <button
+                  disabled
+                  className="rounded px-3 py-2 text-sm w-full sm:w-auto text-neutral-400 border border-neutral-200"
+                  title="This appointment cannot currently be rescheduled"
+                >
+                  Reschedule
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -16,6 +16,8 @@ import {
   validateSalonVoucher,
   fetchAppointmentPaymentStatus,
   createAppointmentPaymentIntent,
+  fetchRescheduleAvailability,
+  rescheduleSalonAppointment,
 } from "@/services/salon/salonService";
 import SalonDatePicker from "@/components/booking/SalonDatePicker";
 import StepSection from "@/components/booking/StepSection";
@@ -85,7 +87,13 @@ function groupTimeSlots(slots) {
   return grouped;
 }
 
-function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previewToken = null }) {
+function InnerSalonClient({
+  slug,
+  initialSalon,
+  initialServiceUuid = null,
+  previewToken = null,
+  rescheduleContext = null,
+}) {
   const dispatch = useDispatch();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -168,7 +176,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
   
 
   useEffect(() => {
-    if (!slug || !initialServiceUuid) return;
+    if (!slug || !initialServiceUuid || rescheduleContext) return;
 
     const shouldApplyService = selectedServiceUuid !== initialServiceUuid;
     if (!shouldApplyService) return;
@@ -181,11 +189,24 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
     dispatch(setProfessionalOpen({ slug, open: false }));
     dispatch(setTimeOpen({ slug, open: false }));
     dispatch(setCommentsOpen({ slug, open: false }));
-  }, [slug, initialServiceUuid, selectedServiceUuid, dispatch]);
+  }, [slug, initialServiceUuid, selectedServiceUuid, rescheduleContext, dispatch]);
+
+  useEffect(() => {
+    if (!rescheduleContext || !slug) return;
+
+    dispatch(setService({ slug, uuid: rescheduleContext.service_uuid }));
+    dispatch(setProfessional({ slug, uuid: rescheduleContext.employee_uuid }));
+    dispatch(setDate({ slug, date: rescheduleContext.local_date }));
+    dispatch(setTime({ slug, time: rescheduleContext.from_time }));
+    dispatch(setServiceOpen({ slug, open: false }));
+    dispatch(setProfessionalOpen({ slug, open: false }));
+    dispatch(setTimeOpen({ slug, open: true }));
+    dispatch(setCommentsOpen({ slug, open: false }));
+  }, [dispatch, rescheduleContext, slug]);
 
   // Restore booking state from localStorage if it exists (for auth redirect recovery)
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || rescheduleContext) return;
 
     try {
       const savedBookingState = localStorage.getItem(`booking_${slug}`);
@@ -244,7 +265,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
       console.error('Failed to restore booking state from localStorage:', err);
       setRestorationComplete(true);
     }
-  }, [slug, dispatch]);
+  }, [slug, dispatch, rescheduleContext]);
 
   // Separate voucher persistence - save selected voucher to localStorage whenever it changes
   useEffect(() => {
@@ -615,7 +636,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
       setProfessionals(profs);
       setProfessionalsError("");
       setProfessionalsLoading(false);
-      if (profs.length > 0) {
+      if (profs.length > 0 && !rescheduleContext) {
         dispatch(setProfessionalOpen({ slug, open: true }));
       }
       return;
@@ -637,7 +658,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
           const profs = Array.isArray(data.professionals) ? data.professionals : [];
           setProfessionals(profs);
           // Open professionals selection once fetch completes and there are professionals
-          if (profs.length > 0) {
+          if (profs.length > 0 && !rescheduleContext) {
             dispatch(setProfessionalOpen({ slug, open: true }));
           }
         }
@@ -658,7 +679,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
     return () => {
       cancelled = true;
     };
-  }, [slug, selectedDate, selectedServiceUuid, serviceAvailableDates, serviceAvailabilityMap, dispatch]);
+  }, [slug, selectedDate, selectedServiceUuid, serviceAvailableDates, serviceAvailabilityMap, rescheduleContext, dispatch]);
 
   useEffect(() => {
     if (!slug || !selectedDate || !selectedServiceUuid || !selectedProfessionalUuid) {
@@ -675,11 +696,13 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
       setTimeSlotsError("");
 
       try {
-        const data = await fetchSalonTimeSlots(slug, {
-          date: selectedDate,
-          service_uuid: selectedServiceUuid,
-          employee_uuid: selectedProfessionalUuid,
-        });
+        const data = rescheduleContext
+          ? await fetchRescheduleAvailability(rescheduleContext.uuid, { date: selectedDate })
+          : await fetchSalonTimeSlots(slug, {
+              date: selectedDate,
+              service_uuid: selectedServiceUuid,
+              employee_uuid: selectedProfessionalUuid,
+            });
 
         if (!cancelled) {
           setTimeSlots(Array.isArray(data.slots) ? data.slots : []);
@@ -701,7 +724,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
     return () => {
       cancelled = true;
     };
-  }, [slug, selectedDate, selectedServiceUuid, selectedProfessionalUuid]);
+  }, [slug, selectedDate, selectedServiceUuid, selectedProfessionalUuid, rescheduleContext]);
 
   // Fetch availability for a service across a date range in one API call.
   // Returns: { "2026-04-01": { available: true, professionals: [...] }, ... }
@@ -711,11 +734,16 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
     try {
       // Try the optimized batch endpoint first
       try {
-        const response = await fetchSalonAvailabilityByDateRange(slug, {
-          start_date: startIso,
-          end_date: endIso,
-          service_uuid: serviceUuid,
-        });
+        const response = rescheduleContext
+          ? await fetchRescheduleAvailability(rescheduleContext.uuid, {
+              start_date: startIso,
+              end_date: endIso,
+            })
+          : await fetchSalonAvailabilityByDateRange(slug, {
+              start_date: startIso,
+              end_date: endIso,
+              service_uuid: serviceUuid,
+            });
         console.log('response',response)
 
         // Response is already in the format { "2026-04-01": { available: true, professionals: [...] }, ... }
@@ -723,6 +751,10 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
         const availableDates = Object.keys(response).filter((date) => response[date]?.available === true);
         return { availabilityMap: response, availableDates };
       } catch (batchErr) {
+        if (rescheduleContext) {
+          throw batchErr;
+        }
+
         // Fallback to the old method if batch endpoint doesn't exist yet
         console.warn("Batch endpoint not available, falling back to individual date checks:", batchErr?.message);
         return await fallbackCheckAvailableDates(startIso, endIso, serviceUuid);
@@ -884,6 +916,33 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
       dispatch(setVoucherValidating({ slug, validating: false }));
     }
   }, [slug, voucherCode, selectedServiceUuid, dispatch]);
+
+  const handleRescheduleNow = useCallback(async () => {
+    if (!rescheduleContext || !selectedTime || !selectedDate) return;
+
+    setBookingSubmitting(true);
+    setBookingError("");
+    setBookingSuccess("");
+
+    try {
+      const result = await rescheduleSalonAppointment(
+        rescheduleContext.uuid,
+        selectedTime
+      );
+      setBookingSuccess(result?.message || "Appointment rescheduled successfully.");
+      await Swal.fire({
+        icon: "success",
+        title: "Appointment rescheduled",
+        text: "Your payment remains attached to this appointment.",
+        confirmButtonText: "View appointments",
+      });
+      router.push("/my-appointments");
+    } catch (error) {
+      setBookingError(error?.message || "Failed to reschedule appointment");
+    } finally {
+      setBookingSubmitting(false);
+    }
+  }, [rescheduleContext, router, selectedDate, selectedTime]);
 
   const handleBookNow = useCallback(async () => {
     // Keep the current reserved appointment in Redux while the user is retrying the payment.
@@ -1237,6 +1296,12 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
           <section className="grid gap-6 lg:flex lg:items-start">
             {/* Left column: booking steps (visually left on large screens) */}
             <div className="space-y-4 lg:order-1 lg:w-[58%]">
+              {rescheduleContext && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-950">Rescheduling your appointment</p>
+                </div>
+              )}
+
               {/* Step 1: Select a service (collapsible) */}
               <StepSection
                 stepNumber={1}
@@ -1271,11 +1336,14 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                   selectedService && !isServiceSectionOpen ? (
                     <button
                       type="button"
+                      disabled={!!rescheduleContext}
                       onClick={() => {
-                        dispatch(setServiceOpen({ slug, open: true }));
-                        dispatch(setProfessionalOpen({ slug, open: false }));
+                        if (!rescheduleContext) {
+                          dispatch(setServiceOpen({ slug, open: true }));
+                          dispatch(setProfessionalOpen({ slug, open: false }));
+                        }
                       }}
-                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
+                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-50 disabled:text-neutral-400 disabled:shadow-none"
                     >
                       Change
                     </button>
@@ -1515,7 +1583,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
               {/* Step 2: Select Date - only show when a service is selected */}
               {selectedService && (
                 <StepSection
-                  stepNumber={2}
+                  stepNumber={rescheduleContext ? 1 : 2}
                   title={selectedDate && !isTimeSectionOpen ? "Date" : "Select Date"}
                   isOpen={true}
                   headerSummary={
@@ -1528,13 +1596,16 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                   value={selectedDate}
                   onChange={(val) => ensureCanModify(() => {
                     dispatch(setDate({ slug, date: val }));
-                    dispatch(setProfessional({ slug, uuid: null }));
+                    if (!rescheduleContext) {
+                      dispatch(setProfessional({ slug, uuid: null }));
+                    }
                     dispatch(setTime({ slug, time: null }));
                     dispatch(setComments({ slug, comments: "" }));
                     dispatch(setTimeOpen({ slug, open: false }));
                     dispatch(setCommentsOpen({ slug, open: false }));
-                    // show professionals once a date has been selected
-                    dispatch(setProfessionalOpen({ slug, open: true }));
+                    if (!rescheduleContext) {
+                      dispatch(setProfessionalOpen({ slug, open: true }));
+                    }
                   })}
                   unavailableDates={unavailableDates}
                   availableDates={serviceAvailableDates}
@@ -1577,10 +1648,13 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                   selectedProfessional && !isProfessionalSectionOpen ? (
                     <button
                       type="button"
+                      disabled={!!rescheduleContext}
                       onClick={() => {
-                        dispatch(setProfessionalOpen({ slug, open: true }));
+                        if (!rescheduleContext) {
+                          dispatch(setProfessionalOpen({ slug, open: true }));
+                        }
                       }}
-                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50"
+                      className="inline-flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 shadow-sm hover:border-black/30 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-50 disabled:text-neutral-400 disabled:shadow-none"
                     >
                       Change
                     </button>
@@ -1665,7 +1739,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
               </StepSection>
 
               <StepSection
-                stepNumber={4}
+                stepNumber={rescheduleContext ? 2 : 4}
                 title={selectedTime && !isTimeSectionOpen ? "Time" : "Choose Time"}
                 isOpen={!!selectedProfessional && (isTimeSectionOpen || !selectedTime)}
                 headerSummary={!selectedProfessional ? (<p className="text-xs text-neutral-600">First choose a professional to see available booking times.</p>) : selectedTime ? (<p className="text-xs font-medium text-neutral-900">{selectedTimeSlot?.label || selectedTime}</p>) : (<p className="text-xs text-neutral-600">Choose the time that works best for you.</p>)}
@@ -1850,7 +1924,9 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                           {selectedVoucher ? (
                             <div className="space-y-2">
                               <div className="flex items-center justify-between gap-3">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Price</p>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">
+                                  Price{rescheduleContext ? " (Paid)" : ""}
+                                </p>
                                 <p className="text-sm font-bold text-neutral-500 line-through">
                                   {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
                                   {(currentProfessionalPrice ?? minProfessionalPrice).toFixed(2)}
@@ -1866,7 +1942,9 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                               </div>
 
                               <div className="flex items-center justify-between gap-3 border-t border-neutral-200 pt-2">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-700">Total</p>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-700">
+                                  Total{rescheduleContext ? " (Paid)" : ""}
+                                </p>
                                 <p className="text-sm font-bold text-emerald-700">
                                   {selectedService.currency?.symbol}
                                   {finalProfessionalPrice !== null ? finalProfessionalPrice.toFixed(2) : "0.00"}
@@ -1875,7 +1953,9 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                             </div>
                           ) : (
                             <div className="flex items-center justify-between gap-3">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">Price</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-600">
+                                Price{rescheduleContext ? " (Paid)" : ""}
+                              </p>
                               <p className="text-sm font-bold text-neutral-950">
                                 {selectedService.currency?.symbol && `${selectedService.currency.symbol}`}
                                 {(currentProfessionalPrice ?? minProfessionalPrice).toFixed(2)}
@@ -1886,8 +1966,41 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
                       </div>
                     )}
 
+                    {rescheduleContext && selectedTime && (
+                      <div className="pt-4 mt-2 space-y-3">
+                        {bookingSuccess && (
+                          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700">
+                            {bookingSuccess}
+                          </div>
+                        )}
+
+                        {bookingError && (
+                          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+                            {bookingError}
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={handleRescheduleNow}
+                          disabled={
+                            bookingSubmitting
+                            || !!bookingSuccess
+                            || selectedTime === rescheduleContext.from_time
+                          }
+                          className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {bookingSubmitting
+                            ? "Rescheduling..."
+                            : selectedTime === rescheduleContext.from_time
+                              ? "Choose a different time"
+                              : "Confirm reschedule"}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Comments section */}
-                    {selectedTime && (
+                    {!rescheduleContext && selectedTime && (
                       <div className="pt-4 mt-2 space-y-3">
                         <textarea
                           value={selectedComments}

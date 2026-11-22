@@ -143,6 +143,58 @@ export async function fetchAppointmentPaymentStatus(appointmentUuid) {
   return data;
 }
 
+export async function fetchRescheduleAppointment(appointmentUuid) {
+  const response = await fetch(`/api/appointments/${appointmentUuid}/reschedule`, {
+    credentials: 'include',
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || 'Failed to validate appointment reschedule');
+  }
+
+  return data;
+}
+
+export async function fetchRescheduleAvailability(appointmentUuid, {
+  date,
+  start_date,
+  end_date,
+}) {
+  const params = new URLSearchParams();
+  if (date) params.set('date', date);
+  if (start_date) params.set('start_date', start_date);
+  if (end_date) params.set('end_date', end_date);
+
+  const response = await fetch(
+    `/api/appointments/${appointmentUuid}/reschedule/availability?${params.toString()}`,
+    { credentials: 'include' }
+  );
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || 'Failed to load reschedule availability');
+  }
+
+  return data;
+}
+
+export async function rescheduleSalonAppointment(appointmentUuid, fromTime) {
+  const response = await fetch(`/api/appointments/${appointmentUuid}/reschedule`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from_time: fromTime }),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || 'Failed to reschedule appointment');
+  }
+
+  return data;
+}
+
 export async function createAppointmentPaymentIntent(appointmentUuid) {
   const response = await fetch(`/api/appointments/${appointmentUuid}/payment-intent`, {
     method: 'POST',
