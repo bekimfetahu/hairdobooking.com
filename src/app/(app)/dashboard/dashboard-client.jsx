@@ -4,14 +4,11 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import PageShell from '@/components/layouts/PageShell';
-import { searchVenues } from '@/services/search/searchService';
 import {
     ArrowRight,
     CalendarDays,
     Clock3,
-    Heart,
     MapPin,
-    Sparkles,
     Star,
 } from 'lucide-react';
 
@@ -27,8 +24,6 @@ export default function DashboardClient({ initialUser }) {
     const [upcomingAppointments, setUpcomingAppointments] = useState(
         Array.isArray(user?.appointments) ? user.appointments : []
     );
-    const [nearbySuggestions, setNearbySuggestions] = useState([]);
-    const [nearbyLoading, setNearbyLoading] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -62,49 +57,14 @@ export default function DashboardClient({ initialUser }) {
         };
     }, [user]);
 
-    useEffect(() => {
-        const lat = user?.client?.address?.latitude ?? user?.client?.latitude ?? null;
-        const lon = user?.client?.address?.longitude ?? user?.client?.longitude ?? null;
-
-        if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
-            setNearbySuggestions([]);
-            return;
-        }
-
-        let isMounted = true;
-        const loadNearby = async () => {
-            setNearbyLoading(true);
-            try {
-                const response = await searchVenues({ lat, lon, distance: '10mi', page: 1 });
-                if (!isMounted) return;
-                const list = Array.isArray(response?.data) ? response.data.slice(0, 3) : [];
-                setNearbySuggestions(list.map((venue) => ({
-                    name: venue?.venue?.name || venue?.name || 'Salon',
-                    address: venue?.address?.formatted || venue?.address || 'Nearby salon',
-                    slug: venue?.venue?.slug ? `/salon/${venue.venue.slug}` : '/salon/search',
-                })));
-            } catch (error) {
-                if (!isMounted) return;
-                setNearbySuggestions([]);
-            } finally {
-                if (isMounted) setNearbyLoading(false);
-            }
-        };
-
-        loadNearby();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [user]);
-
-    const primaryVenueHref = primaryVenue?.slug ? `/salon/${primaryVenue.slug}` : '/salon/search';
+    const primaryVenueData = primaryVenue?.venue ?? primaryVenue;
+    const primaryVenueHref = primaryVenueData?.slug ? `/salon/${primaryVenueData.slug}` : '/salon/search';
+    const primaryVenueAddress = [
+        primaryVenueData?.address?.formatted,
+        primaryVenueData?.formatted_address,
+        typeof primaryVenueData?.address === 'string' ? primaryVenueData.address : null,
+    ].find(Boolean);
     const savedVenueCards = savedVenues.slice(0, 3);
-    const panelStats = [
-        { label: 'Upcoming bookings', value: String(upcomingAppointments.length || 0), icon: CalendarDays },
-        { label: 'Saved salons', value: String(savedVenues.length || 0), icon: Heart },
-        { label: 'Nearby', value: nearbyLoading ? '…' : String(nearbySuggestions.length || 0), icon: MapPin },
-    ];
 
     const formatAppointmentDate = (appointment) => {
         const dateValue = appointment?.date || appointment?.booking_date || appointment?.scheduled_for || appointment?.start_date || null;
@@ -162,26 +122,40 @@ export default function DashboardClient({ initialUser }) {
                 </Link>
             </section>
 
-            <section className="grid gap-4 md:grid-cols-3">
-                {panelStats.map((stat) => {
-                    const Icon = stat.icon;
-                    return (
-                        <article key={stat.label} className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-sm text-neutral-500">{stat.label}</p>
-                                    <p className="mt-2 text-3xl font-semibold text-neutral-950">{stat.value}</p>
-                                </div>
-                                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-neutral-50 text-black">
-                                    <Icon className="h-5 w-5" />
-                                </div>
+            {primaryVenue && (
+                <article className="rounded-xl border border-primary/20 bg-white p-5 shadow-sm">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-center gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <Star className="h-5 w-5" />
                             </div>
-                        </article>
-                    );
-                })}
-            </section>
+                            <div className="min-w-0">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                    Your preferred salon
+                                </p>
+                                <h2 className="mt-1 truncate text-xl font-semibold text-neutral-950">
+                                    {primaryVenueData?.name || 'Preferred salon'}
+                                </h2>
+                                {primaryVenueAddress && (
+                                    <p className="mt-1 flex items-center gap-1.5 text-sm text-neutral-600">
+                                        <MapPin className="h-4 w-4 shrink-0" />
+                                        <span className="truncate">{primaryVenueAddress}</span>
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <Link
+                            href={primaryVenueHref}
+                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-primary/30 px-4 py-2 text-sm font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/5"
+                        >
+                            View salon
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                </article>
+            )}
 
-            <section className="mt-6 grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+            <section className="mt-6 grid gap-4 lg:grid-cols-2">
                 <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                         <div>
@@ -225,9 +199,6 @@ export default function DashboardClient({ initialUser }) {
                     )}
                 </article>
 
-            </section>
-
-            <section className="mt-6 grid gap-4 lg:grid-cols-2">
                 <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                         <div>
@@ -271,46 +242,6 @@ export default function DashboardClient({ initialUser }) {
                     )}
                 </article>
 
-                <article className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nearby</p>
-                            <h2 className="mt-2 text-2xl font-semibold text-neutral-950">Suggested salons near you</h2>
-                        </div>
-                        <span className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-2.5 py-1 text-xs font-medium text-primary">
-                            <Sparkles className="h-3.5 w-3.5" />
-                            Smart picks
-                        </span>
-                    </div>
-
-                    {nearbySuggestions.length ? (
-                        <div className="mt-5 grid gap-3">
-                            {nearbySuggestions.slice(0, 3).map((salon, index) => (
-                                <Link
-                                    key={`${salon?.name || 'nearby'}-${index}`}
-                                    href={salon?.slug || '/salon/search'}
-                                    className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-neutral-50 p-3 transition-colors hover:border-black/20 hover:bg-white"
-                                >
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-neutral-100 text-sm font-semibold text-neutral-900">
-                                            <Star className="h-4 w-4" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="truncate font-medium text-neutral-950">{salon?.name || 'Nearby salon'}</p>
-                                            <p className="truncate text-sm text-neutral-600">{salon?.address || 'Near your location'}</p>
-                                        </div>
-                                    </div>
-                                    <ArrowRight className="h-4 w-4 shrink-0 text-neutral-500" />
-                                </Link>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="mt-5 rounded-lg border border-dashed border-black/15 bg-neutral-50 p-6 text-center">
-                            <p className="text-base font-medium text-neutral-900">No nearby salons yet</p>
-                            <p className="mt-2 text-sm text-neutral-600">Add your address to see salons near you.</p>
-                        </div>
-                    )}
-                </article>
             </section>
         </PageShell>
     );

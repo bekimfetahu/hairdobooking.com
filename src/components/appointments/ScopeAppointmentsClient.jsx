@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Swal from 'sweetalert2';
-import { MapPin, Calendar, User, Clock, Sparkles, Store } from 'lucide-react';
+import { MapPin, Calendar, User, Clock, Sparkles, Store, Banknote } from 'lucide-react';
 import dynamic from 'next/dynamic';
 const Pagination = dynamic(() => import('@/components/ui/Pagination'), { ssr: false });
 
@@ -31,6 +31,20 @@ function isSameDay(dateA, dateB) {
     dateA.getMonth() === dateB.getMonth() &&
     dateA.getDate() === dateB.getDate()
   );
+}
+
+function formatPayment(amount, currency) {
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount)) return '';
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: (currency || 'GBP').toUpperCase(),
+    }).format(numericAmount / 100);
+  } catch {
+    return `${(currency || 'GBP').toUpperCase()} ${(numericAmount / 100).toFixed(2)}`;
+  }
 }
 
 export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
@@ -97,6 +111,9 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
     const isReserved = appt?.appointment_state_id === 6 || String(appt?.appointment_state?.name || '').toLowerCase() === 'reserved';
     const paymentPending = isReserved && requiresPayment &&
       (['pending', 'requires_payment_method', 'requires_action', 'processing'].includes(String(appt?.payment?.status || '').toLowerCase()));
+    const paymentStatus = String(appt?.payment?.status || '').toLowerCase();
+    const isPaid = ['paid', 'succeeded', 'completed', 'confirmed'].includes(paymentStatus);
+    const paymentAmount = formatPayment(appt?.payment?.amount, appt?.payment?.currency);
     const address = appt?.venue?.line_address || '';
 
     const apptDate = dateObj || null;
@@ -212,6 +229,18 @@ export default function ScopeAppointmentsClient({ scope = 'upcoming' }) {
                 Status: <strong>{status}</strong>
               </div>
             </div>
+
+            {isPaid && (
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-white to-emerald-50 text-emerald-600 shadow-sm border border-emerald-100">
+                  <Banknote size={16} strokeWidth={1.5} />
+                </div>
+                <div className="min-w-0 text-sm">
+                  <strong className="text-emerald-700">Paid</strong>
+                  {paymentAmount && <span className="ml-1 text-neutral-600">— {paymentAmount}</span>}
+                </div>
+              </div>
+            )}
 
           </div>
 

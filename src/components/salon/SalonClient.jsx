@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dayjs from "dayjs";
 import { Calendar, Sparkles, Banknote, User, Clock, ChevronDown, MapPin, Filter, X } from "lucide-react";
 import Swal from "sweetalert2";
@@ -87,6 +87,7 @@ function groupTimeSlots(slots) {
 
 function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previewToken = null }) {
   const dispatch = useDispatch();
+  const router = useRouter();
   const searchParams = useSearchParams();
   
   // Get preview token from Redux store
@@ -1073,6 +1074,8 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
         },
       });
 
+      router.push("/my-appointments");
+
       // Clear success message state
       setBookingSuccess("");
     } catch (error) {
@@ -1089,7 +1092,7 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
     } finally {
       setBookingSubmitting(false);
     }
-  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, selectedVoucher, voucherCode, isAuthenticated, booking?.pendingAppointment, booking?.pendingPaymentIntent, dispatch]);
+  }, [slug, selectedServiceUuid, selectedProfessionalUuid, selectedTime, selectedDate, selectedComments, selectedVoucher, voucherCode, isAuthenticated, booking?.pendingAppointment, booking?.pendingPaymentIntent, dispatch, router]);
 
   // Auto-submit booking after successful authentication when booking state is ready
   useEffect(() => {
@@ -1137,7 +1140,9 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
         Swal.getContainer().style.zIndex = '9999';
       },
     });
-  }, [slug, dispatch]);
+
+    router.push("/my-appointments");
+  }, [slug, dispatch, router]);
 
   const handlePaymentError = useCallback((error) => {
     console.error('✗ Payment failed:', error);
@@ -1185,7 +1190,9 @@ function InnerSalonClient({ slug, initialSalon, initialServiceUuid = null, previ
         Swal.getContainer().style.zIndex = '9999';
       },
     });
-  }, [slug, dispatch]);
+
+    router.push("/my-appointments");
+  }, [slug, dispatch, router]);
 
   return (
     <>
